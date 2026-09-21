@@ -1,5 +1,5 @@
 # Build Stage
-FROM rust:latest AS builder
+FROM rust:bookworm AS builder
 WORKDIR /app
 
 # Copy source code, manifests, and assets
