@@ -619,24 +619,58 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     },
   ];
 
-  const filteredItems = menuItems.filter(item =>
-    (!item.roles || item.roles.includes(role)) &&
-    (role !== "staff" || !permissions || (
-      (item.label === "Students" && permissions.can_manage_students) ||
-      (item.label === "Attendance" && permissions.can_manage_attendance) ||
-      (item.label === "Finance" && permissions.can_manage_fees) ||
-      (item.label === "Academics" && permissions.can_manage_courses) ||
-      (item.label === "Exams" && permissions.can_manage_exams) ||
-      (item.label === "Dashboard") ||
-      (item.label === "Staff Management" && permissions.can_manage_staff)
-    ))
-  );
+  const filteredItems = menuItems.filter(item => {
+    if (item.roles && !item.roles.includes(role)) return false;
+
+    // Staff permissions
+    if (role === "staff" && permissions) {
+      const allowed = (
+        (item.label === "Students" && permissions.can_manage_students) ||
+        (item.label === "Attendance" && permissions.can_manage_attendance) ||
+        (item.label === "Finance" && permissions.can_manage_fees) ||
+        (item.label === "Academics" && permissions.can_manage_courses) ||
+        (item.label === "Exams" && permissions.can_manage_exams) ||
+        (item.label === "Dashboard") ||
+        (item.label === "Staff Management" && permissions.can_manage_staff)
+      );
+      if (!allowed) return false;
+    }
+
+    // Sub-Admin role permissions
+    if (role === "admin" && permissions) {
+      const p = permissions.permissions || permissions;
+      if (p && typeof p === "object" && Object.keys(p).length > 0) {
+        if (item.label === "Dashboard") return true;
+        if (item.label === "Centers" && p.centers && !p.centers.view) return false;
+        if (item.label === "Students" && p.students && !p.students.view) return false;
+        if (item.label === "Finance" && p.finance && !p.finance.view) return false;
+        if (item.label === "Academics" && p.courses && !p.courses.view) return false;
+        if (item.label === "Exams" && p.exams && !p.exams.view) return false;
+        if ((item.label === "Staff Management" || item.label === "Interns") && p.staff && !p.staff.view) return false;
+        if (item.label === "CRM" && p.leads && !p.leads.view) return false;
+        if (item.label === "CMS" && p.cms && !p.cms.view) return false;
+        if (item.label === "System" && p.settings && !p.settings.view) return false;
+      }
+    }
+
+    return true;
+  });
 
   return filteredItems.map(item => {
     if (item.subItems) {
       return {
         ...item,
-        subItems: item.subItems.filter(sub => !sub.roles || sub.roles.includes(role))
+        subItems: item.subItems.filter(sub => {
+          if (sub.roles && !sub.roles.includes(role)) return false;
+          if (role === "admin" && permissions) {
+            const p = permissions.permissions || permissions;
+            if (p && typeof p === "object") {
+              if (sub.label.includes("Add New Center") && p.centers && !p.centers.add) return false;
+              if (sub.label.includes("Add Student") && p.students && !p.students.add) return false;
+            }
+          }
+          return true;
+        })
       };
     }
     return item;
@@ -683,6 +717,21 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
     y: number;
   } | null>(null);
   const [permissions, setPermissions] = useState<any>(null);
+
+  useEffect(() => {
+    const role = user?.role?.toLowerCase()?.replace(/\s+/g, "");
+    if (role === "admin") {
+      apiFetch("/api/admin/permissions/me")
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (data && (data.permissions || data.role)) {
+            setPermissions(data.permissions || data);
+          }
+        })
+        .catch(err => console.error("Error fetching admin permissions:", err));
+    }
+  }, [user?.role]);
+
   const [sidebarSize, setSidebarSize] = useState(() => {
     const saved = localStorage.getItem("dashboard_sidebar_size");
     return saved ? parseFloat(saved) : 20;

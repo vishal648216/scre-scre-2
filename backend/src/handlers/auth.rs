@@ -543,6 +543,12 @@ pub struct CreateAdminRequest {
     pub phone: Option<String>,
     #[serde(default)]
     pub full_name: Option<String>,
+    #[serde(default)]
+    pub role_name: Option<String>,
+    #[serde(default)]
+    pub role_id: Option<String>,
+    #[serde(default)]
+    pub permissions: Option<serde_json::Value>,
 }
 
 pub async fn create_admin(
@@ -657,7 +663,9 @@ pub async fn create_admin(
         }
     }
 
-    let hashed_password = hash(&payload.password, DEFAULT_COST).expect("hashing failed");
+    let role_oid = payload.role_id.as_deref().and_then(|s| ObjectId::parse_str(s).ok());
+    let perms_doc = payload.permissions.as_ref().and_then(|p| mongodb::bson::to_document(p).ok());
+
     let new_admin = User {
         id: None,
         username: payload.username,
@@ -665,9 +673,9 @@ pub async fn create_admin(
         raw_password: Some(payload.password),
         role: UserRole::Admin,
         parent_id: None,
-        sub_admin_role_id: None,
-        sub_admin_role_name: None,
-        sub_admin_permissions: None,
+        sub_admin_role_id: role_oid,
+        sub_admin_role_name: payload.role_name,
+        sub_admin_permissions: perms_doc,
         full_name: payload.full_name,
         first_name: None,
         middle_name: None,
@@ -739,27 +747,30 @@ pub async fn create_admin(
     };
 
     match collection.insert_one(new_admin, None).await {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(LoginResponse {
-                success: true,
-                message: "Admin created successfully".to_string(),
-                token: None,
-                role: None,
-                username: None,
-                photo_url: None,
-                user_id: None,
-                email: None,
-                exam_mode: None,
-                _id: None,
-                full_name: None,
-                first_name: None,
-                last_name: None,
-                course: None,
-                enrollment_number: None,
-                roll_number: None,
-            }),
-        ),
+        Ok(res) => {
+            let id_str = res.inserted_id.as_object_id().map(|o| o.to_hex());
+            (
+                StatusCode::CREATED,
+                Json(LoginResponse {
+                    success: true,
+                    message: "Admin created successfully".to_string(),
+                    token: None,
+                    role: Some("admin".to_string()),
+                    username: None,
+                    photo_url: None,
+                    user_id: id_str.clone(),
+                    email: None,
+                    exam_mode: None,
+                    _id: id_str,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            )
+        }
         Err(_) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(LoginResponse {
