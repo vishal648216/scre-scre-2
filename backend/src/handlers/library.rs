@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path, Query},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -30,7 +30,7 @@ pub struct BookFilter {
 
 // GET /api/library/books
 pub async fn get_books(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Query(filter): Query<BookFilter>,
 ) -> impl IntoResponse {
     let coll = db.collection::<Book>("library_books");
@@ -89,7 +89,7 @@ pub async fn get_books(
 
 // GET /api/library/admin/books (includes unpublished)
 pub async fn get_all_books_admin(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
 ) -> impl IntoResponse {
     let coll = db.collection::<Book>("library_books");
     match coll.find(doc! {}, None).await {
@@ -120,7 +120,7 @@ pub async fn get_all_books_admin(
 
 // POST /api/library/books
 pub async fn create_book(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Json(payload): Json<BookPayload>,
 ) -> impl IntoResponse {
     let coll = db.collection::<Book>("library_books");
@@ -167,7 +167,7 @@ pub async fn create_book(
 
 // PUT /api/library/books/:id
 pub async fn update_book(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Path(id): Path<String>,
     Json(payload): Json<BookPayload>,
 ) -> impl IntoResponse {
@@ -227,7 +227,7 @@ pub async fn update_book(
 
 // DELETE /api/library/books/:id
 pub async fn delete_book(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let coll = db.collection::<Book>("library_books");
@@ -267,7 +267,7 @@ pub async fn delete_book(
 
 // POST /api/library/reading/heartbeat
 pub async fn record_heartbeat(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ReadingHeartbeatPayload>,
 ) -> impl IntoResponse {
@@ -344,7 +344,7 @@ pub async fn record_heartbeat(
 
 // GET /api/library/reading/my-stats
 pub async fn get_my_reading_stats(
-    Extension(db): Extension<Database>,
+    State(db): State<Database>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let student_oid = match ObjectId::parse_str(&claims.sub) {

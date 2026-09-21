@@ -55,3 +55,4 @@ pub mod college;
 pub mod batch_student;
 pub mod live_class;
 pub mod library;
+pub mod internship;

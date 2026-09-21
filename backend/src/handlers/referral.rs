@@ -39,41 +39,58 @@ pub async fn validate_referral_code(
 ) -> (StatusCode, Json<ValidateCodeResponse>) {
     let user_coll = db.collection::<User>("users");
 
-    match user_coll
+    if let Ok(Some(user)) = user_coll
         .find_one(doc! { "referral_code": &payload.code }, None)
         .await
     {
-        Ok(Some(user)) => (
+        return (
             StatusCode::OK,
             Json(ValidateCodeResponse {
                 success: true,
                 valid: true,
                 message: "Valid referral code".to_string(),
-                user_name: user.full_name,
+                user_name: user.full_name.or(user.first_name).or(Some(user.username)),
                 user_role: Some(user.role),
             }),
-        ),
-        Ok(None) => (
+        );
+    }
+
+    // Fallback: Check in centers collection by referral_code or center code
+    let center_coll = db.collection::<crate::models::center::Center>("centers");
+    if let Ok(Some(center)) = center_coll
+        .find_one(
+            doc! {
+                "$or": [
+                    { "referral_code": &payload.code },
+                    { "code": &payload.code }
+                ]
+            },
+            None,
+        )
+        .await
+    {
+        return (
             StatusCode::OK,
             Json(ValidateCodeResponse {
-                success: false,
-                valid: false,
-                message: "Invalid referral code".to_string(),
-                user_name: None,
-                user_role: None,
+                success: true,
+                valid: true,
+                message: "Valid Center referral code".to_string(),
+                user_name: Some(center.name),
+                user_role: Some(UserRole::Center),
             }),
-        ),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ValidateCodeResponse {
-                success: false,
-                valid: false,
-                message: "Database error".to_string(),
-                user_name: None,
-                user_role: None,
-            }),
-        ),
+        );
     }
+
+    (
+        StatusCode::OK,
+        Json(ValidateCodeResponse {
+            success: false,
+            valid: false,
+            message: "Invalid referral code".to_string(),
+            user_name: None,
+            user_role: None,
+        }),
+    )
 }
 
 pub async fn get_my_referrals(

@@ -247,6 +247,7 @@ fn is_public_path(path: &str) -> bool {
         || path == "/api/interns/check-email"
         || path == "/api/interns/check-enrollment"
         || path == "/api/interns/check-serial"
+        || path == "/api/internships"
 
         // Public certificate download
         || path.starts_with("/api/certificates/download/")
@@ -281,7 +282,8 @@ fn is_allowed_public_method(path: &str, method: &Method) -> bool {
     // ---------------------------------------------------------
     if (path == "/rss.xml"
         || path == "/sitemap.xml"
-        || path == "/api/health")
+        || path == "/api/health"
+        || path == "/api/internships")
         && *method == Method::GET
     {
         return true;

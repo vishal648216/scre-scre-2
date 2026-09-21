@@ -368,6 +368,14 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Internships",
+      icon: Briefcase,
+      roles: ["admin", "superadmin", "center"],
+      subItems: [
+        { icon: Briefcase, label: "Internship Postings", href: "/dashboard/internships/manage" },
+      ]
+    },
+    {
       label: "Exams",
       icon: FlaskConical,
       roles: ["center"],
@@ -494,6 +502,15 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: FileText, label: "Course Materials", href: "/dashboard/student/materials" },
         { icon: Video, label: "Recorded Classes", href: "/dashboard/student/recorded" },
         { icon: BookMarked, label: "Digital Library", href: "/dashboard/student/library" },
+        { icon: Download, label: "Download Center", href: "/dashboard/student/downloads" },
+      ]
+    },
+    {
+      label: "Internships",
+      icon: Briefcase,
+      roles: ["student"],
+      subItems: [
+        { icon: Briefcase, label: "Browse Internships", href: "/dashboard/student/internships" },
       ]
     },
     {

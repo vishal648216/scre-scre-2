@@ -24,6 +24,8 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { loadRazorpayScript } from "@/lib/loadRazorpay";
 import { stripHtml } from "@/lib/courseDisplay";
+import { SyllabusCoverageModal } from "@/components/SyllabusCoverageModal";
+import { Badge } from "@/components/ui/badge";
 
 interface CountryFeeRule {
   country_code: string;
@@ -125,6 +127,56 @@ const AdmissionPage = () => {
   };
 
   const [couponInfo, setCouponInfo] = useState<{ discount_type: string, discount_value: number } | null>(null);
+  const [syllabusModalOpen, setSyllabusModalOpen] = useState(false);
+  const [syllabusModalCourse, setSyllabusModalCourse] = useState<any>(null);
+  const [referralValidated, setReferralValidated] = useState<{
+    valid: boolean;
+    user_name?: string;
+    user_role?: string;
+    message?: string;
+  } | null>(null);
+  const [validatingReferral, setValidatingReferral] = useState(false);
+
+  const validateReferral = async (code: string) => {
+    const clean = code.trim();
+    if (!clean) {
+      setReferralValidated(null);
+      return;
+    }
+    setValidatingReferral(true);
+    try {
+      const res = await apiFetch("/api/referrals/validate", {
+        method: "POST",
+        body: JSON.stringify({ code: clean }),
+      });
+      const data = await res.json();
+      if (data.success && data.valid) {
+        setReferralValidated({
+          valid: true,
+          user_name: data.user_name,
+          user_role: data.user_role,
+          message: data.message,
+        });
+        toast.success(
+          t("Referral verified: {{name}} ({{role}})", {
+            name: data.user_name || "Partner",
+            role: data.user_role || "Referrer",
+          })
+        );
+      } else {
+        setReferralValidated({
+          valid: false,
+          message: data.message || t("Invalid referral code"),
+        });
+        toast.error(data.message || t("Invalid referral code"));
+      }
+    } catch {
+      setReferralValidated({ valid: false, message: t("Validation error") });
+      toast.error(t("Failed to validate referral code"));
+    } finally {
+      setValidatingReferral(false);
+    }
+  };
 
   const validateCoupon = async (code: string) => {
     if (!code) {
@@ -549,7 +601,7 @@ const AdmissionPage = () => {
                               <h3 className="text-xl font-bold mb-2">{t(course.course_name)}</h3>
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{stripHtml(t(course.description))}</p>
 
-                              <div className="mt-auto pt-4 border-t border-border/50">
+                              <div className="mt-auto pt-4 border-t border-border/50 space-y-2">
                                 <div className="flex justify-between items-center">
                                   <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t("Registration Fee")}</span>
@@ -558,6 +610,19 @@ const AdmissionPage = () => {
                                   <div className="flex items-center text-xs font-black text-primary uppercase tracking-wider group-hover:translate-x-1 transition-transform">
                                     {t("Select")} <ChevronRight className="ml-1 w-4 h-4" />
                                   </div>
+                                </div>
+                                <div className="pt-2 border-t border-border/30 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSyllabusModalCourse(course);
+                                      setSyllabusModalOpen(true);
+                                    }}
+                                    className="text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                                  >
+                                    <Sparkles className="w-3 h-3 text-primary" /> {t("Syllabus Coverage")}
+                                  </button>
                                 </div>
                               </div>
                             </CardContent>
@@ -967,35 +1032,79 @@ const AdmissionPage = () => {
 
                           {formData.center && (
                             <div className="space-y-3 animate-in fade-in duration-500">
-                              <Label className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-primary" />
-                                {t("Available Batches at Center")}
-                              </Label>
+                              <div className="flex items-center justify-between">
+                                <Label className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
+                                  <Clock className="w-4 h-4 text-primary" />
+                                  {t("Available Batches for This Program")}
+                                </Label>
+                                {formData.course && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const found = apiCourses.find((c) => c.id === formData.courseId || c.course_name === formData.course);
+                                      setSyllabusModalCourse(found || { course_name: formData.course });
+                                      setSyllabusModalOpen(true);
+                                    }}
+                                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
+                                  >
+                                    <Sparkles className="w-3 h-3" /> {t("Syllabus Coverage")}
+                                  </button>
+                                )}
+                              </div>
+
                               {centerBatches.length > 0 ? (
                                 <RadioGroup value={formData.batch} onValueChange={(val) => handleInputChange('batch', val)} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   {centerBatches.map((batch) => {
                                     const batchId = batch._id || batch.id;
-                                    const isFull = (batch.current_count || 0) >= (batch.max_capacity || 0);
+                                    const availableSeats = Math.max(0, (batch.max_capacity || 30) - (batch.current_count || 0));
+                                    const isFull = availableSeats <= 0;
+                                    const isSelected = formData.batch === batchId;
+
                                     return (
-                                      <div key={batchId} className={`flex items-center space-x-2 border rounded-xl p-4 transition-all ${isFull ? 'opacity-50 bg-muted cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5'}`}>
-                                        <RadioGroupItem value={batchId} id={batchId} disabled={isFull} />
+                                      <div
+                                        key={batchId}
+                                        onClick={() => !isFull && handleInputChange('batch', batchId)}
+                                        className={`flex items-start space-x-3 border p-4 transition-all rounded-none cursor-pointer ${
+                                          isFull
+                                            ? 'opacity-50 bg-muted/60 cursor-not-allowed border-dashed'
+                                            : isSelected
+                                            ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                                            : 'hover:border-primary/50 hover:bg-primary/5'
+                                        }`}
+                                      >
+                                        <RadioGroupItem value={batchId} id={batchId} disabled={isFull} className="mt-1" />
                                         <Label htmlFor={batchId} className="flex flex-col cursor-pointer w-full">
                                           <div className="flex items-center justify-between mb-1">
-                                            <span className="font-bold text-sm">{t(batch.name || batch.batch_name)}</span>
-                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${isFull ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                              {isFull ? t("FULL") : `${(batch.max_capacity || 0) - (batch.current_count || 0)} ${t("Seats")}`}
-                                            </span>
+                                            <span className="font-bold text-sm text-foreground">{t(batch.name || batch.batch_name)}</span>
+                                            <Badge
+                                              variant="outline"
+                                              className={`text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-wider ${
+                                                isFull
+                                                  ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                                                  : availableSeats < 10
+                                                  ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                                  : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                              }`}
+                                            >
+                                              {isFull ? t("FULL") : `${availableSeats} ${t("Seats Left")}`}
+                                            </Badge>
                                           </div>
-                                          <div className="text-[10px] text-muted-foreground">
-                                            {batch.time_slot || `${batch.start_time} - ${batch.end_time}`}
+                                          <div className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
+                                            <Clock className="w-3 h-3 text-primary" />
+                                            {batch.time_slot || `${batch.start_time || "10:00 AM"} - ${batch.end_time || "12:00 PM"}`}
                                           </div>
+                                          {batch.days && Array.isArray(batch.days) && batch.days.length > 0 && (
+                                            <div className="text-[10px] text-muted-foreground/80 mt-1 uppercase tracking-wider">
+                                              {batch.days.join(" • ")}
+                                            </div>
+                                          )}
                                         </Label>
                                       </div>
                                     );
                                   })}
                                 </RadioGroup>
                               ) : (
-                                <div className="p-6 border-2 border-dashed rounded-xl text-center bg-muted/20">
+                                <div className="p-6 border-2 border-dashed rounded-none text-center bg-muted/20">
                                   <p className="text-sm text-muted-foreground">{t("No active batches found for this center.")}</p>
                                 </div>
                               )}
@@ -1072,21 +1181,51 @@ const AdmissionPage = () => {
                           </div>
 
                           {/* Referral Code Box */}
-                          <div className="space-y-3 p-6 bg-muted/40 border border-border rounded-2xl">
+                          <div className="space-y-3 p-6 bg-muted/40 border border-border rounded-none">
                             <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2">
                               <Gift className="w-4 h-4 text-primary" />
                               {t("Referral Code (Student / Center / Staff)")}
                               <span className="text-[10px] text-muted-foreground font-normal">({t("Optional")})</span>
                             </Label>
-                            <Input
-                              type="text"
-                              value={formData.referral_code}
-                              onChange={(e) => handleInputChange('referral_code', e.target.value.toUpperCase())}
-                              className="h-12 bg-background border-border font-bold uppercase"
-                              placeholder="e.g. SCRE-REF101"
-                            />
+                            <div className="flex gap-2">
+                              <Input
+                                type="text"
+                                value={formData.referral_code}
+                                onChange={(e) => {
+                                  handleInputChange('referral_code', e.target.value.toUpperCase());
+                                  setReferralValidated(null);
+                                }}
+                                className="h-12 bg-background border-border font-bold uppercase rounded-none"
+                                placeholder="e.g. STU-1A2B3C, CEN-101, or STF-201"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={validatingReferral || !formData.referral_code.trim()}
+                                onClick={() => validateReferral(formData.referral_code)}
+                                className="h-12 px-6 border-border font-bold rounded-none shrink-0"
+                              >
+                                {validatingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Verify")}
+                              </Button>
+                            </div>
+
+                            {referralValidated?.valid && (
+                              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 rounded-none flex items-center gap-2 text-xs font-bold animate-in fade-in">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>
+                                  {t("Verified Referrer")}: <span className="underline">{referralValidated.user_name}</span> ({referralValidated.user_role || t("Partner")})
+                                </span>
+                              </div>
+                            )}
+
+                            {referralValidated && !referralValidated.valid && (
+                              <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                                {referralValidated.message || t("Invalid referral code")}
+                              </p>
+                            )}
+
                             <p className="text-[10px] text-muted-foreground">
-                              {t("If an enrolled student, center, or staff member referred you, enter their referral code.")}
+                              {t("If an enrolled student, center, or staff member referred you, verify their code here.")}
                             </p>
                           </div>
 
@@ -1302,6 +1441,13 @@ const AdmissionPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Syllabus Coverage Breakdown Modal */}
+        <SyllabusCoverageModal
+          isOpen={syllabusModalOpen}
+          onClose={() => setSyllabusModalOpen(false)}
+          course={syllabusModalCourse}
+        />
       </main>
 
       <Footer />

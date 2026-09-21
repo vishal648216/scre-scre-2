@@ -192,23 +192,30 @@ pub async fn handle_get_batches(
 
 #[derive(Debug, Deserialize)]
 pub struct PublicBatchFilter {
-    pub center_id: String,
-    pub session_id: Option<String>, // changed from course_id
+    pub center_id: Option<String>,
+    pub course_id: Option<String>,
+    pub session_id: Option<String>,
 }
 
 pub async fn public_get_batches(
     State(db): State<Database>,
     axum::extract::Query(filter): axum::extract::Query<PublicBatchFilter>,
 ) -> (StatusCode, Json<Vec<Batch>>) {
-    let center_oid = match ObjectId::parse_str(&filter.center_id) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(Vec::new())),
-    };
+    let mut query = doc! { "status": "active" };
 
-    let mut query = doc! { "center_id": center_oid, "status": "active" };
+    if let Some(cid_str) = filter.center_id {
+        if !cid_str.trim().is_empty() {
+            if let Ok(center_oid) = ObjectId::parse_str(&cid_str) {
+                query.insert("center_id", center_oid);
+            }
+        }
+    }
+
     if let Some(sid_str) = filter.session_id {
-        if let Ok(sid_oid) = ObjectId::parse_str(&sid_str) {
-            query.insert("session_id", sid_oid);
+        if !sid_str.trim().is_empty() {
+            if let Ok(sid_oid) = ObjectId::parse_str(&sid_str) {
+                query.insert("session_id", sid_oid);
+            }
         }
     }
 

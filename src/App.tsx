@@ -211,6 +211,8 @@ const AdminAssetsPage = lazy(() => import("./pages/AdminAssetsPage"));
 const AdminCertificateApprovalPage = lazy(() => import("./pages/AdminCertificateApprovalPage"));
 const LibraryManagementPage = lazy(() => import("./pages/LibraryManagementPage"));
 const StudentLibraryPage = lazy(() => import("./pages/StudentLibraryPage"));
+const StudentInternshipPortalPage = lazy(() => import("./pages/StudentInternshipPortalPage"));
+const AdminInternshipManagerPage = lazy(() => import("./pages/AdminInternshipManagerPage"));
 
 const queryClient = new QueryClient();
 
@@ -665,6 +667,11 @@ const AppRoutes = () => {
       <Route path="/dashboard/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><LibraryManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/admin/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><LibraryManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/center/library" element={<ProtectedRoute allowedRoles={["center"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/internships" element={<ProtectedRoute allowedRoles={["student"]}><StudentInternshipPortalPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/downloads" element={<ProtectedRoute allowedRoles={["student"]}><DownloadsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/internships/manage" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminInternshipManagerPage /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/internships" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminInternshipManagerPage /></ProtectedRoute>} />
+      <Route path="/dashboard/center/internships" element={<ProtectedRoute allowedRoles={["center"]}><AdminInternshipManagerPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/student/typing" element={<ProtectedRoute allowedRoles={["student"]}><TypingPracticePage /></ProtectedRoute>} />
       <Route path="/dashboard/student/typing/history" element={<ProtectedRoute allowedRoles={["student"]}><TypingHistoryPage /></ProtectedRoute>} />
