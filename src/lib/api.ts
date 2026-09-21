@@ -1,6 +1,10 @@
 function getApiBase(): string {
   let envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (envBase) {
+    // If it's an internal service name like "scre-backend" without dots, append .onrender.com
+    if (!envBase.includes(".")) {
+      envBase = `${envBase}.onrender.com`;
+    }
     if (!envBase.startsWith("http://") && !envBase.startsWith("https://")) {
       envBase = `https://${envBase}`;
     }
