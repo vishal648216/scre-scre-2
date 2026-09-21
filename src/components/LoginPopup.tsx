@@ -96,7 +96,6 @@ const LoginPopup = ({ isOpen, onClose }: LoginPopupProps) => {
       }
     } catch (error) {
       toast.error(t("An error occurred during login. Please check server status."));
-    }
     } finally {
       setLoading(false);
     }
