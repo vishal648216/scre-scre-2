@@ -63,3 +63,4 @@ pub mod translate;
 pub mod typing;
 pub mod upload;
 pub mod batch_student;
+pub mod live_class;

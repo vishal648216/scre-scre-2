@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { IndianRupee, Search, Download, Loader2, Calendar, FileText, User, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { IndianRupee, Search, Download, Loader2, Calendar, FileText, User, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+
+interface CountryFeeRule {
+  country_code: string;
+  country_name: string;
+  currency_code: string;
+  currency_symbol: string;
+  multiplier: number;
+}
 
 // Types
 type PaymentType = "one_time" | "installment" | "late_fee" | "other";
@@ -50,6 +58,19 @@ const StudentFeesPage = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [allFees, setAllFees] = useState<FeeRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [countryFeeRules, setCountryFeeRules] = useState<CountryFeeRule[]>([]);
+  const [selectedCurrency, setSelectedCurrency] = useState<CountryFeeRule>({
+    country_code: "IN",
+    country_name: "India",
+    currency_code: "INR",
+    currency_symbol: "₹",
+    multiplier: 1.0,
+  });
+
+  const formatFee = (amountInInr: number) => {
+    const converted = Math.round(amountInInr * selectedCurrency.multiplier);
+    return `${selectedCurrency.currency_symbol}${converted.toLocaleString()}`;
+  };
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,9 +123,10 @@ const StudentFeesPage = () => {
   // Fetch data
   const fetchData = async () => {
     try {
-      const [studentRes, feeRes] = await Promise.all([
+      const [studentRes, feeRes, countryFeesRes] = await Promise.all([
         apiFetch("/api/students"),
-        apiFetch("/api/fees")
+        apiFetch("/api/fees"),
+        apiFetch("/api/public/country-fees").catch(() => null)
       ]);
       
       const studentData = await studentRes.json();
@@ -121,6 +143,13 @@ const StudentFeesPage = () => {
         });
         setLocalRemarks(initialRemarks);
         setAllFees(feeData);
+      }
+
+      if (countryFeesRes && countryFeesRes.ok) {
+        const cData = await countryFeesRes.json().catch(() => null);
+        if (cData && Array.isArray(cData.rules) && cData.rules.length > 0) {
+          setCountryFeeRules(cData.rules);
+        }
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -295,6 +324,26 @@ const StudentFeesPage = () => {
             <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Student Fee Management</h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">Manage fee collections and track student payments efficiently.</p>
           </div>
+          {countryFeeRules.length > 0 && (
+            <div className="flex items-center gap-2 bg-card border border-border px-3 py-2 rounded-xl shadow-sm">
+              <Globe className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Currency:</span>
+              <select
+                value={selectedCurrency.country_code}
+                onChange={(e) => {
+                  const rule = countryFeeRules.find(r => r.country_code === e.target.value);
+                  if (rule) setSelectedCurrency(rule);
+                }}
+                className="bg-transparent text-xs font-bold text-foreground outline-none cursor-pointer"
+              >
+                {countryFeeRules.map(rule => (
+                  <option key={rule.country_code} value={rule.country_code} className="bg-popover text-foreground">
+                    {rule.country_name} ({rule.currency_symbol} {rule.currency_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -368,13 +417,13 @@ const StudentFeesPage = () => {
                           {student.course || "-"}
                         </td>
                         <td className="py-4 px-6 text-sm font-bold text-foreground">
-                          ₹{(student.totalFee ?? 0).toLocaleString()}
+                          {formatFee(student.totalFee ?? 0)}
                         </td>
                         <td className="py-4 px-6 text-sm font-bold text-emerald-600">
-                          ₹{(student.paidAmount ?? 0).toLocaleString()}
+                          {formatFee(student.paidAmount ?? 0)}
                         </td>
                         <td className="py-4 px-6 text-sm font-bold text-orange-600">
-                          ₹{(student.balanceDue ?? 0).toLocaleString()}
+                          {formatFee(student.balanceDue ?? 0)}
                         </td>
                         <td className="py-4 px-6 text-sm text-muted-foreground">
                       <input
@@ -505,15 +554,15 @@ const StudentFeesPage = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Fee</p>
-                    <p className="text-2xl font-black text-primary">₹{(selectedStudent.totalFee ?? 0).toLocaleString()}</p>
+                    <p className="text-2xl font-black text-primary">{formatFee(selectedStudent.totalFee ?? 0)}</p>
                   </div>
                   <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/30">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Paid Amount</p>
-                    <p className="text-2xl font-black text-emerald-600">₹{(selectedStudent.paidAmount ?? 0).toLocaleString()}</p>
+                    <p className="text-2xl font-black text-emerald-600">{formatFee(selectedStudent.paidAmount ?? 0)}</p>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 dark:border-orange-900/30">
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Balance Due</p>
-                    <p className="text-2xl font-black text-orange-600">₹{(selectedStudent.balanceDue ?? 0).toLocaleString()}</p>
+                    <p className="text-2xl font-black text-orange-600">{formatFee(selectedStudent.balanceDue ?? 0)}</p>
                   </div>
                 </div>
 

@@ -53,3 +53,4 @@ pub mod serde_helpers;
 pub mod intern_task;
 pub mod college;
 pub mod batch_student;
+pub mod live_class;

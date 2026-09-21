@@ -172,6 +172,7 @@ pub struct UpdateSystemSettingsRequest {
     pub razorpay_key_id: Option<String>,
     pub razorpay_key_secret: Option<String>, // New secret to set (if present, encrypt and save)
     pub razorpay_webhook_secret: Option<String>, // New secret to set (if present, encrypt and save)
+    pub country_fee_rules: Option<Vec<crate::models::system_settings::CountryFeeRule>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -329,6 +330,9 @@ pub async fn update_system_settings(
     settings.auto_certificate_generation_days = payload.auto_certificate_generation_days;
     settings.payment_gateway_enabled = payload.payment_gateway_enabled;
     settings.razorpay_key_id = payload.razorpay_key_id;
+    if let Some(rules) = payload.country_fee_rules {
+        settings.country_fee_rules = rules;
+    }
     
     // Update secrets only if provided
     if let Some(secret) = payload.razorpay_key_secret {
@@ -507,3 +511,37 @@ pub async fn upload_cursor(
         }),
     )
 }
+
+/// GET /api/public/country-fees — Returns country fee rules for currency display
+pub async fn get_country_fees(
+    State(db): State<Database>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let collection = db.collection::<crate::models::system_settings::SystemSettings>("system_settings");
+    let singleton_id = system_settings_singleton_id();
+    let settings = match collection.find_one(doc! {"_id": singleton_id}, None).await {
+        Ok(Some(s)) => s,
+        Ok(None) => match collection.find_one(None, None).await {
+            Ok(Some(s)) => s,
+            _ => crate::models::system_settings::SystemSettings::default(),
+        },
+        Err(_) => crate::models::system_settings::SystemSettings::default(),
+    };
+
+    // Always include India as base currency
+    let mut rules = settings.country_fee_rules.clone();
+    if rules.iter().all(|r| r.country_code != "IN") {
+        rules.insert(0, crate::models::system_settings::CountryFeeRule {
+            country_code: "IN".to_string(),
+            country_name: "India".to_string(),
+            currency_code: "INR".to_string(),
+            currency_symbol: "₹".to_string(),
+            multiplier: 1.0,
+        });
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "rules": rules
+    })))
+}
+

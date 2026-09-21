@@ -84,6 +84,24 @@ pub struct SystemSettings {
     pub razorpay_key_id: Option<String>,
     pub razorpay_key_secret_encrypted: Option<String>,
     pub razorpay_webhook_secret_encrypted: Option<String>,
+    /// Country-wise fee rules: each entry maps a country code to a currency + multiplier
+    #[serde(default)]
+    pub country_fee_rules: Vec<CountryFeeRule>,
+}
+
+/// Maps a country code (e.g. "IN", "US", "GB") to a currency display config.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CountryFeeRule {
+    /// ISO 3166-1 alpha-2 country code, e.g. "IN", "US"
+    pub country_code: String,
+    /// Country name for display, e.g. "India"
+    pub country_name: String,
+    /// Currency code, e.g. "INR", "USD"
+    pub currency_code: String,
+    /// Currency symbol, e.g. "₹", "$"
+    pub currency_symbol: String,
+    /// Fee multiplier relative to base INR fee, e.g. 1.0 for India, 0.012 for USD
+    pub multiplier: f64,
 }
 
 fn default_false() -> bool {
@@ -184,6 +202,7 @@ impl Default for SystemSettings {
             razorpay_key_id: None,
             razorpay_key_secret_encrypted: None,
             razorpay_webhook_secret_encrypted: None,
+            country_fee_rules: Vec::new(),
         }
     }
 }

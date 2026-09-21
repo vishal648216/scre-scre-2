@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { CheckCircle2, ChevronRight, ChevronLeft, Upload, Smartphone, MapPin, GraduationCap, Clock, Monitor, User, ShieldCheck, Users, Award, BookOpen, Gift, Sparkles, Search, Loader2, QrCode } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Upload, Smartphone, MapPin, GraduationCap, Clock, Monitor, User, ShieldCheck, Users, Award, BookOpen, Gift, Sparkles, Search, Loader2, QrCode, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,14 @@ import { apiFetch } from "@/lib/api";
 import { loadRazorpayScript } from "@/lib/loadRazorpay";
 import { stripHtml } from "@/lib/courseDisplay";
 
+interface CountryFeeRule {
+  country_code: string;
+  country_name: string;
+  currency_code: string;
+  currency_symbol: string;
+  multiplier: number;
+}
+
 const AdmissionPage = () => {
   const { t } = useTranslation();
   const steps = [
@@ -41,6 +49,14 @@ const AdmissionPage = () => {
   const [centerBatches, setCenterBatches] = useState<any[]>([]);
   const [apiCourses, setApiCourses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [countryFeeRules, setCountryFeeRules] = useState<CountryFeeRule[]>([]);
+  const [selectedCountryFee, setSelectedCountryFee] = useState<CountryFeeRule>({
+    country_code: "IN",
+    country_name: "India",
+    currency_code: "INR",
+    currency_symbol: "₹",
+    multiplier: 1.0,
+  });
   const [formData, setFormData] = useState({
     course: "",
     courseId: "",
@@ -175,8 +191,24 @@ const AdmissionPage = () => {
         console.error("Failed to fetch courses or categories");
       }
     };
+    const fetchCountryFees = async () => {
+      try {
+        const res = await apiFetch("/api/public/country-fees");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.rules && Array.isArray(data.rules) && data.rules.length > 0) {
+            setCountryFeeRules(data.rules);
+            const inRule = data.rules.find((r: CountryFeeRule) => r.country_code === "IN") || data.rules[0];
+            setSelectedCountryFee(inRule);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch country fee rules");
+      }
+    };
     fetchCenters();
     fetchCourses();
+    fetchCountryFees();
   }, []);
 
   useEffect(() => {
@@ -1075,13 +1107,52 @@ const AdmissionPage = () => {
                               </div>
                             </div>
 
+                            {countryFeeRules.length > 1 && (
+                              <div className="pt-3 border-t border-primary/10 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Globe className="w-4 h-4 text-primary" />
+                                  <span className="text-xs font-bold uppercase tracking-wider">{t("Select Currency")}</span>
+                                </div>
+                                <Select
+                                  value={selectedCountryFee.country_code}
+                                  onValueChange={(code) => {
+                                    const rule = countryFeeRules.find(r => r.country_code === code);
+                                    if (rule) setSelectedCountryFee(rule);
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[180px] h-9 text-xs font-bold bg-background rounded-lg">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {countryFeeRules.map(rule => (
+                                      <SelectItem key={rule.country_code} value={rule.country_code} className="text-xs font-bold">
+                                        {rule.country_name} ({rule.currency_symbol} {rule.currency_code})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
                             <div className="pt-4 border-t border-primary/10">
                               <div className="flex justify-between items-center">
                                 <div className="flex flex-col">
                                   <span className="text-base font-black uppercase tracking-tight">{t("Registration Fee")}</span>
                                   <span className="text-[10px] text-muted-foreground">{t("Non-refundable admission processing fee")}</span>
+                                  {selectedCountryFee.country_code !== "IN" && (
+                                    <span className="text-[10px] text-muted-foreground font-semibold">
+                                      {t("Base fee")}: ₹{formData.registrationFee.toLocaleString()} INR
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-2xl font-black text-primary">₹{formData.registrationFee}</span>
+                                <div className="text-right">
+                                  <span className="text-2xl font-black text-primary">
+                                    {selectedCountryFee.currency_symbol}{Math.round(formData.registrationFee * selectedCountryFee.multiplier).toLocaleString()}
+                                  </span>
+                                  <span className="block text-[10px] font-bold text-muted-foreground uppercase">
+                                    {selectedCountryFee.currency_code}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>

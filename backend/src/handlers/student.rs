@@ -1139,6 +1139,7 @@ pub async fn handle_create_student(
         referred_by_code: payload.referral_code_used.clone(),
         applied_coupon: payload.coupon_code.clone(),
         course_category: payload.course_category,
+        enrolled_courses: Some(vec![payload.course.clone()]),
         current_unit: payload.current_unit,
         other_doc_url: payload.other_doc_url,
         updated_at: Some(Utc::now()),
@@ -1297,7 +1298,7 @@ pub async fn public_register_student(
         .await
     {
         if existing_user.role == UserRole::Student {
-            let new_course = payload.course.clone().unwrap_or_default();
+            let new_course = payload.course.clone();
             let mut enrolled = existing_user.enrolled_courses.unwrap_or_default();
             if let Some(ref current_c) = existing_user.course {
                 if !enrolled.contains(current_c) {
@@ -1492,7 +1493,7 @@ pub async fn public_register_student(
         referred_by_code: payload.referral_code_used.clone(),
         applied_coupon: payload.coupon_code.clone(),
         course_category: payload.course_category,
-        enrolled_courses: payload.course.clone().map(|c| vec![c]),
+        enrolled_courses: Some(vec![payload.course.clone()]),
         current_unit: payload.current_unit,
         other_doc_url: payload.other_doc_url,
         updated_at: Some(Utc::now()),

@@ -355,6 +355,7 @@ pub async fn handle_create_intern(
         referred_by_code: payload.referred_by_code,
         applied_coupon: payload.applied_coupon,
         course_category: None,
+        enrolled_courses: None,
         current_unit: None,
         other_doc_url: None,
         updated_at: Some(Utc::now()),

@@ -358,6 +358,7 @@ pub async fn run_server() {
         .route("/api/system/settings", get(handlers::system_settings::get_system_settings).put(handlers::system_settings::update_system_settings))
         .route("/api/system/settings/auto-exam", put(handlers::system_settings::update_auto_exam_settings))
         .route("/api/system/settings/cursor", post(handlers::system_settings::upload_cursor))
+        .route("/api/public/country-fees", get(handlers::system_settings::get_country_fees))
         .route("/api/system/stats", get(handlers::system_stats::get_system_stats).put(handlers::system_stats::update_system_stats))
         .route("/api/subscriptions/plans", post(handlers::subscription::create_plan).get(handlers::subscription::get_plans))
         .route("/api/subscriptions/allot", post(handlers::subscription::allot_subscription))
@@ -458,6 +459,9 @@ pub async fn run_server() {
         .route("/api/exam-v2/marks/list", get(handlers::exam_engine_v2::v2_list_marks))
         .route("/api/exam-v2/marks/:id/approve", post(handlers::exam_engine_v2::v2_approve_marks))
         .route("/api/exam-v2/reappear/apply", post(handlers::exam_engine_v2::v2_apply_reappear))
+        // --- LIVE CLASSES ---
+        .route("/api/live-classes", get(handlers::live_class::list_live_classes).post(handlers::live_class::create_live_class))
+        .route("/api/live-classes/:id", put(handlers::live_class::update_live_class).delete(handlers::live_class::delete_live_class))
         .route("/api/attendance/bulk", post(handlers::attendance::bulk_upsert_attendance))
         .route("/api/certificates", post(handlers::certificate::issue_certificate).get(handlers::certificate::get_certificates))
         .route("/api/certificates/download-bulk", post(handlers::certificate::download_bulk_certificates))

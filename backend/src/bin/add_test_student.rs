@@ -77,6 +77,7 @@ async fn main() {
         referred_by_code: None,
         applied_coupon: None,
         course_category: Some("Computer".to_string()),
+        enrolled_courses: None,
         current_unit: None,
         other_doc_url: None,
         updated_at: Some(current_time),

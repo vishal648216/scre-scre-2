@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MousePointer, Upload, Save, Loader2, Trash2, Sparkles, Image as ImageIcon, IdCard, AlertTriangle, Calendar } from "lucide-react";
+import { MousePointer, Upload, Save, Loader2, Trash2, Sparkles, Image as ImageIcon, IdCard, AlertTriangle, Calendar, Globe, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PUBLIC_SYSTEM_SETTINGS_QUERY_KEY } from "@/lib/publicSystemSettings";
+
+export interface CountryFeeRule {
+  country_code: string;
+  country_name: string;
+  currency_code: string;
+  currency_symbol: string;
+  multiplier: number;
+}
 
 interface SystemSettings {
   cursor_url?: string;
@@ -42,6 +50,7 @@ interface SystemSettings {
   razorpay_key_id?: string;
   razorpay_key_secret?: string;
   razorpay_webhook_secret?: string;
+  country_fee_rules?: CountryFeeRule[];
 }
 
 const AdminSystemSettingsPage = () => {
@@ -56,6 +65,64 @@ const AdminSystemSettingsPage = () => {
   const isSuperAdmin = user?.role === "superadmin";
 
   const [form, setForm] = useState<Partial<SystemSettings>>({});
+  const [newRule, setNewRule] = useState<CountryFeeRule>({
+    country_code: "",
+    country_name: "",
+    currency_code: "",
+    currency_symbol: "",
+    multiplier: 1.0,
+  });
+
+  const handleAddCountryRule = () => {
+    if (!newRule.country_code.trim() || !newRule.currency_code.trim()) {
+      toast.error("Country code and currency code are required");
+      return;
+    }
+    const currentRules = form.country_fee_rules ? [...form.country_fee_rules] : [];
+    const upperCode = newRule.country_code.trim().toUpperCase();
+    if (currentRules.some(r => r.country_code === upperCode)) {
+      toast.error("A rule for this country code already exists");
+      return;
+    }
+    const updated = [
+      ...currentRules,
+      {
+        ...newRule,
+        country_code: upperCode,
+        currency_code: newRule.currency_code.trim().toUpperCase(),
+        multiplier: Number(newRule.multiplier) || 1.0,
+      }
+    ];
+    setForm({ ...form, country_fee_rules: updated });
+    setNewRule({
+      country_code: "",
+      country_name: "",
+      currency_code: "",
+      currency_symbol: "",
+      multiplier: 1.0,
+    });
+    toast.success("Country rule added. Click Save Settings to persist.");
+  };
+
+  const handleDeleteCountryRule = (code: string) => {
+    const currentRules = form.country_fee_rules ? [...form.country_fee_rules] : [];
+    const updated = currentRules.filter(r => r.country_code !== code);
+    setForm({ ...form, country_fee_rules: updated });
+  };
+
+  const handleAddDefaultPresets = () => {
+    const presets: CountryFeeRule[] = [
+      { country_code: "IN", country_name: "India", currency_code: "INR", currency_symbol: "₹", multiplier: 1.0 },
+      { country_code: "US", country_name: "United States", currency_code: "USD", currency_symbol: "$", multiplier: 0.012 },
+      { country_code: "GB", country_name: "United Kingdom", currency_code: "GBP", currency_symbol: "£", multiplier: 0.0095 },
+      { country_code: "EU", country_name: "Eurozone", currency_code: "EUR", currency_symbol: "€", multiplier: 0.011 },
+      { country_code: "AE", country_name: "United Arab Emirates", currency_code: "AED", currency_symbol: "AED", multiplier: 0.044 },
+      { country_code: "CA", country_name: "Canada", currency_code: "CAD", currency_symbol: "C$", multiplier: 0.016 },
+      { country_code: "AU", country_name: "Australia", currency_code: "AUD", currency_symbol: "A$", multiplier: 0.018 },
+    ];
+    setForm({ ...form, country_fee_rules: presets });
+    toast.success("Default currency presets loaded. Click Save Settings to persist.");
+  };
 
   const { data: settings, isLoading } = useQuery<SystemSettings>({
     queryKey: ['admin-system-settings'],
@@ -693,6 +760,146 @@ const AdminSystemSettingsPage = () => {
                       <button className="bg-secondary text-secondary-foreground px-6 py-3 rounded-none font-heading font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:opacity-90 transition-all flex items-center gap-2">
                         <Upload className="w-4 h-4" />
                         {form.popup_image_url ? "Change Image" : "Upload Image"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Country-Wise Fee & Currency Rules */}
+          <Card className="rounded-none border-border shadow-md overflow-hidden hover-popup-subtle">
+            <CardHeader className="bg-muted/30 border-b border-border py-4 flex flex-row items-center justify-between">
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                <Globe className="w-4 h-4 text-primary" />
+                Country-Wise Fee & Currency Rules
+              </CardTitle>
+              <button
+                type="button"
+                onClick={handleAddDefaultPresets}
+                className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all rounded-none"
+              >
+                Load Default Presets
+              </button>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <p className="text-xs text-muted-foreground">
+                Define currency conversion rules by country. For example, India uses ₹ (INR) at multiplier 1.0; United States uses $ (USD) at multiplier 0.012.
+              </p>
+
+              {/* Table of configured rules */}
+              <div className="border border-border overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-muted/50 border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <tr>
+                      <th className="py-3 px-4">Code</th>
+                      <th className="py-3 px-4">Country Name</th>
+                      <th className="py-3 px-4">Currency Code</th>
+                      <th className="py-3 px-4">Symbol</th>
+                      <th className="py-3 px-4">Multiplier (vs INR)</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-xs font-medium">
+                    {(form.country_fee_rules || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-muted-foreground text-xs">
+                          No country rules configured yet. Base fee (₹ INR) applies globally, or click "Load Default Presets" above.
+                        </td>
+                      </tr>
+                    ) : (
+                      (form.country_fee_rules || []).map((rule) => (
+                        <tr key={rule.country_code} className="hover:bg-muted/20">
+                          <td className="py-3 px-4 font-mono font-bold text-primary">{rule.country_code}</td>
+                          <td className="py-3 px-4 font-bold">{rule.country_name}</td>
+                          <td className="py-3 px-4 font-mono">{rule.currency_code}</td>
+                          <td className="py-3 px-4 font-bold text-lg">{rule.currency_symbol}</td>
+                          <td className="py-3 px-4 font-mono">{rule.multiplier}</td>
+                          <td className="py-3 px-4 text-right">
+                            {rule.country_code !== "IN" && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCountryRule(rule.country_code)}
+                                className="text-destructive hover:text-destructive/80 p-1"
+                                title="Remove rule"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add New Rule Form */}
+              <div className="p-4 bg-muted/20 border border-border space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-foreground flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5 text-primary" /> Add New Country Rule
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-muted-foreground">Country Code (e.g. US)</label>
+                    <input
+                      type="text"
+                      maxLength={3}
+                      value={newRule.country_code}
+                      onChange={(e) => setNewRule({ ...newRule, country_code: e.target.value.toUpperCase() })}
+                      placeholder="US"
+                      className="w-full border border-border bg-background px-3 py-2 text-xs font-bold font-mono uppercase"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-muted-foreground">Country Name</label>
+                    <input
+                      type="text"
+                      value={newRule.country_name}
+                      onChange={(e) => setNewRule({ ...newRule, country_name: e.target.value })}
+                      placeholder="United States"
+                      className="w-full border border-border bg-background px-3 py-2 text-xs font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-muted-foreground">Currency Code (e.g. USD)</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={newRule.currency_code}
+                      onChange={(e) => setNewRule({ ...newRule, currency_code: e.target.value.toUpperCase() })}
+                      placeholder="USD"
+                      className="w-full border border-border bg-background px-3 py-2 text-xs font-bold font-mono uppercase"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-muted-foreground">Symbol (e.g. $)</label>
+                    <input
+                      type="text"
+                      value={newRule.currency_symbol}
+                      onChange={(e) => setNewRule({ ...newRule, currency_symbol: e.target.value })}
+                      placeholder="$"
+                      className="w-full border border-border bg-background px-3 py-2 text-xs font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold uppercase text-muted-foreground">Multiplier (vs INR)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={newRule.multiplier}
+                        onChange={(e) => setNewRule({ ...newRule, multiplier: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.012"
+                        className="w-full border border-border bg-background px-3 py-2 text-xs font-mono font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCountryRule}
+                        className="bg-primary text-primary-foreground px-4 py-2 text-[10px] font-black uppercase tracking-wider hover:opacity-90 transition-all shrink-0 rounded-none"
+                      >
+                        Add
                       </button>
                     </div>
                   </div>

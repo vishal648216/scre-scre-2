@@ -142,6 +142,7 @@ pub async fn handle_create_staff(
         referred_by_code: None,
         applied_coupon: None,
         course_category: None,
+        enrolled_courses: None,
         current_unit: None,
         other_doc_url: None,
         updated_at: None,

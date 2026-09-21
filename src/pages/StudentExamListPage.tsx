@@ -59,6 +59,7 @@ interface Blueprint {
   duration_minutes: number;
   total_marks: number;
   max_attempts: number;
+  exam_mode?: string; // "Computer Based Test (CBT)" | "Offline" | etc.
 }
 
 interface EligibleMock {
@@ -478,15 +479,22 @@ function LegacyStudentExamListPage() {
                           <FileText className="w-6 h-6 text-primary" />
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className={cn(
-                            "text-[9px] font-black uppercase tracking-widest px-2 py-1 border",
-                            paper.status === "Generated" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                              paper.status === "InProgress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                                paper.status === "Submitted" ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
-                                  "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                          )}>
-                            {paper.status === "Generated" ? t("Available") : t(paper.status)}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {blueprint?.exam_mode && blueprint.exam_mode.toLowerCase().includes("offline") && (
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 border bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                📝 Offline Exam
+                              </span>
+                            )}
+                            <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest px-2 py-1 border",
+                              paper.status === "Generated" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                                paper.status === "InProgress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                                  paper.status === "Submitted" ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
+                                    "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                            )}>
+                              {paper.status === "Generated" ? t("Available") : t(paper.status)}
+                            </span>
+                          </div>
                           {isTooEarly && startWindow && !isNaN(startWindow.getTime()) && (
                             <span className="text-[8px] font-bold text-amber-600 uppercase">
                               {t("Starts")} {formatISTDateTime(paper.start_window)}
@@ -495,6 +503,7 @@ function LegacyStudentExamListPage() {
                           {isTooLate && <span className="text-[8px] font-bold text-destructive uppercase">{t("Expired")}</span>}
                         </div>
                       </div>
+
 
                       <div className="space-y-2">
                         <h3 className="text-xl font-black uppercase tracking-tight text-foreground">

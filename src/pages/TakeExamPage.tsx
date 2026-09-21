@@ -64,6 +64,7 @@ interface Blueprint {
   duration_minutes: number;
   instructions?: string;
   total_marks: number;
+  exam_mode?: string; // "Computer Based Test (CBT)" | "Offline" | "Online" | etc.
 }
 
 function LegacyTakeExamPage() {
@@ -387,6 +388,56 @@ function LegacyTakeExamPage() {
             <p className="text-6xl font-black tracking-tighter tabular-nums">{formatTime(secondsUntilStart)}</p>
           </div>
           <p className="text-xs font-medium text-muted-foreground italic">Your exam will automatically start when the timer hits zero. Please stay on this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- OFFLINE EXAM BLOCK ---
+  // If the exam mode is Offline, students cannot take it online
+  const isOfflineExam = blueprint?.exam_mode &&
+    blueprint.exam_mode.toLowerCase().includes("offline");
+
+  if (isOfflineExam && paper?.status === "Generated") {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="max-w-lg w-full text-center space-y-8">
+          <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto border-4 border-amber-500">
+            <FileText className="w-12 h-12 text-amber-500" />
+          </div>
+          <div className="space-y-3">
+            <h1 className="text-3xl font-black uppercase tracking-tight">Offline Exam</h1>
+            <p className="text-muted-foreground font-medium text-lg">
+              {blueprint?.name}
+            </p>
+          </div>
+          <div className="bg-amber-500/10 border-2 border-amber-500/40 p-6 text-left space-y-3">
+            <p className="font-black uppercase text-xs tracking-widest text-amber-600">Important Notice</p>
+            <p className="font-semibold text-foreground">
+              This exam is conducted in <strong>Offline Mode</strong>. You cannot attempt it online through this portal.
+            </p>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Report to your center on the scheduled exam date</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Bring your Hall Ticket / Admit Card</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Your center will provide the exam paper</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" /> Marks will be entered by your center after evaluation</li>
+            </ul>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => navigate("/dashboard/student/exams")}
+              variant="outline"
+              className="flex-1 h-12 rounded-none font-black uppercase tracking-widest text-xs"
+            >
+              Back to Exams
+            </Button>
+            <Button
+              onClick={() => window.print()}
+              className="flex-1 h-12 rounded-none font-black uppercase tracking-widest text-xs"
+            >
+              Print Hall Ticket
+            </Button>
+          </div>
         </div>
       </div>
     );
