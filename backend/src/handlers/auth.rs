@@ -663,8 +663,9 @@ pub async fn create_admin(
         }
     }
 
+    let hashed_password = hash(&payload.password, DEFAULT_COST).expect("hashing failed");
     let role_oid = payload.role_id.as_deref().and_then(|s| ObjectId::parse_str(s).ok());
-    let perms_doc = payload.permissions.as_ref().and_then(|p| mongodb::bson::to_document(p).ok());
+    let perms: Option<crate::models::staff::SubAdminPermissions> = payload.permissions.and_then(|p| serde_json::from_value(p).ok());
 
     let new_admin = User {
         id: None,
@@ -675,7 +676,7 @@ pub async fn create_admin(
         parent_id: None,
         sub_admin_role_id: role_oid,
         sub_admin_role_name: payload.role_name,
-        sub_admin_permissions: perms_doc,
+        sub_admin_permissions: perms,
         full_name: payload.full_name,
         first_name: None,
         middle_name: None,
@@ -755,7 +756,7 @@ pub async fn create_admin(
                     success: true,
                     message: "Admin created successfully".to_string(),
                     token: None,
-                    role: Some("admin".to_string()),
+                    role: Some(UserRole::Admin),
                     username: None,
                     photo_url: None,
                     user_id: id_str.clone(),
