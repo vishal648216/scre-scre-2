@@ -38,7 +38,18 @@ const LoginPopup = ({ isOpen, onClose }: LoginPopupProps) => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      if (response.status === 502 || response.status === 503) {
+        toast.error(t("Backend server is starting up on Render, please wait 30 seconds and retry"));
+        return;
+      }
+
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (err) {
+        toast.error(t("Unable to connect to backend server"));
+        return;
+      }
 
       if (response.ok && data.token) {
         // Direct login if token is provided
@@ -81,10 +92,11 @@ const LoginPopup = ({ isOpen, onClose }: LoginPopupProps) => {
           toast.error(t("Failed to send verification code"));
         }
       } else {
-        toast.error(t(sanitizeAuthErrorMessage(data?.message)));
+        toast.error(t(sanitizeAuthErrorMessage(data?.message) || "Invalid username or password"));
       }
     } catch (error) {
-      toast.error(t("An error occurred during login"));
+      toast.error(t("An error occurred during login. Please check server status."));
+    }
     } finally {
       setLoading(false);
     }

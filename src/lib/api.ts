@@ -1,11 +1,28 @@
-/** Optional absolute API origin for production when the SPA is served without `/api` → backend proxy (set in `.env`). */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+function getApiBase(): string {
+  let envBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (envBase) {
+    if (!envBase.startsWith("http://") && !envBase.startsWith("https://")) {
+      envBase = `https://${envBase}`;
+    }
+    return envBase.replace(/\/$/, "");
+  }
+  // Automatic fallback on Render: if frontend is scre-frontend.onrender.com, target scre-backend.onrender.com
+  if (typeof window !== "undefined" && window.location.hostname.includes("onrender.com")) {
+    const backendHost = window.location.hostname.replace("scre-frontend", "scre-backend");
+    return `https://${backendHost}`;
+  }
+  return "";
+}
+
+const API_BASE = getApiBase();
 
 /** Build full URL for API calls (honours `VITE_API_BASE_URL` when Apache/nginx does not proxy `/api`). */
 export function apiUrl(path: string): string {
-  if (!path.startsWith("/")) return `${API_BASE}/${path}`;
-  return `${API_BASE}${path}`;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  if (!API_BASE) return cleanPath;
+  return `${API_BASE}${cleanPath}`;
 }
+
 
 export async function apiFetch(path: string, init?: RequestInit) {
   const token = sessionStorage.getItem("token");
