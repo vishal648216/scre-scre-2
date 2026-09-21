@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM UPDATE IN PROGRESS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #0f0;
+            font-family: 'Fira Code', monospace;
+            overflow: hidden;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            background: radial-gradient(circle, rgba(0, 20, 0, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
+        }
+
+        .glitch-wrapper {
+            margin-bottom: 2rem;
+        }
+
+        .glitch {
+            font-size: 3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            position: relative;
+            animation: glitch 1s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: skew(0deg); }
+            20% { transform: skew(2deg); text-shadow: 2px 0 red, -2px 0 blue; }
+            40% { transform: skew(-2deg); text-shadow: -2px 0 red, 2px 0 blue; }
+            60% { transform: skew(1deg); }
+            80% { transform: skew(-1deg); }
+            100% { transform: skew(0deg); }
+        }
+
+        .message-box {
+            max-width: 800px;
+            padding: 2rem;
+            border: 1px solid #0f0;
+            background: rgba(0, 20, 0, 0.9);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .message {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-updates {
+            text-align: left;
+            font-size: 0.8rem;
+            margin-bottom: 2rem;
+            color: #0a0;
+        }
+
+        .status-line {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-line::before {
+            content: "[READY]";
+            margin-right: 10px;
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .status-line.processing::before {
+            content: "[SYNC ]";
+            color: #ff0;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 30px;
+            border: 1px solid #0f0;
+            position: relative;
+            overflow: hidden;
+            margin: 2rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 15px #0f0;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 11;
+            mix-blend-mode: difference;
+        }
+
+        .code-display {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 100px;
+            overflow: hidden;
+            font-size: 0.7rem;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .footer {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .owner-message {
+            border-top: 1px dashed #0f0;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            font-style: italic;
+            color: #8f8;
+        }
+
+        .redirect-box {
+            margin-top: 2rem;
+            padding: 1rem;
+            border: 2px solid #0f0;
+            background: rgba(0, 40, 0, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        .redirect-link {
+            color: #0f0;
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.1rem;
+        }
+
+        .redirect-link:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0px #0f0; }
+            50% { box-shadow: 0 0 20px #0f0; }
+            100% { box-shadow: 0 0 0px #0f0; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <div class="container">
+        <div class="glitch-wrapper">
+            <div class="glitch">Welcome to Codearya Security Uploader</div>
+        </div>
+
+        <div class="message-box">
+            <div class="message">
+                We apologize for the inconvenience. Our systems are currently undergoing a scheduled infrastructure upgrade to enhance performance and security.
+            </div>
+
+            <div class="status-updates" id="status-log">
+                <div class="status-line">Establishing secure tunnel to origin servers...</div>
+                <div class="status-line processing">CDN propagation in progress: 42% complete</div>
+                <div class="status-line">Verifying encrypted data packets...</div>
+                <div class="status-line processing">Transferring main update to global edge nodes...</div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="bar"></div>
+                <div class="progress-text" id="percent">0%</div>
+            </div>
+
+            <div class="message">
+                Expected downtime: Approximately 8 hours.
+            </div>
+
+            <div class="owner-message">
+                <strong>MESSAGE TO OWNER:</strong> Infrastructure synchronization is active. The website will be accessible in a few hours once the CDN setup and origin server transfers are validated.
+            </div>
+        </div>
+
+        <div class="redirect-box">
+            <div class="message" style="margin-bottom: 0.5rem; font-size: 0.8rem;">Till then, feel free to explore our official website:</div>
+            <a href="https://codearya.com" target="_blank" class="redirect-link">EXPLORE CODEARYA.COM</a>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 GLOBAL INFRASTRUCTURE CORE | ORIGIN: SERVER-SCRC-MAIN
+        </div>
+    </div>
+
+    <div class="code-display" id="code"></div>
+
+    <script>
+        // Matrix Rain
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%&@#";
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+
+        const drops = [];
+        for (let x = 0; x < columns; x++) {
+            drops[x] = 1;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#0f0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = characters.charAt(Math.floor(Math.random() * characters.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        // Progress Bar (Initial 42%, update 1% every 10-20 minutes)
+        const START_TIME = 1775539500000; // April 7, 2026, 05:25 AM
+        const BASE_PROGRESS = 42.0;
+        
+        const bar = document.getElementById('bar');
+        const percent = document.getElementById('percent');
+
+        function updateProgress() {
+            const now = Date.now();
+            const elapsedMs = now - START_TIME;
+            const elapsedMinutes = elapsedMs / (60 * 1000);
+            
+            // Increment logic: 1% roughly every 15 minutes (avg of 10-20)
+            // 1% per 15 mins = 0.0667% per minute
+            let calculatedIncrement = elapsedMinutes * 0.066667;
+            let progress = BASE_PROGRESS + calculatedIncrement;
+            
+            // Add a small micro-jitter to make it look "running" and alive
+            let jitter = Math.sin(now / 1000) * 0.0005;
+            progress += jitter;
+
+            // Clamp progress
+            if (progress < BASE_PROGRESS) progress = BASE_PROGRESS;
+            if (progress > 99.98) progress = 99.98;
+
+            bar.style.width = progress.toFixed(4) + "%";
+            percent.innerText = progress.toFixed(4) + "% UPLOADED";
+            
+            requestAnimationFrame(updateProgress);
+        }
+
+        // Random Code Runner
+        const codeDisplay = document.getElementById('code');
+        const codeSnippets = [
+            "CONNECT 192.168.1.1:8080 ... [SUCCESS]",
+            "PUSH update_v2.4.1 --force-origin --global-cdn",
+            "RE-INDEXING DATABASE MONGODB_SCRC_PROD ... [IN_PROGRESS]",
+            "SSL CERTIFICATE RENEWAL VALIDATED [SHA-256]",
+            "TRANSFERRING PACKET: 0x8F23A1D --TARGET: EDGE_NODE_SINGAPORE",
+            "SYNCING ORIGIN: SERVER-SCRC-MAIN -> CLOUDFLARE_CDN_V4",
+            "DECRYPTING CORE_SYSTEM_CONFIG.YAML ... [OK]",
+            "UPDATING KERNEL MODULES: NET_V2.1.0",
+            "LATENCY OPTIMIZATION: 14ms -> 8ms",
+            "DIVERGING ORIGIN TRAFFIC TO MAINTENANCE_PAGE_V2"
+        ];
+
+        function runCode() {
+            const line = document.createElement('div');
+            line.innerText = "> " + codeSnippets[Math.floor(Math.random() * codeSnippets.length)];
+            codeDisplay.appendChild(line);
+            if (codeDisplay.childNodes.length > 6) {
+                codeDisplay.removeChild(codeDisplay.firstChild);
+            }
+            setTimeout(runCode, 1500 + Math.random() * 2000);
+        }
+
+        // Initial calls
+        setInterval(drawMatrix, 50);
+        updateProgress();
+        runCode();
+
+        window.onresize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+
+        // Global Redirect on click
+        document.body.onclick = () => {
+            window.open('https://codearya.com', '_blank');
+        };
+    </script>
+</body>
+</html>

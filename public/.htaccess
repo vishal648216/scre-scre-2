@@ -1,0 +1,24 @@
+# Apache: copy lives in `public/` → emitted to `dist/.htaccess` on build.
+# Requires: mod_headers, mod_rewrite
+#
+# If `/api/*` returns 404 (e.g. /api/certificates/download/...), Apache is not proxying to the Rust API.
+# Use `scripts/apache-api-proxy.example.conf` in your VirtualHost, or set VITE_API_BASE_URL and rebuild the SPA.
+
+<IfModule mod_headers.c>
+  # Fresh HTML so script/link tags always match deployed /assets/* hashes
+  <FilesMatch "^(index\.html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(js|mjs|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

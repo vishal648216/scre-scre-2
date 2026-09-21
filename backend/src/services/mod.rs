@@ -1,0 +1,12 @@
+pub mod email_service;
+pub mod id_card_auto;
+pub mod pdf_generator;
+pub mod translation_service;
+pub mod bulk_translate;
+pub mod content_extractor;
+pub mod exam_engine_v2;
+pub mod exam_eligibility;
+pub mod marks_calculation;
+pub mod marksheet_automation;
+pub mod certificate_automation;
+pub mod exam_auto_scheduler;
