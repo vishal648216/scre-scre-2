@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 interface NewsDetail {
   id: string;
@@ -87,9 +88,16 @@ const NewsDetailsPage = () => {
       {news.featured_image && (
         <div className="border-b border-border">
           <img
-            src={news.featured_image}
+            src={normalizeAssetUrl(news.featured_image) || "/images/icc-1.jpg"}
             alt={news.title}
             className="w-full max-h-[420px] object-cover"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.fallbackApplied) {
+                target.dataset.fallbackApplied = "true";
+                target.src = "/images/icc-1.jpg";
+              }
+            }}
           />
         </div>
       )}

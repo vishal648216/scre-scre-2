@@ -11,6 +11,9 @@ import {
 import { useHomeData } from "@/hooks/useHomeData";
 import { useTranslation } from "react-i18next";
 
+import { normalizeAssetUrl } from "@/lib/utils";
+import { getHeroSlideFallbackImage } from "@/lib/imageFallback";
+
 const defaultSlides = [
   {
     tag: "🎓 Admissions Open 2026",
@@ -19,7 +22,7 @@ const defaultSlides = [
     desc: "Empowering students with industry-ready skills through certified computer courses and vocational training programs.",
     image: "/images/icc-1.jpg",
     mobile_image: null,
-    link: "#",
+    link: "#courses",
     buttonText: "Apply Now — It's Free",
     viewCoursesButtonText: "View Courses",
     viewCoursesButtonLink: "#courses",
@@ -29,6 +32,40 @@ const defaultSlides = [
     stat3Text: "5000+ Alumni",
     stat4Text: "100% Placement"
   },
+  {
+    tag: "🌟 Government Recognized Programs",
+    heading: "Advance Your Career with",
+    highlight: "Professional Certifications",
+    desc: "Get certified in in-demand technologies, accounting, and creative skill courses designed for real world success.",
+    image: "/images/icc-2.jpg",
+    mobile_image: null,
+    link: "#courses",
+    buttonText: "Explore Courses",
+    viewCoursesButtonText: "Student Zone",
+    viewCoursesButtonLink: "/student/login",
+    showStats: false,
+    stat1Text: "ISO Certified",
+    stat2Text: "Govt. Approved",
+    stat3Text: "Flexible Batches",
+    stat4Text: "Expert Mentors"
+  },
+  {
+    tag: "🚀 Practical Vocational Training",
+    heading: "Launch Your Dream with",
+    highlight: "Industry Recognized Training",
+    desc: "Hands-on project training, interactive learning modules, and nationally accredited diplomas.",
+    image: "/images/icc-3.jpg",
+    mobile_image: null,
+    link: "#courses",
+    buttonText: "Join Today",
+    viewCoursesButtonText: "View Courses",
+    viewCoursesButtonLink: "#courses",
+    showStats: false,
+    stat1Text: "Hands-on Lab",
+    stat2Text: "Live Projects",
+    stat3Text: "Free Material",
+    stat4Text: "Job Assistance"
+  }
 ];
 
 const HeroSection = () => {
@@ -46,23 +83,28 @@ const HeroSection = () => {
   const slides = safeCmsArray
     .filter((item: any) => item.category === "slider" && item.active)
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-    .map((item: any) => ({
-      tag: item.tag ? t(item.tag) : "",
-      heading: item.title ? t(item.title) : "",
-      highlight: item.highlight ? t(item.highlight) : "",
-      desc: item.description ? t(item.description) : "",
-      image: item.image_url,
-      mobile_image: item.mobile_image_url,
-      link: item.link,
-      button_text: item.button_text ? t(item.button_text) : "",
-      view_courses_button_text: item.view_courses_button_text ? t(item.view_courses_button_text) : "",
-      view_courses_button_link: item.view_courses_button_link || "#courses",
-      show_stats: item.show_stats === true || item.show_stats === "true",
-      stat1_text: item.stat1_text ? t(item.stat1_text) : "",
-      stat2_text: item.stat2_text ? t(item.stat2_text) : "",
-      stat3_text: item.stat3_text ? t(item.stat3_text) : "",
-      stat4_text: item.stat4_text ? t(item.stat4_text) : ""
-    }));
+    .map((item: any, idx: number) => {
+      const fallbackSlide = defaultSlides[idx % defaultSlides.length];
+      const normalizedImg = normalizeAssetUrl(item.image_url);
+      return {
+        tag: (item.tag ? t(item.tag) : "").trim() || t(fallbackSlide.tag),
+        heading: (item.title ? t(item.title) : "").trim() || t(fallbackSlide.heading),
+        highlight: (item.highlight ? t(item.highlight) : "").trim() || t(fallbackSlide.highlight),
+        desc: (item.description ? t(item.description) : "").trim() || t(fallbackSlide.desc),
+        image: normalizedImg || fallbackSlide.image,
+        mobile_image: item.mobile_image_url ? normalizeAssetUrl(item.mobile_image_url) : null,
+        link: item.link || fallbackSlide.link,
+        buttonText: (item.button_text ? t(item.button_text) : "").trim() || t(fallbackSlide.buttonText),
+        viewCoursesButtonText: (item.view_courses_button_text ? t(item.view_courses_button_text) : "").trim() || t(fallbackSlide.viewCoursesButtonText),
+        viewCoursesButtonLink: item.view_courses_button_link || fallbackSlide.viewCoursesButtonLink,
+        showStats: item.show_stats === true || item.show_stats === "true" || fallbackSlide.showStats,
+        stat1Text: item.stat1_text ? t(item.stat1_text) : t(fallbackSlide.stat1Text),
+        stat2Text: item.stat2_text ? t(item.stat2_text) : t(fallbackSlide.stat2Text),
+        stat3Text: item.stat3_text ? t(item.stat3_text) : t(fallbackSlide.stat3Text),
+        stat4Text: item.stat4_text ? t(item.stat4_text) : t(fallbackSlide.stat4Text),
+        fallbackImage: fallbackSlide.image,
+      };
+    });
 
   const activeSlides = slides.length > 0 ? slides : defaultSlides.map(s => ({
     ...s,
@@ -77,7 +119,8 @@ const HeroSection = () => {
     stat1Text: t(s.stat1Text),
     stat2Text: t(s.stat2Text),
     stat3Text: t(s.stat3Text),
-    stat4Text: t(s.stat4Text)
+    stat4Text: t(s.stat4Text),
+    fallbackImage: s.image,
   }));
 
   useEffect(() => {
@@ -242,17 +285,31 @@ const HeroSection = () => {
               {/* Mobile Image (if provided, shown on small screens) */}
               {s.mobile_image && (
                 <img
-                  src={s.mobile_image}
+                  src={normalizeAssetUrl(s.mobile_image) || getHeroSlideFallbackImage(i)}
                   alt="Slide Mobile"
-                  className="absolute inset-0 w-full h-full object-fill sm:hidden"
+                  className="absolute inset-0 w-full h-full object-cover sm:hidden"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.fallbackApplied) {
+                      target.dataset.fallbackApplied = "true";
+                      target.src = getHeroSlideFallbackImage(i);
+                    }
+                  }}
                   onLoad={() => handleImageLoad(`main-mobile-${i}`)}
                 />
               )}
               {/* Desktop Image (shown on md and above, fallback for mobile if no mobile image) */}
               <img
-                src={s.image}
+                src={normalizeAssetUrl(s.image) || getHeroSlideFallbackImage(i)}
                 alt="Slide"
-                className={`absolute inset-0 w-full h-full object-fill ${s.mobile_image ? "hidden sm:block" : ""}`}
+                className={`absolute inset-0 w-full h-full object-cover ${s.mobile_image ? "hidden sm:block" : ""}`}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.fallbackApplied) {
+                    target.dataset.fallbackApplied = "true";
+                    target.src = getHeroSlideFallbackImage(i);
+                  }
+                }}
                 onLoad={() => handleImageLoad(`main-desktop-${i}`)}
               />
             </div>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Loader2, Clock, Award, Code, Info, IndianRupee } from "lucide-react";
 import { courseTypeLabel, formatCourseDuration, stripHtml } from "@/lib/courseDisplay";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 interface CourseDetails {
   _id: string;
@@ -73,9 +74,16 @@ const StudentCoursesPage = () => {
                 <div className="relative h-48 overflow-hidden">
                   {course.image_url ? (
                     <img
-                      src={course.image_url}
+                      src={normalizeAssetUrl(course.image_url) || "/images/icc-1.jpg"}
                       alt={course.course_name}
                       className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.fallbackApplied) {
+                          target.dataset.fallbackApplied = "true";
+                          target.src = "/images/icc-1.jpg";
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full bg-muted/40 flex items-center justify-center">

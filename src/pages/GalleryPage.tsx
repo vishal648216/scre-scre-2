@@ -22,7 +22,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, normalizeAssetUrl } from "@/lib/utils";
 
 const MasonryItem = ({
   children,
@@ -120,9 +120,16 @@ const GalleryCard = ({
             initial={{ scale: 1.1 }}
             whileHover={{ scale: 1.3 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            src={img.src}
+            src={normalizeAssetUrl(img.src) || "/images/icc-1.jpg"}
             alt={img.title || "Gallery Image"}
-            className="absolute inset-0 w-full h-full object-fill"
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              if (!target.dataset.fallbackApplied) {
+                target.dataset.fallbackApplied = "true";
+                target.src = "/images/icc-1.jpg";
+              }
+            }}
           />
         )}
 
@@ -227,7 +234,7 @@ const GalleryPage = () => {
             const videoUrl = item.video_url || item.content;
             const isVideo = item.designation === "video" || (videoUrl && (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") || videoUrl.startsWith("/uploads/")));
             return {
-              src: item.image_url,
+              src: normalizeAssetUrl(item.image_url) || "/images/icc-1.jpg",
               category: (item.link || item.category || "general").toLowerCase(),
               title: item.title,
               type: isVideo ? "video" : "image",
@@ -535,9 +542,16 @@ const GalleryPage = () => {
                   ) : (
                     <div className="relative group">
                       <img
-                        src={filtered[selectedIdx].src}
+                        src={normalizeAssetUrl(filtered[selectedIdx].src) || "/images/icc-1.jpg"}
                         alt={filtered[selectedIdx].title}
                         className="w-full max-h-[75vh] object-contain rounded-3xl shadow-[0_50px_120px_rgba(0,0,0,0.85)] border border-white/10"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = "true";
+                            target.src = "/images/icc-1.jpg";
+                          }
+                        }}
                       />
                       <div className="absolute bottom-6 right-6 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button

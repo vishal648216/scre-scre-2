@@ -6,6 +6,7 @@ import { stripHtml } from "@/lib/courseDisplay";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "./ui/skeleton";
 import { normalizeAssetUrl } from "@/lib/utils";
+import { getCategoryFallbackImage } from "@/lib/imageFallback";
 
 /** Static fallback for Admission / inquiry forms when the API returns nothing. */
 export const courses = [
@@ -304,9 +305,16 @@ const CoursesSection = () => {
                       className="relative h-44 overflow-hidden block"
                     >
                       <img
-                        src={normalizeAssetUrl(resolveCategoryImage(category)) || CATEGORY_FALLBACK_IMAGE}
+                        src={normalizeAssetUrl(resolveCategoryImage(category)) || getCategoryFallbackImage(category.name)}
                         alt={category.name}
                         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = "true";
+                            target.src = getCategoryFallbackImage(category.name);
+                          }
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
                     </Link>

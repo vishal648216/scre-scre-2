@@ -12,13 +12,22 @@ import {
 import { Hero, Section } from "@/components/franchise/FranchiseComponents";
 import { useTranslation } from "react-i18next";
 
+import { normalizeAssetUrl } from '@/lib/utils';
+
 const PartnerCard = ({ name, type, image }: { name: string, type: string, image?: string }) => {
   const { t } = useTranslation();
   return (
     <div className="p-8 bg-white border border-slate-100 rounded-[32px] shadow-sm hover:shadow-xl hover:border-primary/20 transition-all group flex flex-col items-center text-center">
       <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/5 transition-colors overflow-hidden p-4">
         {image ? (
-          <img src={image} alt={name} className="w-full h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500" />
+          <img
+            src={normalizeAssetUrl(image)}
+            alt={name}
+            className="w-full h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
         ) : (
           <Handshake className="w-10 h-10 text-slate-300 group-hover:text-primary transition-colors" />
         )}

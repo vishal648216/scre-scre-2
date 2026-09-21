@@ -4,6 +4,7 @@ import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom"
 import { Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import Header from "@/components/Header";
 import { apiFetch } from "@/lib/api";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 interface BlogDetail {
   title: string;
@@ -105,7 +106,18 @@ const BlogDetailsPage = () => {
           <div className="lg:col-span-2 space-y-8">
             <h1 className="font-heading font-extrabold text-3xl md:text-4xl text-foreground tracking-tight">{blog.title}</h1>
             {blog.featured_image && (
-              <img src={blog.featured_image} alt={blog.title} className="w-full h-96 object-fill border border-border rounded-2xl" />
+              <img
+                src={normalizeAssetUrl(blog.featured_image) || "/images/icc-2.jpg"}
+                alt={blog.title}
+                className="w-full h-96 object-cover border border-border rounded-2xl"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.fallbackApplied) {
+                    target.dataset.fallbackApplied = "true";
+                    target.src = "/images/icc-2.jpg";
+                  }
+                }}
+              />
             )}
             <Card className="rounded-3xl border-border overflow-hidden">
               <CardContent
@@ -129,9 +141,16 @@ const BlogDetailsPage = () => {
                     <Card className="rounded-2xl border-border overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all">
                       {r.featured_image && (
                         <img
-                          src={r.featured_image}
+                          src={normalizeAssetUrl(r.featured_image) || "/images/icc-2.jpg"}
                           alt={r.title}
                           className="w-full h-36 object-cover border-b border-border"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallbackApplied) {
+                              target.dataset.fallbackApplied = "true";
+                              target.src = "/images/icc-2.jpg";
+                            }
+                          }}
                         />
                       )}
                       <CardContent className="p-4 space-y-2">

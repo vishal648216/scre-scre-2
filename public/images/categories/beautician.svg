@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350" width="100%" height="100%">
+  <defs>
+    <linearGradient id="beautyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#831843" />
+      <stop offset="50%" stop-color="#9d174d" />
+      <stop offset="100%" stop-color="#c026d3" />
+    </linearGradient>
+    <radialGradient id="sparkleGlow" cx="50%" cy="45%" r="45%">
+      <stop offset="0%" stop-color="#fbcfe8" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#fbcfe8" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="600" height="350" fill="url(#beautyGrad)" />
+  <circle cx="300" cy="140" r="130" fill="url(#sparkleGlow)" />
+  <!-- Beauty & Salon Icon -->
+  <g fill="#ffffff" opacity="0.9" transform="translate(300, 140) scale(1.15)">
+    <!-- Mirror Oval -->
+    <ellipse cx="0" cy="-10" rx="42" ry="52" fill="#fdf2f8" stroke="#f472b6" stroke-width="4" />
+    <ellipse cx="0" cy="-10" rx="36" ry="46" fill="#fce7f3" />
+    <!-- Reflection highlight -->
+    <path d="M-15 -35 A 25 35 0 0 1 18 -15" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none" />
+    <!-- Mirror Handle -->
+    <path d="M-6 42 L-4 82 C-4 86 4 86 4 82 L6 42 Z" fill="#ec4899" stroke="#be185d" stroke-width="2" />
+    <!-- Sparkles -->
+    <path d="M-45 -40 L-42 -30 L-32 -27 L-42 -24 L-45 -14 L-48 -24 L-58 -27 L-48 -30 Z" fill="#fef08a" />
+    <path d="M45 -35 L47 -28 L54 -26 L47 -24 L45 -17 L43 -24 L36 -26 L43 -28 Z" fill="#fef08a" />
+  </g>
+  <!-- Category Tag -->
+  <g transform="translate(300, 280)">
+    <rect x="-105" y="-16" width="210" height="32" rx="16" fill="#500724" fill-opacity="0.75" stroke="#f472b6" stroke-width="1.5" />
+    <text x="0" y="5" text-anchor="middle" fill="#fdf2f8" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">BEAUTY &amp; WELLNESS</text>
+  </g>
+</svg>

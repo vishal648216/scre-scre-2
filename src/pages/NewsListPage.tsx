@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Loader2, Search, Filter } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeAssetUrl } from "@/lib/utils";
 import Header from "@/components/Header";
 import { useTranslation } from "react-i18next";
 import { useDynamicTranslations } from "@/hooks/useDynamicTranslations";
@@ -151,9 +151,16 @@ const NewsListPage = () => {
                   <Card className="rounded-none border-border hover:border-primary/40 transition-all">
                     {n.featured_image && (
                       <img
-                        src={n.featured_image}
+                        src={normalizeAssetUrl(n.featured_image) || "/images/icc-1.jpg"}
                         alt={n.title}
                         className="w-full h-40 object-cover border-b border-border"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = "true";
+                            target.src = "/images/icc-1.jpg";
+                          }
+                        }}
                       />
                     )}
                     <CardHeader className="py-4">

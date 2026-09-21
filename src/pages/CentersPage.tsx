@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Link } from "react-router-dom";
 import { MapPin, Search, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 type PublicCenter = {
   _id?: string;
@@ -86,7 +87,18 @@ const CentersPage = () => {
                 {filtered.slice(0, visibleCount).map((c) => (
                 <div key={c.code} className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
                   {c.branding_media?.banner_image_url ? (
-                    <img src={c.branding_media.banner_image_url} alt={c.name} className="w-full h-36 object-cover" />
+                    <img
+                      src={normalizeAssetUrl(c.branding_media.banner_image_url) || "/images/icc-1.jpg"}
+                      alt={c.name}
+                      className="w-full h-36 object-cover"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.fallbackApplied) {
+                          target.dataset.fallbackApplied = "true";
+                          target.src = "/images/icc-1.jpg";
+                        }
+                      }}
+                    />
                   ) : (
                     <div className="w-full h-36 bg-muted/40" />
                   )}

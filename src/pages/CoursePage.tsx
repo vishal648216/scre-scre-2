@@ -252,6 +252,13 @@ const CoursePage = () => {
               src={normalizeAssetUrl(course.image_url) || "/images/icc-1.jpg"}
               alt={course.course_name}
               className="w-full h-[300px] object-cover"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallbackApplied) {
+                  target.dataset.fallbackApplied = "true";
+                  target.src = "/images/icc-1.jpg";
+                }
+              }}
             />
           </div>
         </div>

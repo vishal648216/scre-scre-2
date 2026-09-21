@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Loader2, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeAssetUrl } from "@/lib/utils";
 import Header from "@/components/Header";
 import { useTranslation } from "react-i18next";
 import { useDynamicTranslations } from "@/hooks/useDynamicTranslations";
@@ -191,10 +191,16 @@ const BlogListPage = () => {
                     {blogs[0].featured_image && (
                       <div className="relative">
                         <img
-                          src={blogs[0].featured_image}
+                          src={normalizeAssetUrl(blogs[0].featured_image) || "/images/icc-2.jpg"}
                           alt={blogs[0].title}
-                          className="w-full h-72 bg-muted"
-                          style={{ objectFit: "fill" }}
+                          className="w-full h-72 bg-muted object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallbackApplied) {
+                              target.dataset.fallbackApplied = "true";
+                              target.src = "/images/icc-2.jpg";
+                            }
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/70 via-primary/10 to-transparent" />
                         <div className="absolute bottom-5 left-5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.22em]">
@@ -248,10 +254,16 @@ const BlogListPage = () => {
                             {b.featured_image && (
                               <div className="w-full h-52 flex items-center justify-center bg-muted border-b md:border-b-0 md:border-r border-border">
                                 <img
-                                  src={b.featured_image}
+                                  src={normalizeAssetUrl(b.featured_image) || "/images/icc-2.jpg"}
                                   alt={b.title}
-                                  className="w-full h-full"
-                                  style={{ objectFit: "fill" }}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (!target.dataset.fallbackApplied) {
+                                      target.dataset.fallbackApplied = "true";
+                                      target.src = "/images/icc-2.jpg";
+                                    }
+                                  }}
                                 />
                               </div>
                             )}
