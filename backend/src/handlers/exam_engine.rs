@@ -308,6 +308,8 @@ pub async fn create_blueprint(
         },
         created_at: Some(mongodb::bson::DateTime::now()),
         default_blueprint: payload.default_blueprint,
+        exam_pattern: payload.exam_pattern,
+        term_number: payload.term_number,
     };
 
     match coll.insert_one(blueprint, None).await {
@@ -585,6 +587,8 @@ pub async fn update_blueprint(
         created_by: old_bp.created_by,
         created_at: old_bp.created_at,
         default_blueprint: payload.default_blueprint,
+        exam_pattern: payload.exam_pattern,
+        term_number: payload.term_number,
     };
 
     // Freeze already-allotted papers against future blueprint edits by backfilling the

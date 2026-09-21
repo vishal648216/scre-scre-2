@@ -36,6 +36,7 @@ import {
   FileSpreadsheet,
   BookOpen,
   Library,
+  BookMarked,
   ClipboardList,
   Keyboard,
   Languages,
@@ -354,6 +355,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: LinkIcon, label: "Subject Mapping", href: "/dashboard/academics/mapping" },
         { icon: Calendar, label: "Sessions", href: "/dashboard/academics/sessions" },
         { icon: FileText, label: "Study Material", href: "/dashboard/academics/study-material" },
+        { icon: BookMarked, label: "Digital Library", href: "/dashboard/admin/library" },
         { icon: ClipboardList, label: "Exam Blueprints", href: "/dashboard/academics/blueprints" },
         { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
         ...(USE_EXAM_V2_VAL
@@ -388,6 +390,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Calendar, label: "Batches", href: "/dashboard/center/batches" },
         { icon: Calendar, label: "Sessions", href: "/dashboard/courses/sessions" },
         { icon: FileText, label: "Course Materials", href: "/dashboard/courses/materials" },
+        { icon: BookMarked, label: "Digital Library", href: "/dashboard/center/library" },
       ]
     },
     {
@@ -490,6 +493,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Library, label: "My Subjects", href: "/dashboard/student/subjects" },
         { icon: FileText, label: "Course Materials", href: "/dashboard/student/materials" },
         { icon: Video, label: "Recorded Classes", href: "/dashboard/student/recorded" },
+        { icon: BookMarked, label: "Digital Library", href: "/dashboard/student/library" },
       ]
     },
     {

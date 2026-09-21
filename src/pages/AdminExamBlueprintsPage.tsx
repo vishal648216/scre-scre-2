@@ -116,6 +116,8 @@ interface ExamBlueprint {
   sections?: any[];
   created_at?: string;
   default_blueprint?: boolean;
+  exam_pattern?: string;
+  term_number?: number;
 }
 
 const AdminExamBlueprintsPage = () => {
@@ -142,6 +144,8 @@ const AdminExamBlueprintsPage = () => {
     total_duration_minutes: 0,
     max_attempts: 1,
     instructions: "",
+    exam_pattern: "Semester",
+    term_number: 1,
   });
 
   const [sameInstructionsForAll, setSameInstructionsForAll] = useState(false);
@@ -771,10 +775,15 @@ const AdminExamBlueprintsPage = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between pt-2 border-t border-border gap-2">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap items-center">
                       <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-1">
                         {formatDuration(bp.total_duration_minutes || 0)}
                       </span>
+                      {bp.exam_pattern && (
+                        <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-500/10 border border-indigo-500/20 px-2 py-1">
+                          {bp.exam_pattern} {bp.term_number ? `• Term ${bp.term_number}` : ''}
+                        </span>
+                      )}
                       {bp.created_at && (
                         <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted px-2 py-1">
                           {formatDate(bp.created_at)}
@@ -952,6 +961,43 @@ const AdminExamBlueprintsPage = () => {
                       <Label className="text-[10px] font-black uppercase tracking-widest">
                         Set as Default Blueprint
                       </Label>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest">
+                        Exam Pattern
+                      </Label>
+                      <Select
+                        value={form.exam_pattern || "Semester"}
+                        onValueChange={(val) => setForm({ ...form, exam_pattern: val })}
+                      >
+                        <SelectTrigger className="rounded-none border-border font-bold">
+                          <SelectValue placeholder="Select Pattern" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Semester">Semester Pattern</SelectItem>
+                          <SelectItem value="Yearly">Yearly Pattern</SelectItem>
+                          <SelectItem value="Monthly">Monthly Pattern</SelectItem>
+                          <SelectItem value="Weekly">Weekly Pattern</SelectItem>
+                          <SelectItem value="Days">Custom Days Pattern</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest">
+                        Term / Sequence No.
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.term_number ?? 1}
+                        onChange={(e) =>
+                          setForm({ ...form, term_number: parseInt(e.target.value) || 1 })
+                        }
+                        className="rounded-none border-border font-bold"
+                        placeholder="e.g. 1 (for Sem 1 or Year 1)"
+                      />
                     </div>
                   </div>
                 </div>

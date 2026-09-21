@@ -60,6 +60,8 @@ interface Blueprint {
   total_marks: number;
   max_attempts: number;
   exam_mode?: string; // "Computer Based Test (CBT)" | "Offline" | etc.
+  exam_pattern?: string;
+  term_number?: number;
 }
 
 interface EligibleMock {
@@ -480,6 +482,11 @@ function LegacyStudentExamListPage() {
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {blueprint?.exam_pattern && (
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 border bg-indigo-500/10 text-indigo-600 border-indigo-500/20">
+                                {blueprint.exam_pattern} {blueprint.term_number ? `• Term ${blueprint.term_number}` : ''}
+                              </span>
+                            )}
                             {blueprint?.exam_mode && blueprint.exam_mode.toLowerCase().includes("offline") && (
                               <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 border bg-amber-500/10 text-amber-600 border-amber-500/20">
                                 📝 Offline Exam

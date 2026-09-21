@@ -138,6 +138,10 @@ pub struct ExamBlueprint {
     pub created_at: Option<DateTime>,
     #[serde(default)]
     pub default_blueprint: bool,
+    #[serde(default)]
+    pub exam_pattern: Option<String>, // "Semester", "Yearly", "Monthly", "Weekly", "Days"
+    #[serde(default)]
+    pub term_number: Option<i32>,    // e.g. 1, 2, 3, 4
 }
 
 // Payload for API requests (uses String for IDs)
@@ -181,6 +185,10 @@ pub struct ExamBlueprintPayload {
     pub subjects: Vec<SubjectBlueprintConfigPayload>,
     #[serde(default)]
     pub default_blueprint: bool,
+    #[serde(default)]
+    pub exam_pattern: Option<String>,
+    #[serde(default)]
+    pub term_number: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

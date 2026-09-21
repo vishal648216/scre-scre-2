@@ -3,13 +3,15 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Keyboard, Play, RefreshCw, Loader2, Languages, Clock, Zap, CheckCircle2, AlertTriangle, 
-  BookOpen, Target, History, Award, RotateCcw, Pause, ChevronRight, XCircle, Trophy, BarChart3, Users 
+  BookOpen, Target, History, Award, RotateCcw, Pause, ChevronRight, XCircle, Trophy, BarChart3, Users,
+  FileText, Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TypingAnalyticsDashboard from "@/components/TypingAnalyticsDashboard";
 import TypingLeaderboard from "@/components/TypingLeaderboard";
+import { TypingScorecardCertificateModal } from "@/components/TypingScorecardCertificateModal";
 
 import { useTranslation } from "react-i18next";
 
@@ -49,6 +51,10 @@ const TypingPracticePage = () => {
   // Anti-cheat / Detailed tracking
   const [mistakes, setMistakes] = useState(0);
   const [extraChars, setExtraChars] = useState(0);
+  
+  // Scorecard / Certificate Modal
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [docModalMode, setDocModalMode] = useState<"scorecard" | "certificate">("scorecard");
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -445,7 +451,31 @@ const TypingPracticePage = () => {
                                 </div>
                               )}
     
-                              <div className="flex flex-col md:flex-row gap-4 pt-4">
+                              {/* Scorecard & Certificate Action Buttons */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                <button
+                                  onClick={() => {
+                                    setDocModalMode("scorecard");
+                                    setDocModalOpen(true);
+                                  }}
+                                  className="py-3 px-4 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Download Scorecard PDF</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setDocModalMode("certificate");
+                                    setDocModalOpen(true);
+                                  }}
+                                  className="py-3 px-4 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                                >
+                                  <Award className="w-4 h-4" />
+                                  <span>Official Certificate</span>
+                                </button>
+                              </div>
+
+                              <div className="flex flex-col md:flex-row gap-4 pt-2">
                                 <button 
                                   onClick={resetPractice}
                                   disabled={submitting}
@@ -468,6 +498,24 @@ const TypingPracticePage = () => {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Scorecard & Certificate Modal */}
+                {selectedLesson && (
+                  <TypingScorecardCertificateModal
+                    isOpen={docModalOpen}
+                    onClose={() => setDocModalOpen(false)}
+                    mode={docModalMode}
+                    stats={{
+                      wpm: stats.wpm,
+                      accuracy: stats.accuracy,
+                      time: stats.time,
+                      mistakes: mistakes,
+                      totalChars: userInput.length,
+                    }}
+                    lessonTitle={selectedLesson.title}
+                    languageName={languages.find((l) => l._id === selectedLanguage)?.name || "English"}
+                  />
+                )}
               </div>
             )}
           </TabsContent>
