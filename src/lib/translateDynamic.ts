@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api";
+
 export const SUPPORTED_CONTENT_LANGUAGES = ["en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "ml", "pa", "or", "as", "ur", "sa", "fr", "es", "de", "ar", "zh"] as const;
 
 const memoryCache = new Map<string, string>();
@@ -30,12 +32,8 @@ export async function preloadDynamicTranslations(texts: string[], language: stri
   );
 
   const tasks = uniqueTexts.map(async (text) => {
-    const res = await fetch("/api/translate/bulk", {
+    const res = await apiFetch("/api/translate/bulk", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept-Language": lang,
-      },
       body: JSON.stringify({ text, languages: [lang] }),
     });
     if (!res.ok) return;
@@ -63,12 +61,8 @@ export async function translateDynamic(text: string, language: string): Promise<
   if (pending) return pending;
 
   const promise = (async () => {
-    const res = await fetch("/api/translate", {
+    const res = await apiFetch("/api/translate", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept-Language": lang,
-      },
       body: JSON.stringify({ text: cleanText, target: lang }),
     });
 

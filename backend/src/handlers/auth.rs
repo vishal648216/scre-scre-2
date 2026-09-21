@@ -556,12 +556,12 @@ pub async fn create_admin(
     claims: Claims,
     Json(payload): Json<CreateAdminRequest>,
 ) -> (StatusCode, Json<LoginResponse>) {
-    if claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::SuperAdmin && claims.role != UserRole::Admin {
         return (
             StatusCode::FORBIDDEN,
             Json(LoginResponse {
                 success: false,
-                message: "Unauthorized".to_string(),
+                message: "Unauthorized: Administrative privileges required".to_string(),
                 token: None,
                 role: None,
                 username: None,

@@ -1291,30 +1291,52 @@ pub async fn public_register_student(
 
     let user_collection = db.collection::<User>("users");
 
-    // Check if email already exists
-    match user_collection
+    // Check if email already exists - if existing student, enroll in additional course under single login
+    if let Ok(Some(existing_user)) = user_collection
         .find_one(doc! { "email": &payload.email }, None)
         .await
     {
-        Ok(Some(_)) => {
+        if existing_user.role == UserRole::Student {
+            let new_course = payload.course.clone().unwrap_or_default();
+            let mut enrolled = existing_user.enrolled_courses.unwrap_or_default();
+            if let Some(ref current_c) = existing_user.course {
+                if !enrolled.contains(current_c) {
+                    enrolled.push(current_c.clone());
+                }
+            }
+            if !new_course.is_empty() && !enrolled.contains(&new_course) {
+                enrolled.push(new_course.clone());
+            }
+
+            let _ = user_collection.update_one(
+                doc! { "_id": existing_user.id },
+                doc! {
+                    "$set": {
+                        "enrolled_courses": enrolled,
+                        "updated_at": Utc::now()
+                    }
+                },
+                None,
+            ).await;
+
+            return (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "message": "Enrolled in course successfully under your existing student profile!",
+                    "is_existing_student": true,
+                    "id": existing_user.id.map(|o| o.to_hex())
+                })),
+            );
+        } else {
             return (
                 StatusCode::CONFLICT,
                 Json(serde_json::json!({
                     "success": false,
-                    "message": "Email already registered"
+                    "message": "An account with this email already exists"
                 })),
             );
         }
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "success": false,
-                    "message": format!("Database error: {}", e)
-                })),
-            );
-        }
-        Ok(None) => {}
     }
 
     // Default username is email
@@ -1470,6 +1492,7 @@ pub async fn public_register_student(
         referred_by_code: payload.referral_code_used.clone(),
         applied_coupon: payload.coupon_code.clone(),
         course_category: payload.course_category,
+        enrolled_courses: payload.course.clone().map(|c| vec![c]),
         current_unit: payload.current_unit,
         other_doc_url: payload.other_doc_url,
         updated_at: Some(Utc::now()),
@@ -3177,5 +3200,107 @@ pub async fn generate_student_id_card_pdf(
             format!("PDF generation failed: {}", last_error),
         )
             .into_response()
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct VerifyStudentQuery {
+    pub query: String,
+    pub dob: Option<String>,
+}
+
+pub async fn public_verify_student(
+    State(db): State<Database>,
+    axum::extract::Query(params): axum::extract::Query<VerifyStudentQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let clean = params.query.trim().to_string();
+    if clean.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "message": "Please enter an Enrollment Number, Roll Number, or Username"
+            })),
+        );
+    }
+
+    let upper = clean.to_uppercase();
+    let lower = clean.to_lowercase();
+
+    let mut or_clauses = vec![
+        doc! { "enrollment_number": &clean },
+        doc! { "enrollment_number": &upper },
+        doc! { "enrollment_number": &lower },
+        doc! { "roll_number": &clean },
+        doc! { "roll_number": &upper },
+        doc! { "roll_number": &lower },
+        doc! { "username": &clean },
+        doc! { "username": &lower },
+    ];
+
+    let mut filter = doc! {
+        "role": "student",
+        "$or": or_clauses
+    };
+
+    if let Some(dob_str) = params.dob {
+        let clean_dob = dob_str.trim();
+        if !clean_dob.is_empty() {
+            filter.insert("dob", clean_dob);
+        }
+    }
+
+    let users_coll = db.collection::<User>("users");
+    match users_coll.find_one(filter, None).await {
+        Ok(Some(student)) => {
+            let mut center_name = None;
+            if let Some(parent_oid) = student.parent_id {
+                let centers_coll = db.collection::<mongodb::bson::Document>("centers");
+                if let Ok(Some(center_doc)) = centers_coll.find_one(doc! { "$or": [{ "_id": parent_oid }, { "user_id": parent_oid }] }, None).await {
+                    center_name = center_doc.get_str("name").ok().map(|s| s.to_string());
+                }
+            }
+
+            let full_name = student.full_name.clone().unwrap_or_else(|| {
+                let f = student.first_name.clone().unwrap_or_default();
+                let l = student.last_name.clone().unwrap_or_default();
+                let joined = format!("{} {}", f, l).trim().to_string();
+                if joined.is_empty() { student.username.clone() } else { joined }
+            });
+
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "student": {
+                        "full_name": full_name,
+                        "enrollment_number": student.enrollment_number,
+                        "roll_number": student.roll_number,
+                        "father_name": student.father_name,
+                        "course": student.course,
+                        "center_name": center_name,
+                        "photo_url": student.photo_url,
+                        "dob": student.dob,
+                        "registration_date": student.registration_date,
+                        "created_at": student.created_at,
+                        "status": "Verified Active Student"
+                    }
+                })),
+            )
+        },
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "success": false,
+                "message": "No student record found matching the provided credentials"
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "message": format!("Database error: {}", e)
+            })),
+        ),
     }
 }

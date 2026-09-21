@@ -1198,9 +1198,47 @@ pub async fn get_allotted_courses(
                     "eligibility": course.eligibility,
                     "status": course.status,
                     "category": category_name,
-                    "allotted_at": user.created_at,
                 }));
             }
+
+            // Also include all additional enrolled courses for single-login multi-course support
+            if let Some(ref enrolled_list) = user.enrolled_courses {
+                for c_name in enrolled_list {
+                    let already_included = items.iter().any(|it| {
+                        it.get("course_name").and_then(|v| v.as_str()) == Some(c_name.as_str())
+                    });
+                    if !already_included {
+                        if let Ok(Some(add_c)) = course_coll.find_one(doc! { "course_name": c_name }, None).await {
+                            items.push(serde_json::json!({
+                                "_id": add_c.id.map(|id| id.to_hex()).unwrap_or_default(),
+                                "name": add_c.course_name,
+                                "course_name": add_c.course_name,
+                                "code": add_c.course_code,
+                                "course_code": add_c.course_code,
+                                "short_code": add_c.short_code,
+                                "course_type": add_c.course_type,
+                                "description": add_c.description,
+                                "image_url": add_c.image_url,
+                                "og_image_url": add_c.og_image_url,
+                                "duration_months": add_c.duration_months,
+                                "duration_value": add_c.duration_value,
+                                "duration_unit": add_c.duration_unit,
+                                "total_fees": add_c.fees.unwrap_or(0),
+                                "fees": add_c.fees.unwrap_or(0),
+                                "registration_fee": add_c.registration_fee.unwrap_or(0),
+                                "admission_fee": add_c.registration_fee.unwrap_or(0),
+                                "exam_fees_applicable": add_c.exam_fees_applicable,
+                                "exam_fee_amount": add_c.exam_fee_amount.unwrap_or(0),
+                                "eligibility": add_c.eligibility,
+                                "status": add_c.status,
+                                "category": "Enrolled Course",
+                                "allotted_at": user.created_at,
+                            }));
+                        }
+                    }
+                }
+            }
+
             return (StatusCode::OK, Json(serde_json::json!(items)));
         }
         return (StatusCode::OK, Json(serde_json::json!([])));

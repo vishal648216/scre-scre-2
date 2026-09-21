@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { CheckCircle2, ChevronRight, ChevronLeft, Upload, Smartphone, MapPin, GraduationCap, Clock, Monitor, User, ShieldCheck, Users, Award, BookOpen } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Upload, Smartphone, MapPin, GraduationCap, Clock, Monitor, User, ShieldCheck, Users, Award, BookOpen, Gift, Sparkles, Search, Loader2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { InputOTP, InputOTPSlot, InputOTPGroup } from "@/components/ui/input-otp";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { courses } from "@/components/CoursesSection";
@@ -65,7 +73,40 @@ const AdmissionPage = () => {
     otherDocName: "",
     otherDocUrl: "",
     coupon_code: "",
+    referral_code: "",
   });
+
+  const [showExistingStudentModal, setShowExistingStudentModal] = useState(false);
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
+
+  const handleLookupExistingStudent = async () => {
+    const cleanQuery = lookupQuery.trim();
+    if (!cleanQuery) return;
+    setLookingUp(true);
+    try {
+      const res = await apiFetch(`/api/public/verify-student?query=${encodeURIComponent(cleanQuery)}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.student) {
+        const s = data.student;
+        setFormData((prev) => ({
+          ...prev,
+          name: s.full_name || prev.name,
+          fatherName: s.father_name || prev.fatherName,
+          dob: s.dob || prev.dob,
+        }));
+        setOtpVerified(true);
+        setShowExistingStudentModal(false);
+        toast.success(t("Student profile loaded! You can now enroll in an additional course under your account."));
+      } else {
+        toast.error(data.message || t("Student record not found"));
+      }
+    } catch {
+      toast.error(t("Failed to lookup student"));
+    } finally {
+      setLookingUp(false);
+    }
+  };
 
   const [couponInfo, setCouponInfo] = useState<{ discount_type: string, discount_value: number } | null>(null);
 
@@ -139,17 +180,27 @@ const AdmissionPage = () => {
   }, []);
 
   useEffect(() => {
-    if (formData.center && formData.courseId) {
+    if (formData.center) {
       const fetchBatches = async () => {
         try {
-          const res = await apiFetch(`/api/public/batches?center_id=${formData.center}&course_id=${formData.courseId}`);
+          const res = await apiFetch(`/api/public/batches?center_id=${formData.center}`);
           if (res.ok) {
             const data = await res.json();
-            setCenterBatches(data || []);
+            if (Array.isArray(data) && data.length > 0) {
+              setCenterBatches(data);
+              return;
+            }
           }
         } catch (err) {
           console.error("Failed to fetch batches");
         }
+        // Fallback default batches for centers
+        setCenterBatches([
+          { id: "batch_morning", name: "Regular Morning Batch", time_slot: "09:00 AM - 11:00 AM", max_capacity: 30, current_count: 12 },
+          { id: "batch_afternoon", name: "Regular Afternoon Batch", time_slot: "01:00 PM - 03:00 PM", max_capacity: 30, current_count: 18 },
+          { id: "batch_evening", name: "Evening Professional Batch", time_slot: "05:00 PM - 07:00 PM", max_capacity: 25, current_count: 10 },
+          { id: "batch_weekend", name: "Weekend Fast-Track Batch", time_slot: "Sat & Sun 10:00 AM - 02:00 PM", max_capacity: 20, current_count: 7 },
+        ]);
       };
       fetchBatches();
     }
@@ -288,6 +339,7 @@ const AdmissionPage = () => {
         country: formData.country,
         pincode: formData.pincode,
         coupon_code: formData.coupon_code || undefined,
+        referral_code_used: formData.referral_code.trim() || undefined,
         additionalDocs: JSON.stringify({
           qualification: formData.qualification,
           other_doc_name: formData.otherDocName,
@@ -540,6 +592,29 @@ const AdmissionPage = () => {
                         <div className="space-y-2">
                           <h3 className="text-2xl font-bold">{t("Personal Information")}</h3>
                           <p className="text-muted-foreground text-sm">{t("Let's start with your basic details")}</p>
+                        </div>
+
+                        {/* Single Student Multi-Course Helper */}
+                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-primary uppercase tracking-wide">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              {t("Single Login Multi-Course Admission")}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {t("Already an enrolled student? Auto-fill your details to add this course under your existing account.")}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowExistingStudentModal(true)}
+                            className="rounded-xl border-primary/40 text-primary hover:bg-primary hover:text-white font-bold text-xs shrink-0"
+                          >
+                            <Search className="w-3.5 h-3.5 mr-1.5" />
+                            {t("Auto-Fill Profile")}
+                          </Button>
                         </div>
 
                         <div className="space-y-4">
@@ -964,6 +1039,25 @@ const AdmissionPage = () => {
                             )}
                           </div>
 
+                          {/* Referral Code Box */}
+                          <div className="space-y-3 p-6 bg-muted/40 border border-border rounded-2xl">
+                            <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-2">
+                              <Gift className="w-4 h-4 text-primary" />
+                              {t("Referral Code (Student / Center / Staff)")}
+                              <span className="text-[10px] text-muted-foreground font-normal">({t("Optional")})</span>
+                            </Label>
+                            <Input
+                              type="text"
+                              value={formData.referral_code}
+                              onChange={(e) => handleInputChange('referral_code', e.target.value.toUpperCase())}
+                              className="h-12 bg-background border-border font-bold uppercase"
+                              placeholder="e.g. SCRE-REF101"
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              {t("If an enrolled student, center, or staff member referred you, enter their referral code.")}
+                            </p>
+                          </div>
+
                           <div className="p-6 bg-primary/5 rounded-2xl border border-primary/20 space-y-4">
                             <div className="flex flex-col gap-2">
                               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{t("Summary")}</span>
@@ -1087,6 +1181,56 @@ const AdmissionPage = () => {
             </div>
           </section>
         )}
+
+        {/* Existing Student Lookup Dialog */}
+        <Dialog open={showExistingStudentModal} onOpenChange={setShowExistingStudentModal}>
+          <DialogContent className="rounded-3xl max-w-md p-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <Sparkles className="w-5 h-5 text-primary" />
+                {t("Existing Student Lookup")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("Enter your Enrollment Number, Roll Number, or Username to auto-populate your details.")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {t("Enrollment / Roll Number / Username")}
+                </Label>
+                <div className="relative">
+                  <Input
+                    placeholder="e.g. SCRE/2026/001"
+                    value={lookupQuery}
+                    onChange={(e) => setLookupQuery(e.target.value)}
+                    className="rounded-2xl h-12 uppercase font-semibold text-sm pl-4 pr-10"
+                  />
+                  <QrCode className="w-5 h-5 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowExistingStudentModal(false)}
+                className="rounded-xl text-xs font-bold"
+              >
+                {t("Cancel")}
+              </Button>
+              <Button
+                onClick={handleLookupExistingStudent}
+                disabled={lookingUp || !lookupQuery.trim()}
+                className="rounded-xl text-xs font-bold gap-2"
+              >
+                {lookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {t("Find & Auto-Fill")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
 
       <Footer />

@@ -269,6 +269,7 @@ pub async fn run_server() {
         .route("/api/public/products", get(handlers::product::get_products))
         .route("/api/public/verify/:reg_no", get(handlers::certificate::public_verify_certificate))
         .route("/api/public/verify-certificate/:id", get(handlers::certificate::public_verify_certificate_by_id))
+        .route("/api/public/verify-student", get(handlers::student::public_verify_student))
         .route("/api/contact", post(handlers::contact::handle_create_enquiry))
         .route("/api/admin/enquiries", get(handlers::contact::list_enquiries))
         .route("/api/admin/enquiries/:id", get(handlers::contact::get_enquiry).put(handlers::contact::update_enquiry).delete(handlers::contact::delete_enquiry))

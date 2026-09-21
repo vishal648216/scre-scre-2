@@ -84,6 +84,7 @@ const Header = () => {
         { label: t("Franchise Requirements"), href: "/franchise/requirements", icon: ClipboardList },
         { label: t("Why us"), href: "/franchise/why-us", icon: Sparkles },
         { label: t("Our Centers"), href: "/centers", icon: MapPin },
+        { label: t("Center Verification"), href: "/verify/center", icon: ShieldCheck },
       ],
     },
     {
@@ -93,6 +94,8 @@ const Header = () => {
       submenu: [
         { label: t("Student Login"), href: "/?login=true", icon: LogIn },
         { label: t("Student Registration"), href: "/admission", icon: UserPlus },
+        { label: t("Student Verification"), href: "/verify/student", icon: ShieldCheck },
+        { label: t("Certificate Verification"), href: "/certificate-verification", icon: FileText },
         { label: t("Student Internship"), href: "/student-internship", icon: Briefcase },
         { label: t("Student Inquiry"), href: "/student-inquiry", icon: HelpCircle },
       ],

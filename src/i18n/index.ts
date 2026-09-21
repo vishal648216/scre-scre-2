@@ -57,6 +57,25 @@ export const i18nInitPromise = i18n
     },
   });
 
+export const loadLanguageBundle = async (lng: string) => {
+  const normalized = (lng || "en").split("-")[0].toLowerCase();
+  if (i18n.hasResourceBundle(normalized, "translation")) {
+    return;
+  }
+  try {
+    const modules = import.meta.glob("./*.json");
+    const path = `./${normalized}.json`;
+    if (modules[path]) {
+      const module: any = await modules[path]();
+      if (module && (module.default || typeof module === "object")) {
+        i18n.addResourceBundle(normalized, "translation", module.default || module, true, true);
+      }
+    }
+  } catch (err) {
+    console.debug(`Could not dynamically load bundle for ${normalized}`, err);
+  }
+};
+
 const applyDocumentLanguage = (lng: string) => {
   if (typeof document === "undefined") return;
   const htmlElement = document.documentElement;
@@ -67,6 +86,7 @@ const applyDocumentLanguage = (lng: string) => {
 
 i18n.on("languageChanged", (lng) => {
   const normalized = (lng || "en").split("-")[0].toLowerCase();
+  loadLanguageBundle(normalized);
   if (typeof localStorage !== "undefined") {
     localStorage.setItem("lang", normalized);
   }
@@ -78,6 +98,7 @@ i18n.on("languageChanged", (lng) => {
 
 if (typeof window !== "undefined") {
   const bootLang = (localStorage.getItem("lang") || i18n.language || "en").split("-")[0].toLowerCase();
+  loadLanguageBundle(bootLang);
   applyDocumentLanguage(bootLang);
 }
 

@@ -138,6 +138,8 @@ pub struct User {
     pub applied_coupon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub course_category: Option<String>,
+    #[serde(default)]
+    pub enrolled_courses: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other_doc_url: Option<String>,
     #[serde(with = "crate::models::serde_helpers::optional_flexible_datetime")]

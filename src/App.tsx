@@ -194,6 +194,8 @@ const GenerateCertificatesPage = lazy(() => import("./pages/GenerateCertificates
 const StudentCertificatesListPage = lazy(() => import("./pages/StudentCertificatesListPage"));
 const AttachmentListCertificatesPage = lazy(() => import("./pages/AttachmentListCertificatesPage"));
 const VerifyCertificatePage = lazy(() => import("./pages/VerifyCertificatePage"));
+const StudentVerificationPage = lazy(() => import("./pages/StudentVerificationPage"));
+const CenterVerificationPage = lazy(() => import("./pages/CenterVerificationPage"));
 const CertificateDesignerListPage = lazy(() => import("./pages/CertificateDesignerListPage"));
 const CertificateDesignerCanvasPage = lazy(() => import("./pages/CertificateDesignerCanvasPage"));
 
@@ -725,6 +727,12 @@ const AppRoutes = () => {
       <Route path="/admission" element={<AdmissionPage />} />
       <Route path="/verify/:registration_number" element={<VerifyCertificatePage />} />
       <Route path="/verify-certificate/:id" element={<VerifyCertificatePage />} />
+      <Route path="/verify/certificate" element={<VerifyCertificatePage />} />
+      <Route path="/certificate-verification" element={<VerifyCertificatePage />} />
+      <Route path="/verify/student" element={<StudentVerificationPage />} />
+      <Route path="/student-verification" element={<StudentVerificationPage />} />
+      <Route path="/verify/center" element={<CenterVerificationPage />} />
+      <Route path="/center-verification" element={<CenterVerificationPage />} />
 
       <Route
         path="/dashboard/profile"
