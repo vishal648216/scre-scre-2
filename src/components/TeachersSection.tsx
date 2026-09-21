@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 const TeachersSection = () => {
   const { data: homeData, isLoading } = useHomeData();
@@ -60,16 +61,17 @@ const TeachersSection = () => {
   const teachers = safeCmsArray
     .filter((item: any) => item.category === "teacher" && item.active)
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-    .map((item: any) => {
-      console.log("Teacher item from CMS:", item);
+    .map((item: any, idx: number) => {
+      const fallback = defaultTeachers[idx % defaultTeachers.length];
       return {
         id: item._id?.$oid || item._id || Math.random().toString(),
-        name: t(item.title),
-        role: t(item.designation || ""),
-        image: item.image_url,
-        experience: t(item.specialization || "Expert Trainer"),
-        education: item.education,
-        about: item.description || item.content || item.bio || item.short_bio || "",
+        name: t(item.title) || fallback.name,
+        role: t(item.designation || "") || fallback.role,
+        image: normalizeAssetUrl(item.image_url) || fallback.image,
+        experience: t(item.specialization || "Expert Trainer") || fallback.experience,
+        education: item.education || fallback.education,
+        about: item.description || item.content || item.bio || item.short_bio || fallback.about,
+        fallbackImage: fallback.image,
       };
     });
 
@@ -212,9 +214,9 @@ const TeachersSection = () => {
           className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory custom-scrollbar select-none"
           style={{ scrollBehavior: 'auto', cursor: isDragging.current ? 'grabbing' : 'grab' }}
         >
-          {displayTeachers.map((teacher: any) => (
+          {displayTeachers.map((teacher: any, index: number) => (
             <article
-              key={teacher.id || teacher.name}
+              key={teacher.id || teacher.name || index}
               className="
       group
       relative
@@ -237,16 +239,23 @@ const TeachersSection = () => {
               {/* Image */}
               <div className="relative h-[190px] min-h-[190px] max-h-[190px] overflow-hidden">
                 <img
-                  src={teacher.image}
+                  src={teacher.image || teacher.fallbackImage || "/images/icc-1.jpg"}
                   alt={teacher.name}
                   className="
           w-full
           h-full
-          object-fill
+          object-cover
           transition-all
           duration-700
           group-hover:scale-105
         "
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.fallbackApplied) {
+                      target.dataset.fallbackApplied = "true";
+                      target.src = teacher.fallbackImage || "/images/icc-1.jpg";
+                    }
+                  }}
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />

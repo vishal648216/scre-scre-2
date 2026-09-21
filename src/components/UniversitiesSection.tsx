@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHomeData } from "@/hooks/useHomeData";
 import { Loader2 } from "lucide-react";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 const UniversitiesSection = () => {
   const { t } = useTranslation();
@@ -23,12 +24,15 @@ const UniversitiesSection = () => {
   const universities = safeCmsArray
     .filter((item: any) => item.category === "university" && item.active)
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-    .map((item: any) => ({
-      id: item._id?.$oid || item._id || Math.random().toString(),
-      name: t(item.title),
-      image: item.image_url,
-      link: item.link || "#",
-    }));
+    .map((item: any, idx: number) => {
+      const fallback = defaultUniversities[idx % defaultUniversities.length];
+      return {
+        id: item._id?.$oid || item._id || Math.random().toString(),
+        name: t(item.title) || fallback.name,
+        image: normalizeAssetUrl(item.image_url) || fallback.image,
+        link: item.link || "#",
+      };
+    });
 
   const activeUniversities = universities.length > 0 ? universities : defaultUniversities;
 
@@ -108,9 +112,16 @@ const UniversitiesSection = () => {
                   <div className="w-full h-full flex flex-col items-center justify-center p-4">
                     <div className="relative w-full flex-1 flex items-center justify-center">
                       <img
-                        src={uni.image}
+                        src={uni.image || "/images/logo.jpeg"}
                         alt={uni.name}
                         className="object-contain transition-all duration-700 ease-out"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = "true";
+                            target.src = "/images/logo.jpeg";
+                          }
+                        }}
                         style={{
                           maxHeight: isHovered ? "80px" : "60px",
                           maxWidth: "90%",

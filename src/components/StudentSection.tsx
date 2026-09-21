@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useHomeData } from "@/hooks/useHomeData";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 const StudentSection = () => {
   const { t } = useTranslation();
@@ -71,15 +72,19 @@ const StudentSection = () => {
   const students = safeCmsArray
     .filter((item: any) => item.category === "student" && item.active)
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-    .map((item: any) => ({
-      id: item._id?.$oid || item._id || Math.random().toString(),
-      name: t(item.title),
-      course: t(item.description || ""),
-      image: item.image_url,
-      note: t(item.note || ""),
-      role: t(item.role || ""),
-      student_description: t(item.student_description || ""),
-    }));
+    .map((item: any, idx: number) => {
+      const fallback = defaultStudents[idx % defaultStudents.length];
+      return {
+        id: item._id?.$oid || item._id || Math.random().toString(),
+        name: t(item.title) || fallback.name,
+        course: t(item.description || "") || fallback.course,
+        image: normalizeAssetUrl(item.image_url) || fallback.image,
+        note: t(item.note || ""),
+        role: t(item.role || "") || fallback.role,
+        student_description: t(item.student_description || "") || fallback.student_description,
+        fallbackImage: fallback.image,
+      };
+    });
 
   const activeStudents = students.length > 0 ? students : defaultStudents;
 
@@ -219,9 +224,16 @@ const StudentSection = () => {
             >
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={student.image}
+                  src={student.image || "/images/icc-2.jpg"}
                   alt={student.name}
-                  className="w-full h-full object-fill transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.fallbackApplied) {
+                      target.dataset.fallbackApplied = "true";
+                      target.src = "/images/icc-2.jpg";
+                    }
+                  }}
                 />
               </div>
 

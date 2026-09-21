@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ArrowUpRight, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useTranslatedContent } from "@/hooks/useTranslatedContent";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 const GallerySection = () => {
   const { t } = useTranslation();
@@ -64,11 +65,15 @@ const GallerySection = () => {
       selectedItems = [...selectedItems, ...others.slice(0, 5 - selectedItems.length)];
     }
 
-    return selectedItems.map((item: any) => ({
-      title: t(item.title || ""),
-      desc: t(item.description || ""),
-      image: item.image_url,
-    }));
+    return selectedItems.map((item: any, idx: number) => {
+      const fallback = defaultGalleryItems[idx % defaultGalleryItems.length]?.image || "/images/icc-1.jpg";
+      return {
+        title: t(item.title || "") || defaultGalleryItems[idx % defaultGalleryItems.length]?.title,
+        desc: t(item.description || "") || defaultGalleryItems[idx % defaultGalleryItems.length]?.desc,
+        image: normalizeAssetUrl(item.image_url) || fallback,
+        fallbackImage: fallback,
+      };
+    });
   })();
 
   const activeItem =
@@ -150,9 +155,16 @@ const GallerySection = () => {
             className="relative rounded-3xl overflow-hidden group cursor-pointer h-[500px] hover-popup-subtle transition-all duration-700"
           >
             <img
-              src={galleryItems[0].image}
-              alt=""
-              className="w-full h-full object-fill transition duration-700 group-hover:scale-110"
+              src={galleryItems[0].image || "/images/icc-1.jpg"}
+              alt={galleryItems[0].title}
+              className="w-full h-full object-cover transition duration-700 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallbackApplied) {
+                  target.dataset.fallbackApplied = "true";
+                  target.src = "/images/icc-1.jpg";
+                }
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/40 to-transparent"></div>
             <div className="absolute bottom-8 left-8 text-white">
@@ -173,9 +185,16 @@ const GallerySection = () => {
                 className="relative rounded-3xl overflow-hidden cursor-pointer group h-[240px] hover-popup-subtle transition-all duration-700"
               >
                 <img
-                  src={item.image}
-                  alt=""
-                  className="w-full h-full object-fill transition duration-700 group-hover:scale-110"
+                  src={item.image || defaultGalleryItems[(index + 1) % defaultGalleryItems.length]?.image || "/images/icc-2.jpg"}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition duration-700 group-hover:scale-110"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.dataset.fallbackApplied) {
+                      target.dataset.fallbackApplied = "true";
+                      target.src = defaultGalleryItems[(index + 1) % defaultGalleryItems.length]?.image || "/images/icc-2.jpg";
+                    }
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/30 to-transparent opacity-90 group-hover:opacity-100 transition"></div>
                 <div className="absolute bottom-5 left-5 text-white">
@@ -229,9 +248,16 @@ const GallerySection = () => {
             {/* Image with Zoom */}
             <div className="overflow-hidden rounded-3xl">
               <img
-                src={activeItem.image}
-                alt=""
+                src={activeItem.image || "/images/icc-1.jpg"}
+                alt={activeItem.title}
                 className="w-full max-h-[80vh] object-contain transition-transform duration-500 hover:scale-110"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.fallbackApplied) {
+                    target.dataset.fallbackApplied = "true";
+                    target.src = "/images/icc-1.jpg";
+                  }
+                }}
               />
             </div>
 

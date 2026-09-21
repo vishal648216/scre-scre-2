@@ -2,6 +2,7 @@ import { Star, Quote, User, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 interface Review {
   public_id: string;
@@ -68,7 +69,14 @@ const PlacementsSection = () => {
                 <div className="border-t border-border pt-4">
                   <div className="flex items-center gap-3">
                     {t_review.student_photo ? (
-                      <img src={t_review.student_photo} alt={t_review.student_name} className="w-10 h-10 rounded-full object-cover border border-border" />
+                      <img
+                        src={normalizeAssetUrl(t_review.student_photo)}
+                        alt={t_review.student_name}
+                        className="w-10 h-10 rounded-full object-cover border border-border"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
                     ) : (
                       <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-heading font-bold text-sm">
                         {t_review.student_name.charAt(0)}

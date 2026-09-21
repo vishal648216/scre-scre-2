@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useTranslatedContent } from "@/hooks/useTranslatedContent";
 import { useTranslation } from "react-i18next";
+import { normalizeAssetUrl } from "@/lib/utils";
 
 interface Partner {
   _id?: string;
@@ -16,12 +17,12 @@ const OurPartnersSection = () => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const defaultPartners: Partner[] = [
-    { image_url: "/images/icc-1.jpg", title: t("Partner 1") },
-    { image_url: "/images/icc-2.jpg", title: t("Partner 2") },
-    { image_url: "/images/icc-3.jpg", title: t("Partner 3") },
-    { image_url: "/images/icc-1.jpg", title: t("Partner 4") },
-    { image_url: "/images/icc-2.jpg", title: t("Partner 5") },
-    { image_url: "/images/icc-3.jpg", title: t("Partner 6") },
+    { image_url: "/images/partner-1.jpeg", title: t("Partner 1") },
+    { image_url: "/images/partner-2.jpeg", title: t("Partner 2") },
+    { image_url: "/images/partner-3.jpeg", title: t("Partner 3") },
+    { image_url: "/images/partner-4.jpeg", title: t("Partner 4") },
+    { image_url: "/images/logo.jpeg", title: t("Partner 5") },
+    { image_url: "/images/iso.webp", title: t("Partner 6") },
   ];
 
   const partners = (() => {
@@ -32,10 +33,10 @@ const OurPartnersSection = () => {
       return cat === "partner" && i.image_url;
     });
     if (items.length === 0) return defaultPartners;
-    return items.map((p: any) => ({
+    return items.map((p: any, idx: number) => ({
       _id: p._id?.$oid || p._id,
-      image_url: p.image_url,
-      title: t(p.title),
+      image_url: normalizeAssetUrl(p.image_url) || defaultPartners[idx % defaultPartners.length].image_url,
+      title: t(p.title) || defaultPartners[idx % defaultPartners.length].title,
       link: p.link,
     })) as Partner[];
   })();
@@ -138,9 +139,16 @@ const OurPartnersSection = () => {
                   <div className="w-full h-full flex flex-col items-center justify-center p-4">
                     <div className="relative w-full flex-1 flex items-center justify-center">
                       <img
-                        src={partner.image_url}
+                        src={partner.image_url || "/images/partner-1.jpeg"}
                         alt={partner.title || "Partner"}
                         className="object-contain transition-all duration-700 ease-out"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = "true";
+                            target.src = "/images/partner-1.jpeg";
+                          }
+                        }}
                         style={{
                           maxHeight: isHovered ? "80px" : "60px",
                           maxWidth: "90%",
