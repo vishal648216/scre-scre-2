@@ -18,8 +18,9 @@ services:
         value: uploads
 
   # 2. Frontend Static Site (React Vite SPA)
-  - type: static
+  - type: web
     name: scre-frontend
+    runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
