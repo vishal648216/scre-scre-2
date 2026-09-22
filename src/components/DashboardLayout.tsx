@@ -103,6 +103,8 @@ import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 import { LiveChatDrawer } from "./LiveChatDrawer";
+import { PWAInstallPrompt } from "./PWAInstallPrompt";
+import { AITutorDrawer } from "./AITutorDrawer";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -643,6 +645,8 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: History, label: "Activity Logs", href: "/dashboard/system/logs", roles: ["admin", "superadmin"] },
         { icon: Globe, label: "Translation Usage", href: "/dashboard/system/translation-usage", roles: ["admin", "superadmin"] },
         { icon: Bell, label: "Announcements Management", href: "/dashboard/system/notifications", roles: ["admin", "superadmin"] },
+        { icon: MessageSquare, label: "Notification Gateway (SMS/WhatsApp)", href: "/dashboard/system/notifications-gateway", roles: ["admin", "superadmin"] },
+        { icon: Database, label: "Database Backup & Diagnostics", href: "/dashboard/system/backup-diagnostics", roles: ["admin", "superadmin"] },
         { icon: HardDrive, label: "Disk & Storage", href: "/dashboard/disk-usage" },
         { icon: AlertTriangle, label: "Maintenance", href: "/dashboard/system/maintenance", roles: ["superadmin"] },
       ]
@@ -1628,6 +1632,8 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
           </div>
         )}
         <LiveChatDrawer />
+        <AITutorDrawer />
+        <PWAInstallPrompt />
       </div>
     </DashboardSidebarContext.Provider>
   );

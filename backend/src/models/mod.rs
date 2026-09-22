@@ -58,3 +58,4 @@ pub mod library;
 pub mod internship;
 pub mod birthday;
 pub mod ticket;
+pub mod notification_gateway;

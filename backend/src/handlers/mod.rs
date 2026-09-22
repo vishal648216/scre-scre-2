@@ -69,3 +69,6 @@ pub mod internship;
 pub mod birthday;
 pub mod ticket;
 pub mod digilocker;
+pub mod notification_gateway;
+pub mod ai_tutor;
+pub mod system_backup;

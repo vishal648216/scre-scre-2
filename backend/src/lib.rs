@@ -653,6 +653,15 @@ pub async fn run_server() {
         // --- PHASE 6: DIGILOCKER & NAD GATEWAY ---
         .route("/api/public/digilocker/certificate/:cert_no", get(handlers::digilocker::get_digilocker_metadata))
         .route("/api/public/digilocker/certificate/:cert_no/xml", get(handlers::digilocker::get_digilocker_xml))
+        // --- PHASE 7: AI STUDY ASSISTANT & DOUBT SOLVER ---
+        .route("/api/ai/doubt-solver", post(handlers::ai_tutor::solve_doubt))
+        // --- PHASE 7: NOTIFICATION GATEWAY (WHATSAPP & SMS) ---
+        .route("/api/admin/notifications/config", get(handlers::notification_gateway::get_notification_config).post(handlers::notification_gateway::update_notification_config))
+        .route("/api/admin/notifications/send-test", post(handlers::notification_gateway::send_test_notification))
+        .route("/api/admin/notifications/logs", get(handlers::notification_gateway::get_notification_logs))
+        // --- PHASE 7: DATABASE BACKUP & DIAGNOSTICS ---
+        .route("/api/admin/system/diagnostics", get(handlers::system_backup::get_system_diagnostics))
+        .route("/api/admin/system/backup", get(handlers::system_backup::export_system_backup))
         .nest_service("/uploads", ServeDir::new(std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "uploads".to_string()))
             .precompressed_gzip()
             .precompressed_br())

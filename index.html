@@ -10,23 +10,33 @@
     <meta name="description" content="Sir Chhotu Ram Education Pvt. Ltd. - Leading Computer Education & Skill Development Institute" />
     <meta name="author" content="SCRE" />
 
+    <meta name="theme-color" content="#2563eb" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/images/logo.jpeg" />
     <link rel="icon" href="/images/logo.jpeg">
 
-    
-    
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/images/logo.jpeg">
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/images/logo.jpeg">
     <meta property="og:title" content="SIR CHHOTU RAM EDUCATION PVT. LTD.">
-  <meta name="twitter:title" content="SIR CHHOTU RAM EDUCATION PVT. LTD.">
-  <meta property="og:description" content="SIR CHHOTU RAM EDUCATION PVT. LTD. offers DCA, ADCA, Tally, Web Design, Graphic Design courses with 100% placement support in Haryana.">
-  <meta name="twitter:description" content="SIR CHHOTU RAM EDUCATION PVT. LTD. offers DCA, ADCA, Tally, Web Design, Graphic Design courses with 100% placement support in Haryana.">
+    <meta name="twitter:title" content="SIR CHHOTU RAM EDUCATION PVT. LTD.">
+    <meta property="og:description" content="SIR CHHOTU RAM EDUCATION PVT. LTD. offers DCA, ADCA, Tally, Web Design, Graphic Design courses with 100% placement support in Haryana.">
+    <meta name="twitter:description" content="SIR CHHOTU RAM EDUCATION PVT. LTD. offers DCA, ADCA, Tally, Web Design, Graphic Design courses with 100% placement support in Haryana.">
 </head>
 
   <body>
     <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration skipped or error:', err);
+          });
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
