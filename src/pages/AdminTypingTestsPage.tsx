@@ -4,6 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookCheck, Loader2, Languages, BookOpen, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { apiFetch } from "@/lib/api";
+
+const normalizeId = (v: any): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "object") {
+    if (typeof v.$oid === "string") return v.$oid;
+    if (typeof v.id === "string") return v.id;
+    if (typeof v._id === "string") return v._id;
+  }
+  return String(v);
+};
+
 interface Language {
   _id: string;
   name: string;
@@ -29,17 +43,29 @@ const AdminTypingTestsPage = () => {
 
   const fetchData = async () => {
     try {
-      const token = sessionStorage.getItem("token");
       const [langRes, lessonRes] = await Promise.all([
-        fetch("/api/typing/languages", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/typing/lessons", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/typing/languages"),
+        apiFetch("/api/typing/lessons"),
       ]);
       const langData = await langRes.json();
       const lessonData = await lessonRes.json();
-      if (langRes.ok && Array.isArray(langData)) setLanguages(langData);
-      else setLanguages([]);
-      if (lessonRes.ok && Array.isArray(lessonData)) setLessons(lessonData);
-      else setLessons([]);
+      if (langRes.ok && Array.isArray(langData)) {
+        setLanguages(langData.map((l: any) => ({
+          ...l,
+          _id: normalizeId(l._id ?? l.id),
+        })));
+      } else {
+        setLanguages([]);
+      }
+      if (lessonRes.ok && Array.isArray(lessonData)) {
+        setLessons(lessonData.map((l: any) => ({
+          ...l,
+          _id: normalizeId(l._id ?? l.id),
+          language_id: normalizeId(l.language_id),
+        })));
+      } else {
+        setLessons([]);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {

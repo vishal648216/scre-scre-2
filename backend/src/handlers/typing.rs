@@ -1,4 +1,4 @@
-use axum::{extract::{State, Query}, http::StatusCode, Json};
+use axum::{extract::{State, Query, Path}, http::StatusCode, Json};
 use mongodb::{Database, bson::{doc, oid::ObjectId}, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use crate::handlers::course::resolve_course_from_enrollment_string;
@@ -96,11 +96,282 @@ pub async fn create_language(
     }
 }
 
+pub async fn seed_default_languages_internal(db: &Database) -> Result<usize, String> {
+    struct LangDef {
+        name: &'static str,
+        code: &'static str,
+        font_family: &'static str,
+        keyboard_layout: &'static str,
+        sample_title: &'static str,
+        sample_content: &'static str,
+    }
+
+    let defs = [
+        LangDef {
+            name: "English (Standard / QWERTY)",
+            code: "en",
+            font_family: "Inter, system-ui, sans-serif",
+            keyboard_layout: "QWERTY",
+            sample_title: "English Typing Fundamentals",
+            sample_content: "The quick brown fox jumps over the lazy dog. Daily typing practice significantly improves your speed, accuracy, and professional efficiency in computer education and office administration.",
+        },
+        LangDef {
+            name: "Hindi - Mangal (Inscript)",
+            code: "hi",
+            font_family: "'Noto Sans Devanagari', 'Mangal', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "हिंदी इंस्क्रिप्ट अभ्यास",
+            sample_content: "अभ्यास ही सफलता की सबसे बड़ी कुंजी है। नियमित रूप से टाइपिंग करने से गति और शुद्धता दोनों में बहुत सुधार होता है। कंप्यूटर शिक्षा आज के युग में अत्यंत महत्वपूर्ण है।",
+        },
+        LangDef {
+            name: "Hindi - Kruti Dev 010 (Remington)",
+            code: "hi-kd",
+            font_family: "'Kruti Dev 010', 'Devlys 010', sans-serif",
+            keyboard_layout: "Remington (Kruti Dev)",
+            sample_title: "कुर्तीदेव रेमिंगटन अभ्यास",
+            sample_content: "Hkkjr ,d egku ns'k gSA ;gk¡ fofo/krk esa ,drk gSA dEI;wVj f'k{kk vkt ds ;qx esa vko';d gSA fu;fer vH;kl ls gh xfr rFkk 'kq)rk c<+rh gSA",
+        },
+        LangDef {
+            name: "Punjabi (Raavi / Inscript)",
+            code: "pa",
+            font_family: "'Noto Sans Gurmukhi', 'Raavi', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "ਪੰਜਾਬੀ ਰਾਵੀ ਟਾਈਪਿੰਗ",
+            sample_content: "ਸਿੱਖਿਆ ਮਨੁੱਖ ਦਾ ਸਭ ਤੋਂ ਵੱਡਾ ਗਹਿਣਾ ਹੈ। ਨਿਰੰਤਰ ਅਭਿਆਸ ਨਾਲ ਟਾਈਪਿੰਗ ਗਤੀ ਅਤੇ ਸ਼ੁੱਧਤਾ ਦੋਵੇਂ ਵਧਦੀਆਂ ਹਨ। ਕੰਪਿਊਟਰ ਹੁਨਰ ਅੱਜ ਦੇ ਯੁੱਗ ਵਿੱਚ ਬਹੁਤ ਜ਼ਰੂਰੀ ਹੈ।",
+        },
+        LangDef {
+            name: "Punjabi (Asees)",
+            code: "pa-asees",
+            font_family: "'Asees', sans-serif",
+            keyboard_layout: "Phonetic",
+            sample_title: "ਅਸੀਸ ਫੌਂਟ ਅਭਿਆਸ",
+            sample_content: "is`iKAw mnu`K dw sB qoN v`fw gihxw hY[ inrMqr AiBAws nwl twieipMg sqwrI huMdI hY[ hryk ivaupwr ivc kMipaUtr bhuq zrUrI hY[",
+        },
+        LangDef {
+            name: "Marathi",
+            code: "mr",
+            font_family: "'Noto Sans Devanagari', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "मराठी टंकलेखन सराव",
+            sample_content: "प्रयत्नांती परमेश्वर. संगणक शिक्षण आजच्या युगात अत्यंत आवश्यक आहे. नियमित सरावाने टाइपिंगचा वेग आणि अचूकता दोन्ही वाढतात.",
+        },
+        LangDef {
+            name: "Gujarati",
+            code: "gu",
+            font_family: "'Noto Sans Gujarati', 'Shruti', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "ગુજરાતી ટાઈપિંગ પ્રેક્ટિસ",
+            sample_content: "શિક્ષણ એ જીવનનો આધારસ્તંભ છે. નિયમિત ટાઈપિંગ અભ્યાસથી તમારી ઝડપ અને ચોકસાઈ બંનેમાં મોટો સુધારો થાય છે.",
+        },
+        LangDef {
+            name: "Bengali (বাংলা)",
+            code: "bn",
+            font_family: "'Noto Sans Bengali', 'Vrinda', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "বাংলা টাইপিং পাঠ",
+            sample_content: "পরিশ্রমই সৌভাগ্যের প্রসূতি। প্রতিদিন মনোযোগ দিয়ে টাইপিং অনুশীলন করলে কাজের গতি দ্রুত বৃদ্ধি পায় এবং নির্ভুলতা বাড়ে।",
+        },
+        LangDef {
+            name: "Tamil (தமிழ்)",
+            code: "ta",
+            font_family: "'Noto Sans Tamil', 'Latha', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "தமிழ் தட்டச்சு பயிற்சி",
+            sample_content: "முயற்சி திருவினையாக்கும். கணினி தட்டச்சு பயிற்சி உங்கள் வேகத்தையும் துல்லியத்தையும் பெரிதும் மேம்படுத்துகிறது.",
+        },
+        LangDef {
+            name: "Telugu (తెలుగు)",
+            code: "te",
+            font_family: "'Noto Sans Telugu', 'Gautami', sans-serif",
+            keyboard_layout: "Inscript",
+            sample_title: "తెలుగు టైపింగ్ సాధన",
+            sample_content: "నిరంతర సాధనతో ఏదైనా సాధించవచ్చు. రోజూ టైపింగ్ చేయడం వల్ల వేగం మరియు ఖచ్చితత్వం మెరుగవుతాయి.",
+        },
+        LangDef {
+            name: "Urdu (اردو)",
+            code: "ur",
+            font_family: "'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', sans-serif",
+            keyboard_layout: "Phonetic",
+            sample_title: "اردو ٹائپنگ مشق",
+            sample_content: "محنت کامیابی کی کنجی ہے۔ کمپیوٹر ٹائپنگ کی باقاعدہ مشق سے رفتار اور درستگی دونوں بہتر ہوتی ہیں۔ علم حاصل کرنا ہر انسان کے لیے ضروری ہے۔",
+        },
+        LangDef {
+            name: "Arabic (العربية)",
+            code: "ar",
+            font_family: "'Noto Naskh Arabic', sans-serif",
+            keyboard_layout: "Arabic 101",
+            sample_title: "ممارسة الطباعة باللغة العربية",
+            sample_content: "الممارسة المستمرة هي سر النجاح في سرعة الطباعة ولوحة المفاتيح. التعليم قوة تبني المستقبل وتفتح آفاق النجاح للجميع.",
+        },
+        LangDef {
+            name: "Spanish (Español)",
+            code: "es",
+            font_family: "sans-serif",
+            keyboard_layout: "QWERTY Spanish",
+            sample_title: "Práctica de Mecanografía en Español",
+            sample_content: "La práctica constante es la clave para dominar la mecanografía. El conocimiento y la perseverancia abren todas las puertas del éxito laboral.",
+        },
+        LangDef {
+            name: "French (Français)",
+            code: "fr",
+            font_family: "sans-serif",
+            keyboard_layout: "AZERTY",
+            sample_title: "Pratique de Dactylographie Française",
+            sample_content: "La pratique régulière permet d'améliorer la vitesse de frappe et la précision au clavier. L'apprentissage numérique est un trésor inestimable.",
+        },
+        LangDef {
+            name: "German (Deutsch)",
+            code: "de",
+            font_family: "sans-serif",
+            keyboard_layout: "QWERTZ",
+            sample_title: "Deutsche Tastaturschreibübung",
+            sample_content: "Übung macht den Meister beim Tastaturschreiben. Schnelligkeit und Genauigkeit sind entscheidende Fähigkeiten in der modernen Berufswelt.",
+        },
+        LangDef {
+            name: "Russian (Русский)",
+            code: "ru",
+            font_family: "'Noto Sans', sans-serif",
+            keyboard_layout: "JCUKEN Cyrillic",
+            sample_title: "Урок слепой печати на русском",
+            sample_content: "Постоянная практика — залог успеха в быстрой и точной печати на клавиатуре. Знания и компьютерные навыки открывают двери в будущее.",
+        },
+        LangDef {
+            name: "Chinese (中文)",
+            code: "zh",
+            font_family: "'Noto Sans SC', sans-serif",
+            keyboard_layout: "Pinyin",
+            sample_title: "中文拼音打字练习",
+            sample_content: "坚持每天练习打字可以显著提高打字速度与准确率。熟能生巧，知识就是力量，努力开创美好未来。",
+        },
+        LangDef {
+            name: "Japanese (日本語)",
+            code: "ja",
+            font_family: "'Noto Sans JP', sans-serif",
+            keyboard_layout: "Romaji / Kana",
+            sample_title: "日本語タイピング練習",
+            sample_content: "毎日のタイピング練習が速度と正確さを向上させます。継続は力なり、新しいスキルを身につけて将来に役立てましょう。",
+        },
+        LangDef {
+            name: "Korean (한국어)",
+            code: "ko",
+            font_family: "'Noto Sans KR', sans-serif",
+            keyboard_layout: "2-Set Hangul",
+            sample_title: "한국어 타자 연습",
+            sample_content: "꾸준한 타자 연습은 정확도와 타이핑 속도를 크게 향상시킵니다. 배움에는 끝이 없으며 지식은 큰 힘이 됩니다.",
+        },
+        LangDef {
+            name: "Portuguese (Português)",
+            code: "pt",
+            font_family: "sans-serif",
+            keyboard_layout: "ABNT2",
+            sample_title: "Prática de Digitação em Português",
+            sample_content: "A prática diária de digitação melhora sua velocidade e produtividade no trabalho digital. O aprendizado constante transforma carreiras.",
+        },
+        LangDef {
+            name: "Italian (Italiano)",
+            code: "it",
+            font_family: "sans-serif",
+            keyboard_layout: "QWERTY Italian",
+            sample_title: "Esercizio di Dattilografia in Italiano",
+            sample_content: "La pratica costante della dattilografia aumenta la velocità e la precisione sulla tastiera. La formazione apre le vie del futuro.",
+        },
+        LangDef {
+            name: "Turkish (Türkçe)",
+            code: "tr",
+            font_family: "sans-serif",
+            keyboard_layout: "Turkish Q",
+            sample_title: "Türkçe Klavye Yazma Pratiği",
+            sample_content: "Düzenli klavye yazma pratiği hızınızı ve doğruluğunuzu geliştirir. Bilgi güçtür ve dijital beceriler başarı getirir.",
+        },
+        LangDef {
+            name: "Persian / Farsi (فارسی)",
+            code: "fa",
+            font_family: "'Noto Naskh Arabic', sans-serif",
+            keyboard_layout: "Persian Standard",
+            sample_title: "تمرین تایپ زبان فارسی",
+            sample_content: "تمرین منظم تایپ سرعت و دقت شما را در کار با رایانه به میزان چشمگیری افزایش می‌دهد. دانش و پشتکار ضامن پیروزی است.",
+        },
+        LangDef {
+            name: "Vietnamese (Tiếng Việt)",
+            code: "vi",
+            font_family: "sans-serif",
+            keyboard_layout: "Telex",
+            sample_title: "Luyện Gõ Tiếng Việt",
+            sample_content: "Luyện gõ bàn phím hàng ngày giúp tăng tốc độ và độ chính xác trong học tập và công việc. Kỹ năng công nghệ thông tin là chìa khóa thành công.",
+        },
+        LangDef {
+            name: "Thai (ไทย)",
+            code: "th",
+            font_family: "'Noto Sans Thai', sans-serif",
+            keyboard_layout: "Kedmanee",
+            sample_title: "แบบฝึกหัดพิมพ์ดีดภาษาไทย",
+            sample_content: "การฝึกพิมพ์สัมผัสเป็นประจำจะช่วยเพิ่มความเร็วและความแม่นยำในการพิมพ์อย่างมีประสิทธิภาพ ความรู้คือกุญแจสู่ความสำเร็จ",
+        },
+    ];
+
+    let lang_col = db.collection::<TypingLanguage>("typing_languages");
+    let lesson_col = db.collection::<TypingLesson>("typing_lessons");
+
+    let mut seeded = 0;
+    for def in defs {
+        let existing = lang_col.find_one(doc! { "code": def.code }, None).await.map_err(|e| e.to_string())?;
+        let lang_id = match existing {
+            Some(l) => l.id.unwrap_or_default(),
+            None => {
+                let new_lang = TypingLanguage {
+                    id: None,
+                    name: def.name.to_string(),
+                    code: def.code.to_string(),
+                    font_family: Some(def.font_family.to_string()),
+                    keyboard_layout: Some(def.keyboard_layout.to_string()),
+                    active: true,
+                };
+                let res = lang_col.insert_one(new_lang, None).await.map_err(|e| e.to_string())?;
+                res.inserted_id.as_object_id().unwrap_or_default()
+            }
+        };
+
+        // Ensure at least one lesson exists for this language
+        if !lang_id.to_hex().is_empty() {
+            let lesson_exists = lesson_col.find_one(doc! { "language_id": lang_id }, None).await.map_err(|e| e.to_string())?;
+            if lesson_exists.is_none() {
+                let lesson = TypingLesson {
+                    id: None,
+                    language_id: lang_id,
+                    title: def.sample_title.to_string(),
+                    content: def.sample_content.to_string(),
+                    level: TypingLevel::Beginner,
+                    min_wpm: Some(25.0),
+                    min_accuracy: Some(85.0),
+                    active: true,
+                    created_at: Utc::now(),
+                };
+                let _ = lesson_col.insert_one(lesson, None).await;
+            }
+        }
+        seeded += 1;
+    }
+
+    Ok(seeded)
+}
+
 pub async fn get_languages(
     State(db): State<Database>,
 ) -> (StatusCode, Json<Vec<TypingLanguage>>) {
     let collection = db.collection::<TypingLanguage>("typing_languages");
-    let mut cursor = collection.find(doc! { "active": true }, None).await.expect("Failed to fetch languages");
+    
+    // Auto-seed if empty so user always sees all languages
+    let count = collection.count_documents(None, None).await.unwrap_or(0);
+    if count == 0 {
+        let _ = seed_default_languages_internal(&db).await;
+    }
+
+    let options = FindOptions::builder().sort(doc! { "name": 1 }).build();
+    let mut cursor = match collection.find(doc! { "active": true }, options).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new())),
+    };
+
     let mut languages = Vec::new();
     while let Some(result) = cursor.next().await {
         if let Ok(lang) = result {
@@ -108,6 +379,47 @@ pub async fn get_languages(
         }
     }
     (StatusCode::OK, Json(languages))
+}
+
+pub async fn seed_default_languages(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<TypingResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(TypingResponse { success: false, message: "Unauthorized".to_string() }));
+    }
+
+    match seed_default_languages_internal(&db).await {
+        Ok(count) => (StatusCode::OK, Json(TypingResponse {
+            success: true,
+            message: format!("Successfully seeded and verified {} global and Indian typing languages with lessons", count),
+        })),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, Json(TypingResponse {
+            success: false,
+            message: format!("Failed to seed languages: {}", err),
+        })),
+    }
+}
+
+pub async fn delete_language(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<TypingResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(TypingResponse { success: false, message: "Unauthorized".to_string() }));
+    }
+
+    let oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(TypingResponse { success: false, message: "Invalid Language ID".to_string() })),
+    };
+
+    let collection = db.collection::<TypingLanguage>("typing_languages");
+    match collection.delete_one(doc! { "_id": oid }, None).await {
+        Ok(_) => (StatusCode::OK, Json(TypingResponse { success: true, message: "Language removed successfully".to_string() })),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(TypingResponse { success: false, message: "Failed to delete language".to_string() })),
+    }
 }
 
 #[derive(Debug, Deserialize)]

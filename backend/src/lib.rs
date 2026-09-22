@@ -369,6 +369,8 @@ pub async fn run_server() {
         .route("/api/staff/:id", put(handlers::staff::update_staff).delete(handlers::staff::delete_staff))
         .route("/api/staff/permissions", get(handlers::staff::get_staff_permissions))
         .route("/api/typing/languages", post(handlers::typing::create_language).get(handlers::typing::get_languages))
+        .route("/api/typing/languages/seed-default", post(handlers::typing::seed_default_languages))
+        .route("/api/typing/languages/:id", delete(handlers::typing::delete_language))
         .route("/api/typing/lessons", post(handlers::typing::create_lesson).get(handlers::typing::get_lessons))
         .route("/api/typing/lessons/:id", delete(handlers::typing::delete_lesson).patch(handlers::typing::toggle_lesson_status))
         .route("/api/typing/results", post(handlers::typing::submit_typing_result))

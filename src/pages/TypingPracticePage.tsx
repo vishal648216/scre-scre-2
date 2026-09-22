@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   Keyboard, Play, RefreshCw, Loader2, Languages, Clock, Zap, CheckCircle2, AlertTriangle, 
   BookOpen, Target, History, Award, RotateCcw, Pause, ChevronRight, XCircle, Trophy, BarChart3, Users,
-  FileText, Printer
+  FileText, Printer, Globe, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -12,13 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TypingAnalyticsDashboard from "@/components/TypingAnalyticsDashboard";
 import TypingLeaderboard from "@/components/TypingLeaderboard";
 import { TypingScorecardCertificateModal } from "@/components/TypingScorecardCertificateModal";
-
+import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 interface Language {
   _id: string;
   name: string;
+  code: string;
   font_family?: string;
+  keyboard_layout?: string;
+  script?: string;
 }
 
 interface Lesson {
@@ -30,6 +33,46 @@ interface Lesson {
   min_wpm?: number;
   min_accuracy?: number;
 }
+
+const defaultSampleTexts: Record<string, string> = {
+  hi: "सफलता का कोई शार्टकट नहीं होता। नियमित अभ्यास और एकाग्रता से ही गति और सटीकता प्राप्त की जा सकती है।",
+  "hi-kruti": "vH;kl gh lQyrk dh dqath gSA fu;fer vH;kl ls vki viuh xfr c<+k ldrs gSaA",
+  mr: "प्रयत्नांती परमेश्वर. सततच्या सरावाने टायपिंगचा वेग आणि अचूकता निश्चितपणे सुधारते.",
+  pa: "ਮਿਹਨਤ ਸਫਲਤਾ ਦੀ ਕੁੰਜੀ ਹੈ। ਰੋਜ਼ਾਨਾ ਅਭਿਆਸ ਨਾਲ ਤੁਹਾਡੀ ਟਾਈਪਿੰਗ ਗਤੀ ਅਤੇ ਸ਼ੁੱਧਤਾ ਵਧੇਗੀ।",
+  "pa-asees": "imhnq sPlqw dI kuMjI hY. rozwnw AiBAws nwl quhwfI twieipMg xqI vDyxI.",
+  gu: "સતત અભ્યાસથી સફળતા મળે છે. નિયમિત ટાઈપિંગ તમારી ઝડપ અને ચોકસાઈ વધારે છે.",
+  bn: "পরিশ্রম সৌভাগ্যের প্রসূতি। নিয়মিত অনুশীলনের মাধ্যমে টাইপিং গতি বৃদ্ধি পায়।",
+  ta: "முயற்சியே வெற்றிக்கு வழிவகுக்கும். தொடர் பயிற்சி உங்கள் தட்டச்சு திறனை மேம்படுத்தும்.",
+  te: "నిరంతర సాధనతో నైపుణ్యం పెరుగుతుంది. క్రమం తప్పకుండా టైపింగ్ చేయడం వేగాన్ని పెంచుతుంది.",
+  ur: "محنت کامیابی کی کنجی ہے۔ روزانہ کی مشق سے رفتار اور درستگی بہتر ہوتی ہے۔",
+  ar: "العمل الجاد هو مفتاح النجاح. التدريب المستمر يحسن سرعة الطباعة والدقة في لوحة المفاتيح.",
+  fa: "تمرین مداوم کلید موفقیت است. تمرین روزانه سرعت و دقت تایپ شما را افزایش می‌دهد.",
+  fr: "La pratique régulière est la clé du succès. Entraînez-vous chaque jour pour perfectionner votre vitesse et votre précision de frappe.",
+  de: "Übung macht den Meister. Regelmäßiges Tippen verbessert Ihre Schreibgeschwindigkeit und Genauigkeit maßgeblich.",
+  es: "La práctica constante es la clave del éxito. Escribir a diario mejora la velocidad y la precisión en el teclado.",
+  ru: "Постоянная практика — залог успеха. Ежедневные упражнения развивают скорость печати и точность ввода текста.",
+  zh: "坚持练习是成功的关键。每天进行打字练习能显著提升您的输入速度与准确率。",
+  ja: "継続は力なり。毎日のタイピング練習が入力速度と正確性を劇的に向上させます。",
+  ko: "꾸준한 연습이 성공의 열쇠입니다. 매일 타자 연습을 하면 속도와 정확도가 크게 향상됩니다.",
+  pt: "A prática diária é o segredo do sucesso. Digitar com regularidade aperfeiçoa a sua agilidade e precisão.",
+  it: "La pratica costante è la chiave del successo. Esercitarsi ogni giorno migliora la velocità di battitura.",
+  tr: "Düzenli pratik başarının anahtarıdır. Günlük yazma egzersizleri klavye hızınızı ve doğruluğunuzu artırır.",
+  vi: "Luyện tập thường xuyên là chìa khóa của thành công. Đánh máy mỗi ngày giúp tăng tốc độ và độ chính xác.",
+  th: "การฝึกฝนอย่างสม่ำเสมอคือกุญแจสู่ความสำเร็จ การพิมพ์ทุกวันช่วยเพิ่มความเร็วและความแม่นยำ",
+  en: "The quick brown fox jumps over the lazy dog. Continuous typing practice improves hand-eye coordination and boosts professional efficiency."
+};
+
+const normalizeId = (v: any): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "object") {
+    if (typeof v.$oid === "string") return v.$oid;
+    if (typeof v.id === "string") return v.id;
+    if (typeof v._id === "string") return v._id;
+  }
+  return String(v);
+};
 
 const TypingPracticePage = () => {
   const { t } = useTranslation();
@@ -58,6 +101,10 @@ const TypingPracticePage = () => {
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const currentLanguage = languages.find(l => l._id === selectedLanguage);
+  const isRtl = ["ar", "ur", "fa", "he"].includes((currentLanguage?.code || "").toLowerCase());
+  const activeFontFamily = currentLanguage?.font_family || "inherit";
+
   useEffect(() => {
     fetchLanguages();
     
@@ -78,11 +125,15 @@ const TypingPracticePage = () => {
 
   const fetchLanguages = async () => {
     try {
-      const response = await fetch("/api/typing/languages", {
-        headers: { "Authorization": `Bearer ${sessionStorage.getItem("token")}` }
-      });
-      const data = await response.json();
-      if (response.ok) setLanguages(data);
+      const response = await apiFetch("/api/typing/languages");
+      if (response.ok) {
+        const raw = await response.json();
+        const list = Array.isArray(raw) ? raw : [];
+        setLanguages(list.map((l: any) => ({
+          ...l,
+          _id: normalizeId(l._id ?? l.id),
+        })));
+      }
     } catch (error) {
       console.error("Error fetching languages:", error);
     } finally {
@@ -92,11 +143,16 @@ const TypingPracticePage = () => {
 
   const fetchLessons = async (langId: string) => {
     try {
-      const response = await fetch(`/api/typing/lessons?language_id=${langId}&active=true`, {
-        headers: { "Authorization": `Bearer ${sessionStorage.getItem("token")}` }
-      });
-      const data = await response.json();
-      if (response.ok) setLessons(data);
+      const response = await apiFetch(`/api/typing/lessons?language_id=${langId}&active=true`);
+      if (response.ok) {
+        const raw = await response.json();
+        const list = Array.isArray(raw) ? raw : [];
+        setLessons(list.map((lesson: any) => ({
+          ...lesson,
+          _id: normalizeId(lesson._id ?? lesson.id),
+          language_id: normalizeId(lesson.language_id),
+        })));
+      }
     } catch (error) {
       console.error("Error fetching lessons:", error);
     }
@@ -114,31 +170,50 @@ const TypingPracticePage = () => {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
+  const startDefaultPassagePractice = () => {
+    if (!currentLanguage) return;
+    const baseCode = (currentLanguage.code || "en").toLowerCase();
+    const sample = defaultSampleTexts[baseCode] || 
+                   defaultSampleTexts[baseCode.split("-")[0]] ||
+                   `Welcome to ${currentLanguage.name} typing practice. Regular practice will quickly build muscle memory, speed, and accuracy using the ${currentLanguage.keyboard_layout || "standard"} keyboard layout.`;
+    const quickLesson: Lesson = {
+      _id: `quick-${currentLanguage._id || currentLanguage.code}`,
+      language_id: currentLanguage._id,
+      title: `${currentLanguage.name} Practice Passage`,
+      content: sample,
+      level: "beginner",
+      min_wpm: 25,
+      min_accuracy: 85,
+    };
+    startPractice(quickLesson);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (isFinished || !selectedLesson) return;
     
     const val = e.target.value;
     
-    // Prevent pasting
-    if (val.length - userInput.length > 1) {
-      toast.error("Pasting is not allowed!");
+    // Prevent pasting using event inputType so multi-byte scripts & IMEs work flawlessly
+    const nativeEvent = e.nativeEvent as (InputEvent & { inputType?: string }) | undefined;
+    if (nativeEvent?.inputType === "insertFromPaste") {
+      toast.error("Pasting is not allowed! Please type directly.");
       return;
     }
 
     if (!startTime) setStartTime(Date.now());
     
-    // Calculate mistakes if backspacing or typing
+    // Calculate mistakes if characters added
     if (val.length > userInput.length) {
-      const lastChar = val[val.length - 1];
-      const targetChar = selectedLesson.content[val.length - 1];
-      if (lastChar !== targetChar) {
+      const added = val.slice(userInput.length);
+      const targetSlice = selectedLesson.content.slice(userInput.length, val.length);
+      if (added !== targetSlice) {
         setMistakes(prev => prev + 1);
       }
     }
 
     setUserInput(val);
 
-    if (val.length === selectedLesson.content.length) {
+    if (val.length >= selectedLesson.content.length) {
       finishPractice(val);
     }
   };
@@ -175,14 +250,13 @@ const TypingPracticePage = () => {
   const submitResult = async (finalInput: string, wpm: number, accuracy: number, duration: number, correct: number, incorrect: number) => {
     setSubmitting(true);
     try {
-      const response = await fetch("/api/typing/results", {
+      const response = await apiFetch("/api/typing/results", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionStorage.getItem("token")}`
         },
         body: JSON.stringify({
-          lesson_id: selectedLesson?._id,
+          lesson_id: selectedLesson?._id?.startsWith("quick-") ? undefined : selectedLesson?._id,
           mode,
           start_time: new Date(startTime!).toISOString(),
           end_time: new Date(endTime!).toISOString(),
@@ -249,16 +323,21 @@ const TypingPracticePage = () => {
           <TabsContent value="lessons" className="mt-0">
             {!selectedLesson ? (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 bg-card p-2 border border-border shadow-sm w-fit">
-                  <Languages className="w-5 h-5 text-primary ml-2" />
+                <div className="flex flex-wrap items-center gap-4 bg-card p-3 border border-border shadow-sm w-fit">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Select Language:</span>
+                  </div>
                   <select 
-                    className="bg-transparent border-none focus:ring-0 text-sm font-bold uppercase tracking-tight outline-none"
+                    className="bg-transparent border-none focus:ring-0 text-sm font-bold uppercase tracking-tight outline-none cursor-pointer max-w-xs md:max-w-md"
                     value={selectedLanguage}
                     onChange={(e) => setSelectedLanguage(e.target.value)}
                   >
                     <option value="">{t("CHOOSE LANGUAGE")}</option>
                     {languages.map(lang => (
-                      <option key={lang._id} value={lang._id}>{t(lang.name.toUpperCase())}</option>
+                      <option key={lang._id} value={lang._id}>
+                        {lang.name.toUpperCase()} {lang.keyboard_layout ? `— [${lang.keyboard_layout}]` : ""}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -272,8 +351,20 @@ const TypingPracticePage = () => {
                       <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{t("Select a language to see lessons")}</p>
                     </Card>
                   ) : lessons.length === 0 ? (
-                    <div className="col-span-full py-20 border border-border border-dashed text-center opacity-60">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{t("No lessons found for this language")}</p>
+                    <div className="col-span-full p-8 border border-primary/20 bg-primary/5 text-center space-y-4">
+                      <Sparkles className="w-10 h-10 text-primary mx-auto animate-pulse" />
+                      <div>
+                        <h3 className="text-base font-black uppercase text-foreground">{currentLanguage?.name} Instant Typing Practice</h3>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                          Ready to practice in {currentLanguage?.name} ({currentLanguage?.keyboard_layout || "Standard"} layout). Start immediately with our curated sample passage.
+                        </p>
+                      </div>
+                      <button
+                        onClick={startDefaultPassagePractice}
+                        className="px-6 py-3 bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:opacity-90 inline-flex items-center gap-2 shadow-lg transition-all"
+                      >
+                        <Play className="w-4 h-4" /> Start {currentLanguage?.name} Practice Now
+                      </button>
                     </div>
                   ) : (
                     lessons.map(lesson => (
@@ -325,7 +416,12 @@ const TypingPracticePage = () => {
                   <div className="bg-primary p-4 text-primary-foreground flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <BookOpen className="w-5 h-5" />
-                      <h2 className="text-sm font-black uppercase tracking-widest">{t(selectedLesson.title)}</h2>
+                      <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest">{t(selectedLesson.title)}</h2>
+                        <p className="text-[10px] font-bold opacity-80 uppercase tracking-wider">
+                          Language: {currentLanguage?.name || "Standard"} • Layout: {currentLanguage?.keyboard_layout || "QWERTY"}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="flex items-center gap-2">
@@ -359,8 +455,12 @@ const TypingPracticePage = () => {
 
                     {/* Content Display */}
                     <div 
-                      className="bg-muted/30 p-8 border border-border/50 font-mono text-xl leading-relaxed select-none relative"
-                      style={{ fontFamily: languages.find(l => l._id === selectedLesson.language_id)?.font_family || "inherit" }}
+                      className={cn(
+                        "bg-muted/30 p-8 border border-border/50 font-mono text-xl leading-relaxed select-none relative",
+                        isRtl && "text-right"
+                      )}
+                      dir={isRtl ? "rtl" : "ltr"}
+                      style={{ fontFamily: activeFontFamily }}
                     >
                       <div className="absolute top-0 left-0 w-full h-1 bg-primary/20">
                         <div 
@@ -389,8 +489,13 @@ const TypingPracticePage = () => {
                       disabled={isFinished}
                       value={userInput}
                       onChange={handleInputChange}
-                      className="w-full h-32 p-6 bg-card border-2 border-border rounded-none text-xl font-mono focus:border-primary outline-none transition-all resize-none shadow-inner"
-                      placeholder={t("Start typing the text above...")}
+                      dir={isRtl ? "rtl" : "ltr"}
+                      style={{ fontFamily: activeFontFamily }}
+                      className={cn(
+                        "w-full h-32 p-6 bg-card border-2 border-border rounded-none text-xl font-mono focus:border-primary outline-none transition-all resize-none shadow-inner",
+                        isRtl && "text-right"
+                      )}
+                      placeholder={isRtl ? "ابدأ الكتابة هنا..." : t("Start typing the text above...")}
                     />
 
                     <div className="flex justify-between items-center pt-4">
