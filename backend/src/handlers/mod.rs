@@ -66,3 +66,6 @@ pub mod batch_student;
 pub mod live_class;
 pub mod library;
 pub mod internship;
+pub mod birthday;
+pub mod ticket;
+pub mod digilocker;

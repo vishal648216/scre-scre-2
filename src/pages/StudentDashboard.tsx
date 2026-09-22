@@ -66,6 +66,8 @@ const oid = (x: any): string => {
   return String(x);
 };
 
+import { StudentBirthdayBanner } from "@/components/BirthdayWidget";
+
 const StudentDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -458,6 +460,7 @@ const StudentDashboard = () => {
         </div>
       ) : (
         <div className="dashboard-page">
+          <StudentBirthdayBanner />
           {/* Header Section */}
           <div className="dashboard-hero">
             <div>

@@ -102,6 +102,8 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
+import { LiveChatDrawer } from "./LiveChatDrawer";
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role?: string;
@@ -208,6 +210,8 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: MessageSquare, label: "Student Leads", href: "/dashboard/leads/student" },
         { icon: Handshake, label: "Franchise Leads", href: "/dashboard/leads/franchise" },
         { icon: Mail, label: "General Leads", href: "/dashboard/leads/general" },
+        { icon: HelpCircle, label: "Support Tickets", href: "/dashboard/support" },
+        { icon: Bell, label: "Broadcast Announcements", href: "/dashboard/broadcast" },
       ]
     },
     {
@@ -340,6 +344,8 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Mail, label: "Enquiry Register", href: "/dashboard/enquiries/new" },
         { icon: History, label: "Follow-ups", href: "/dashboard/enquiries/followups" },
         { icon: UserCheck, label: "Converted Leads", href: "/dashboard/enquiries/converted" },
+        { icon: HelpCircle, label: "Student Query Desk", href: "/dashboard/support" },
+        { icon: Bell, label: "Broadcast Notices", href: "/dashboard/broadcast" },
         { icon: MessageSquare, label: "Internal Messages", href: "/dashboard/student/messages" },
         { icon: Bell, label: "Center Announcements", href: "/dashboard/student/notifications" },
       ]
@@ -569,6 +575,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       icon: Bell,
       roles: ["student"],
       subItems: [
+        { icon: HelpCircle, label: "Helpdesk & Queries", href: "/dashboard/student/helpdesk" },
         { icon: Bell, label: "Announcements", href: "/dashboard/student/notifications" },
         { icon: MessageSquare, label: "Messages", href: "/dashboard/student/messages" },
         { icon: Star, label: "Review Us", href: "/dashboard/student/review" },
@@ -1620,6 +1627,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
             {collapsedHoverTooltip.label}
           </div>
         )}
+        <LiveChatDrawer />
       </div>
     </DashboardSidebarContext.Provider>
   );

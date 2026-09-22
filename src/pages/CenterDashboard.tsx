@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout, { getDashboardMenuItems } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TodayBirthdaysCard } from "@/components/BirthdayWidget";
 import {
   GraduationCap,
   BookOpen,
@@ -513,6 +514,7 @@ const CenterDashboard = () => {
 
           {/* Side Panel */}
           <div className="space-y-8">
+            <TodayBirthdaysCard />
             <Card className="rounded-[2rem] border border-white/10 bg-slate-900/95 text-white shadow-dashboard-soft-lg backdrop-blur-xl overflow-hidden relative transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-dashboard-hover hover:border-white/15">
               <div className="absolute top-0 right-0 p-10 opacity-10">
                 <Bell className="w-24 h-24" />

@@ -288,3 +288,46 @@ pub async fn edit_announcement(
         }
     }
 }
+
+pub async fn delete_announcement(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<AnnouncementResponse>) {
+    let collection = db.collection::<Announcement>("announcements");
+    let obj_id = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(AnnouncementResponse {
+            success: false,
+            message: "Invalid announcement ID".to_string(),
+        })),
+    };
+
+    let can_delete = match claims.role {
+        UserRole::Admin | UserRole::SuperAdmin => true,
+        UserRole::Center => {
+            // Check if center owns this announcement
+            let sender_id = ObjectId::parse_str(&claims.sub).unwrap_or_default();
+            collection.find_one(doc! { "_id": obj_id, "sender_id": sender_id }, None).await.ok().flatten().is_some()
+        },
+        _ => false,
+    };
+
+    if !can_delete {
+        return (StatusCode::FORBIDDEN, Json(AnnouncementResponse {
+            success: false,
+            message: "Unauthorized to delete this announcement".to_string(),
+        }));
+    }
+
+    match collection.delete_one(doc! { "_id": obj_id }, None).await {
+        Ok(_) => (StatusCode::OK, Json(AnnouncementResponse {
+            success: true,
+            message: "Announcement deleted successfully".to_string(),
+        })),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(AnnouncementResponse {
+            success: false,
+            message: "Failed to delete announcement".to_string(),
+        })),
+    }
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout, { getDashboardMenuItems } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TodayBirthdaysCard } from "@/components/BirthdayWidget";
 import {
   School,
   GraduationCap,
@@ -686,6 +687,7 @@ const AdminDashboard = () => {
           </Card>
 
           <div className="space-y-8">
+            <TodayBirthdaysCard />
             <Card variant="dashboard">
               <CardHeader className="px-8 py-6 border-b border-border/40 bg-gradient-to-r from-sky-50/40 to-transparent">
                 <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">

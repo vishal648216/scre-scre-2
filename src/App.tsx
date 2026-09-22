@@ -43,6 +43,8 @@ const StudentFeeDetailsPage = lazy(() => import("./pages/StudentFeeDetailsPage")
 const AdminFeesPage = lazy(() => import("./pages/AdminFeesPage"));
 const AdminCoursesPage = lazy(() => import("./pages/AdminCoursesPage"));
 const AdminAnnouncementsPage = lazy(() => import("./pages/AdminAnnouncementsPage"));
+const StudentHelpdeskPage = lazy(() => import("./pages/StudentHelpdeskPage"));
+const AdminTicketsPage = lazy(() => import("./pages/AdminTicketsPage"));
 const ActivityLogsPage = lazy(() => import("./pages/ActivityLogsPage"));
 const AdminTranslationUsagePage = lazy(() => import("./pages/AdminTranslationUsagePage"));
 const StudentAnnouncementsPage = lazy(() => import("./pages/StudentAnnouncementsPage"));
@@ -702,6 +704,9 @@ const AppRoutes = () => {
       <Route path="/dashboard/student/notifications" element={<ProtectedRoute allowedRoles={["student", "center", "admin", "superadmin"]}><StudentAnnouncementsPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/messages" element={<ProtectedRoute allowedRoles={["student", "center", "admin", "superadmin"]}><MessagingPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/review" element={<ProtectedRoute allowedRoles={["student"]}><StudentReviewPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/helpdesk" element={<ProtectedRoute allowedRoles={["student"]}><StudentHelpdeskPage /></ProtectedRoute>} />
+      <Route path="/dashboard/support" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminTicketsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/broadcast" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminAnnouncementsPage /></ProtectedRoute>} />
 
       {/* Public Blog */}
       <Route path="/blog" element={<BlogListPage />} />
