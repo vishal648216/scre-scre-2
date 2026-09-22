@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Keyboard, Play, RefreshCw, Loader2, Languages, Clock, Zap, CheckCircle2, AlertTriangle, 
   BookOpen, Target, History, Award, RotateCcw, Pause, ChevronRight, XCircle, Trophy, BarChart3, Users,
-  FileText, Printer, Globe, Sparkles
+  FileText, Printer, Globe, Sparkles, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -104,6 +104,17 @@ const TypingPracticePage = () => {
   const currentLanguage = languages.find(l => l._id === selectedLanguage);
   const isRtl = ["ar", "ur", "fa", "he"].includes((currentLanguage?.code || "").toLowerCase());
   const activeFontFamily = currentLanguage?.font_family || "inherit";
+
+  const [langSearch, setLangSearch] = useState("");
+  const filteredSelectLanguages = useMemo(() => {
+    if (!langSearch.trim()) return languages;
+    const q = langSearch.toLowerCase();
+    return languages.filter(l => 
+      l.name.toLowerCase().includes(q) || 
+      l.code.toLowerCase().includes(q) || 
+      (l.keyboard_layout && l.keyboard_layout.toLowerCase().includes(q))
+    );
+  }, [languages, langSearch]);
 
   useEffect(() => {
     fetchLanguages();
@@ -323,23 +334,36 @@ const TypingPracticePage = () => {
           <TabsContent value="lessons" className="mt-0">
             {!selectedLesson ? (
               <div className="space-y-6">
-                <div className="flex flex-wrap items-center gap-4 bg-card p-3 border border-border shadow-sm w-fit">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-primary" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Select Language:</span>
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-card p-3 border border-border shadow-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Language ({languages.length}):</span>
+                    </div>
+                    <select 
+                      className="bg-muted/40 border border-border px-3 py-2 text-xs font-bold uppercase tracking-tight outline-none cursor-pointer min-w-[240px] max-w-sm focus:border-primary"
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                    >
+                      <option value="">{t("CHOOSE LANGUAGE")}</option>
+                      {filteredSelectLanguages.map(lang => (
+                        <option key={lang._id} value={lang._id}>
+                          {lang.name.toUpperCase()} {lang.keyboard_layout ? `— [${lang.keyboard_layout}]` : ""}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <select 
-                    className="bg-transparent border-none focus:ring-0 text-sm font-bold uppercase tracking-tight outline-none cursor-pointer max-w-xs md:max-w-md"
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                  >
-                    <option value="">{t("CHOOSE LANGUAGE")}</option>
-                    {languages.map(lang => (
-                      <option key={lang._id} value={lang._id}>
-                        {lang.name.toUpperCase()} {lang.keyboard_layout ? `— [${lang.keyboard_layout}]` : ""}
-                      </option>
-                    ))}
-                  </select>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search world language..."
+                      value={langSearch}
+                      onChange={(e) => setLangSearch(e.target.value)}
+                      className="w-full bg-muted/40 border border-border pl-9 pr-3 py-1.5 text-xs outline-none focus:border-primary"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

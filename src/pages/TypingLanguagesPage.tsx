@@ -27,7 +27,25 @@ interface Language {
   active: boolean;
 }
 
-const INDIAN_CODES = ["hi", "hi-kd", "pa", "pa-asees", "mr", "gu", "bn", "ta", "te", "ur"];
+const normalizeId = (v: any): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "object") {
+    if (typeof v.$oid === "string") return v.$oid;
+    if (typeof v.id === "string") return v.id;
+    if (typeof v._id === "string") return v._id;
+  }
+  return String(v);
+};
+
+const INDIAN_CODES = ["hi", "hi-kd", "pa", "pa-asees", "mr", "gu", "bn", "ta", "te", "kn", "ml", "or", "as", "sa", "ks", "sd", "kok", "mni", "ne", "ur"];
+const EUROPEAN_CODES = ["en", "es", "fr", "de", "it", "pt", "ru", "nl", "pl", "sv", "no", "da", "fi", "el", "cs", "hu", "ro", "uk", "bg", "sk", "hr", "sr", "sl", "lt", "lv", "et", "ga", "is", "sq", "mt", "mk", "bs", "be", "eu", "ca", "gl", "eo", "la", "cy", "lb"];
+const ASIAN_PACIFIC_CODES = ["zh-hans", "zh-hant", "ja", "ko", "vi", "th", "id", "ms", "fil", "my", "km", "lo", "mn", "kk", "uz", "az", "ka", "hy", "si", "bo", "jv", "su", "tg", "tk", "ky", "tt", "ceb", "haw", "mi", "sm", "fj", "to"];
+const MIDEAST_AFRICA_CODES = ["ar", "fa", "he", "tr", "ps", "ku", "ug", "sw", "am", "yo", "ig", "ha", "zu", "xh", "af", "so", "om", "ti", "sn", "rw", "mg"];
+const AMERICAS_CODES = ["en", "es", "pt", "fr", "ht", "qu", "gn"];
+
+type RegionFilter = "all" | "european" | "asian_pacific" | "mideast_africa" | "americas" | "indian";
 
 const TypingLanguagesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -36,7 +54,7 @@ const TypingLanguagesPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "indian" | "world">("all");
+  const [categoryFilter, setCategoryFilter] = useState<RegionFilter>("all");
 
   const [form, setForm] = useState({
     name: "",
@@ -62,7 +80,10 @@ const TypingLanguagesPage: React.FC = () => {
       });
       const data = await response.json();
       if (response.ok && Array.isArray(data)) {
-        setLanguages(data);
+        setLanguages(data.map((l: any) => ({
+          ...l,
+          _id: normalizeId(l._id ?? l.id),
+        })));
       }
     } catch (error) {
       console.error("Error fetching languages:", error);
@@ -155,9 +176,12 @@ const TypingLanguagesPage: React.FC = () => {
 
       if (!matchesSearch) return false;
 
-      const isIndian = INDIAN_CODES.includes(lang.code.toLowerCase());
-      if (categoryFilter === "indian") return isIndian;
-      if (categoryFilter === "world") return !isIndian;
+      const codeLower = lang.code.toLowerCase();
+      if (categoryFilter === "indian") return INDIAN_CODES.includes(codeLower);
+      if (categoryFilter === "european") return EUROPEAN_CODES.includes(codeLower);
+      if (categoryFilter === "asian_pacific") return ASIAN_PACIFIC_CODES.includes(codeLower);
+      if (categoryFilter === "mideast_africa") return MIDEAST_AFRICA_CODES.includes(codeLower);
+      if (categoryFilter === "americas") return AMERICAS_CODES.includes(codeLower);
       return true;
     });
   }, [languages, searchQuery, categoryFilter]);
@@ -276,34 +300,61 @@ const TypingLanguagesPage: React.FC = () => {
         )}
 
         {/* Filter and Search Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <button
               onClick={() => setCategoryFilter("all")}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-bold transition",
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
                 categoryFilter === "all" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
               )}
             >
               All ({languages.length})
             </button>
             <button
+              onClick={() => setCategoryFilter("european")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
+                categoryFilter === "european" ? "bg-cyan-600 text-white shadow-md shadow-cyan-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
+              )}
+            >
+              European ({languages.filter(l => EUROPEAN_CODES.includes(l.code.toLowerCase())).length})
+            </button>
+            <button
+              onClick={() => setCategoryFilter("asian_pacific")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
+                categoryFilter === "asian_pacific" ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
+              )}
+            >
+              Asian & Pacific ({languages.filter(l => ASIAN_PACIFIC_CODES.includes(l.code.toLowerCase())).length})
+            </button>
+            <button
+              onClick={() => setCategoryFilter("mideast_africa")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
+                categoryFilter === "mideast_africa" ? "bg-purple-600 text-white shadow-md shadow-purple-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
+              )}
+            >
+              Middle East & Africa ({languages.filter(l => MIDEAST_AFRICA_CODES.includes(l.code.toLowerCase())).length})
+            </button>
+            <button
+              onClick={() => setCategoryFilter("americas")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
+                categoryFilter === "americas" ? "bg-rose-600 text-white shadow-md shadow-rose-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
+              )}
+            >
+              Americas ({languages.filter(l => AMERICAS_CODES.includes(l.code.toLowerCase())).length})
+            </button>
+            <button
               onClick={() => setCategoryFilter("indian")}
               className={cn(
-                "px-4 py-2 rounded-xl text-xs font-bold transition",
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition",
                 categoryFilter === "indian" ? "bg-amber-600 text-white shadow-md shadow-amber-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
               )}
             >
-              Indian Languages ({languages.filter(l => INDIAN_CODES.includes(l.code.toLowerCase())).length})
-            </button>
-            <button
-              onClick={() => setCategoryFilter("world")}
-              className={cn(
-                "px-4 py-2 rounded-xl text-xs font-bold transition",
-                categoryFilter === "world" ? "bg-purple-600 text-white shadow-md shadow-purple-500/20" : "bg-slate-800 text-slate-300 hover:text-white"
-              )}
-            >
-              International Languages ({languages.filter(l => !INDIAN_CODES.includes(l.code.toLowerCase())).length})
+              Indian Subcontinent ({languages.filter(l => INDIAN_CODES.includes(l.code.toLowerCase())).length})
             </button>
           </div>
 
