@@ -364,6 +364,7 @@ pub async fn run_server() {
         .route("/api/subscriptions/allot", post(handlers::subscription::allot_subscription))
         .route("/api/subscriptions/center/:center_id", get(handlers::subscription::get_center_subscription))
         .route("/api/staff", post(handlers::staff::handle_create_staff).get(handlers::staff::get_staff_list))
+        .route("/api/staff/:id", put(handlers::staff::update_staff).delete(handlers::staff::delete_staff))
         .route("/api/staff/permissions", get(handlers::staff::get_staff_permissions))
         .route("/api/typing/languages", post(handlers::typing::create_language).get(handlers::typing::get_languages))
         .route("/api/typing/lessons", post(handlers::typing::create_lesson).get(handlers::typing::get_lessons))

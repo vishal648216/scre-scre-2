@@ -5,6 +5,7 @@ import { IndianRupee, Search, Plus, Loader2, Calendar, FileText, User, CreditCar
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
 
 interface Student {
   _id: string;
@@ -51,6 +52,7 @@ const AdminFeesPage = () => {
     receipt_no: `RCP-${Date.now().toString().slice(-6)}`,
     remarks: ""
   });
+  const [selectedReceipt, setSelectedReceipt] = useState<FeeReceiptData | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -166,16 +168,28 @@ const AdminFeesPage = () => {
     }
   };
 
-  const handlePreviewFeeSlip = async () => {
+  const handlePreviewFeeSlip = () => {
     if (!selectedStudent) return;
-    const token = sessionStorage.getItem("token");
-    window.open(`/api/fees/preview?student_id=${selectedStudent._id}&token=${token}`, "_blank");
+    const studentFeesList = getStudentFees(selectedStudent._id);
+    if (studentFeesList.length > 0) {
+      const latest = studentFeesList[0];
+      setSelectedReceipt({
+        receipt_no: latest.receipt_no,
+        payment_date: latest.payment_date,
+        amount: latest.amount,
+        mode: latest.mode,
+        remarks: latest.remarks,
+        student_name: selectedStudent.fullName || selectedStudent.username,
+        enrollment_no: (selectedStudent as any).enrollment_number || (selectedStudent as any).roll_number || "SCRE-ENR-OK",
+        course_name: selectedStudent.course || "Certified Course",
+      });
+    } else {
+      toast.error("No fee records found for this student");
+    }
   };
 
-  const handlePrintFeeSlip = async () => {
-    if (!selectedStudent) return;
-    const token = sessionStorage.getItem("token");
-    window.open(`/api/fees/print?student_id=${selectedStudent._id}&token=${token}`, "_blank");
+  const handlePrintFeeSlip = () => {
+    handlePreviewFeeSlip();
   };
 
   const filteredStudents = students.filter(s => 
@@ -535,9 +549,26 @@ const AdminFeesPage = () => {
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-primary">{fee.receipt_no}</p>
-                              <p className="text-[9px] font-bold text-muted-foreground truncate max-w-[150px]">{fee.remarks}</p>
+                            <div className="text-right flex items-center gap-3">
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">{fee.receipt_no}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground truncate max-w-[150px]">{fee.remarks}</p>
+                              </div>
+                              <button
+                                onClick={() => setSelectedReceipt({
+                                  receipt_no: fee.receipt_no,
+                                  payment_date: fee.payment_date,
+                                  amount: fee.amount,
+                                  mode: fee.mode,
+                                  remarks: fee.remarks,
+                                  student_name: selectedStudent.fullName || selectedStudent.username,
+                                  enrollment_no: (selectedStudent as any).enrollment_number || (selectedStudent as any).roll_number || "SCRE-ENR-OK",
+                                  course_name: selectedStudent.course || "Certified Course",
+                                })}
+                                className="px-2.5 py-1 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                              >
+                                <FileText className="w-3 h-3" /> Slip
+                              </button>
                             </div>
                           </div>
                         ))
@@ -549,6 +580,13 @@ const AdminFeesPage = () => {
             )}
           </div>
         </div>
+
+        {/* Fee Receipt Printable Modal */}
+        <FeeReceiptModal
+          isOpen={!!selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+          receipt={selectedReceipt}
+        />
       </div>
     </DashboardLayout>
   );

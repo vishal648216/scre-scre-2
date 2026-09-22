@@ -1,9 +1,9 @@
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
-use mongodb::{Database, bson::{doc, oid::ObjectId}};
+use mongodb::{Database, bson::{doc, oid::ObjectId, to_bson}};
 use serde::{Deserialize, Serialize};
 use crate::models::user::{Claims, UserRole, User};
 use crate::models::staff::{Staff, StaffPermissions};
@@ -17,9 +17,22 @@ pub struct CreateStaffRequest {
     pub password: Option<String>,
     pub name: String,
     pub designation: String,
-    pub role_type: String, // "peon", "teacher", "center_admin", "alternate_staff"
+    pub role_type: String, // "peon", "teacher", "accountant", "counselor", "center_admin", "alternate_staff"
     pub phone: Option<String>,
     pub email: Option<String>,
+    pub permissions: Option<StaffPermissions>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateStaffRequest {
+    pub name: Option<String>,
+    pub designation: Option<String>,
+    pub role_type: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub status: Option<String>, // "active", "inactive"
+    pub permissions: Option<StaffPermissions>,
+    pub password: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,7 +64,7 @@ pub async fn handle_create_staff(
         return (StatusCode::CONFLICT, Json(StaffResponse { success: false, message: "Username already exists".to_string() }));
     }
 
-    // Default permissions based on role_type
+    // Default permissions based on role_type or custom override
     let mut permissions = StaffPermissions::default();
     match payload.role_type.as_str() {
         "teacher" => {
@@ -59,6 +72,14 @@ pub async fn handle_create_staff(
             permissions.can_manage_attendance = true;
             permissions.can_manage_courses = true;
             permissions.can_manage_exams = true;
+        },
+        "accountant" => {
+            permissions.can_manage_fees = true;
+            permissions.can_view_reports = true;
+        },
+        "counselor" => {
+            permissions.can_manage_enquiries = true;
+            permissions.can_manage_students = true;
         },
         "center_admin" => {
             permissions.can_manage_students = true;
@@ -68,6 +89,8 @@ pub async fn handle_create_staff(
             permissions.can_manage_exams = true;
             permissions.can_view_reports = true;
             permissions.can_manage_staff = true;
+            permissions.can_manage_enquiries = true;
+            permissions.can_issue_certificates = true;
         },
         "peon" => {
             // No permissions, just for presence
@@ -76,6 +99,10 @@ pub async fn handle_create_staff(
             // Custom or no permissions
         },
         _ => {}
+    }
+
+    if let Some(custom) = payload.permissions {
+        permissions = custom;
     }
 
     let password_plain = payload.password.clone().unwrap_or_else(|| "staff123".to_string());
@@ -254,5 +281,113 @@ pub async fn get_staff_permissions(
     match staff_coll.find_one(doc! { "user_id": user_oid }, None).await {
         Ok(Some(staff)) => (StatusCode::OK, Json(serde_json::to_value(staff.permissions).unwrap_or(serde_json::json!({})))),
         _ => (StatusCode::NOT_FOUND, Json(serde_json::json!({}))),
+    }
+}
+
+pub async fn update_staff(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateStaffRequest>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
+    }
+
+    let staff_oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Invalid staff ID".to_string() })),
+    };
+
+    let staff_coll = db.collection::<Staff>("staff");
+    let user_coll = db.collection::<User>("users");
+
+    let existing = match staff_coll.find_one(doc! { "_id": staff_oid }, None).await {
+        Ok(Some(s)) => s,
+        _ => return (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() })),
+    };
+
+    let mut update_doc = doc! {};
+    if let Some(name) = &payload.name {
+        update_doc.insert("name", name);
+    }
+    if let Some(desig) = &payload.designation {
+        update_doc.insert("designation", desig);
+    }
+    if let Some(role) = &payload.role_type {
+        update_doc.insert("role_type", role);
+    }
+    if let Some(phone) = &payload.phone {
+        update_doc.insert("phone", phone);
+    }
+    if let Some(email) = &payload.email {
+        update_doc.insert("email", email);
+    }
+    if let Some(status) = &payload.status {
+        update_doc.insert("status", status);
+    }
+    if let Some(perms) = &payload.permissions {
+        if let Ok(b) = to_bson(perms) {
+            update_doc.insert("permissions", b);
+        }
+    }
+
+    if !update_doc.is_empty() {
+        let _ = staff_coll.update_one(doc! { "_id": staff_oid }, doc! { "$set": update_doc }, None).await;
+    }
+
+    // Also update associated User if name, phone, email, or password changed
+    let mut user_update = doc! {};
+    if let Some(name) = &payload.name {
+        user_update.insert("full_name", name);
+    }
+    if let Some(phone) = &payload.phone {
+        user_update.insert("phone", phone);
+    }
+    if let Some(email) = &payload.email {
+        user_update.insert("email", email);
+    }
+    if let Some(pwd) = &payload.password {
+        if !pwd.trim().is_empty() {
+            if let Ok(h) = hash(pwd, DEFAULT_COST) {
+                user_update.insert("password_hash", h);
+                user_update.insert("raw_password", pwd);
+            }
+        }
+    }
+    if let Some(status) = &payload.status {
+        user_update.insert("active", status == "active");
+    }
+
+    if !user_update.is_empty() {
+        let _ = user_coll.update_one(doc! { "_id": existing.user_id }, doc! { "$set": user_update }, None).await;
+    }
+
+    (StatusCode::OK, Json(StaffResponse { success: true, message: "Staff updated successfully".to_string() }))
+}
+
+pub async fn delete_staff(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
+    }
+
+    let staff_oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Invalid staff ID".to_string() })),
+    };
+
+    let staff_coll = db.collection::<Staff>("staff");
+    let user_coll = db.collection::<User>("users");
+
+    if let Ok(Some(staff)) = staff_coll.find_one(doc! { "_id": staff_oid }, None).await {
+        let _ = staff_coll.delete_one(doc! { "_id": staff_oid }, None).await;
+        let _ = user_coll.delete_one(doc! { "_id": staff.user_id }, None).await;
+        (StatusCode::OK, Json(StaffResponse { success: true, message: "Staff deleted successfully".to_string() }))
+    } else {
+        (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() }))
     }
 }

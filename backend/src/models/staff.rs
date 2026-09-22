@@ -11,6 +11,10 @@ pub struct StaffPermissions {
     pub can_manage_exams: bool,
     pub can_view_reports: bool,
     pub can_manage_staff: bool, // Can this staff add other staff?
+    #[serde(default)]
+    pub can_manage_enquiries: bool,
+    #[serde(default)]
+    pub can_issue_certificates: bool,
 }
 
 impl Default for StaffPermissions {
@@ -23,6 +27,8 @@ impl Default for StaffPermissions {
             can_manage_exams: false,
             can_view_reports: false,
             can_manage_staff: false,
+            can_manage_enquiries: false,
+            can_issue_certificates: false,
         }
     }
 }

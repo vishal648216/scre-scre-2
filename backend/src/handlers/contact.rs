@@ -36,6 +36,9 @@ pub struct CreateContactRequest {
     pub college: Option<String>,
     pub subject: Option<String>,
     pub priority: Option<String>,
+    pub notes: Option<String>,
+    pub next_follow_up_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -101,9 +104,9 @@ pub async fn handle_create_enquiry(
         status: "new".to_string(),
         subject: payload.subject,
         priority: payload.priority,
-        notes: None,
+        notes: payload.notes.clone(),
         assigned_to: None,
-        next_follow_up_at: None,
+        next_follow_up_at: payload.next_follow_up_at,
         notes_history: Vec::new(),
         created_at: now,
         updated_at: now,
@@ -133,6 +136,9 @@ pub async fn handle_create_enquiry(
     }
     if let Some(col) = payload.college {
         doc_bson.insert("college", col);
+    }
+    if let Some(src) = payload.source {
+        doc_bson.insert("source", src);
     }
 
     match db

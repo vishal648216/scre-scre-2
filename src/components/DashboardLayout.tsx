@@ -319,6 +319,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: IndianRupee, label: "Student Fees", href: "/dashboard/students/fees" },
         { icon: FileSpreadsheet, label: "Student Marksheets", href: "/dashboard/students/marksheets" },
         { icon: FileSpreadsheet, label: "Issue marksheets", href: "/dashboard/attachments/generate/marksheet" },
+        { icon: Award, label: "Issue Certificates", href: "/dashboard/attachments/generate/certificate" },
         { icon: Send, label: "Document Requests", href: "/dashboard/students/requests" },
       ]
     },
@@ -336,7 +337,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       icon: MessageSquare,
       roles: ["center"],
       subItems: [
-        { icon: Mail, label: "New Enquiries", href: "/dashboard/enquiries/new" },
+        { icon: Mail, label: "Enquiry Register", href: "/dashboard/enquiries/new" },
         { icon: History, label: "Follow-ups", href: "/dashboard/enquiries/followups" },
         { icon: UserCheck, label: "Converted Leads", href: "/dashboard/enquiries/converted" },
         { icon: MessageSquare, label: "Internal Messages", href: "/dashboard/student/messages" },
@@ -550,6 +551,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       subItems: [
         { icon: List, label: "Allotted Exams", href: "/dashboard/student/exams" },
         ...(userId ? [{ icon: FileSpreadsheet, label: "My Marksheet", href: `/dashboard/student/marksheet/${userId}` } as const] : []),
+        { icon: Award, label: "My Certificates", href: "/dashboard/student/certificates" },
       ]
     },
     {

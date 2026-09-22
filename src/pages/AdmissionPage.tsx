@@ -26,6 +26,7 @@ import { loadRazorpayScript } from "@/lib/loadRazorpay";
 import { stripHtml } from "@/lib/courseDisplay";
 import { SyllabusCoverageModal } from "@/components/SyllabusCoverageModal";
 import { Badge } from "@/components/ui/badge";
+import { useSearchParams } from "react-router-dom";
 
 interface CountryFeeRule {
   country_code: string;
@@ -37,6 +38,7 @@ interface CountryFeeRule {
 
 const AdmissionPage = () => {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const steps = [
     { id: 1, title: t("Course"), icon: <BookOpen className="w-4 h-4" /> },
     { id: 2, title: t("Identity"), icon: <User className="w-4 h-4" /> },
@@ -93,6 +95,27 @@ const AdmissionPage = () => {
     coupon_code: "",
     referral_code: "",
   });
+
+  useEffect(() => {
+    const nameParam = searchParams.get("name");
+    const phoneParam = searchParams.get("phone");
+    const emailParam = searchParams.get("email");
+    const courseParam = searchParams.get("course");
+    const courseIdParam = searchParams.get("course_id");
+
+    if (nameParam || phoneParam || emailParam || courseParam) {
+      setFormData((prev) => ({
+        ...prev,
+        name: nameParam || prev.name,
+        mobile: phoneParam || prev.mobile,
+        email: emailParam || prev.email,
+        course: courseParam || prev.course,
+        courseId: courseIdParam || prev.courseId,
+      }));
+      setCurrentStep(1);
+      toast.success(t("Applicant details pre-filled from Enquiry Register!"));
+    }
+  }, [searchParams]);
 
   const [showExistingStudentModal, setShowExistingStudentModal] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
