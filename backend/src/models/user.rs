@@ -121,14 +121,19 @@ pub struct User {
     #[serde(default = "chrono::Utc::now")]
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub course_id: Option<ObjectId>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub registration_date: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub roll_number: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub batch_id: Option<ObjectId>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub current_unit: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub referral_code: Option<String>,
@@ -139,11 +144,13 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub course_category: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub enrolled_courses: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other_doc_url: Option<String>,
     #[serde(with = "crate::models::serde_helpers::optional_flexible_datetime")]
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(deserialize_with = "deserialize_bool_or_null")]
     #[serde(default)]
@@ -158,24 +165,32 @@ pub struct User {
     pub internship_mode: Option<String>,
     // Fees
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_fees: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_charges: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grand_total: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fee_breakdown: Option<Vec<FeeBreakdownItem>>,
     // New payment structure fields
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_type: Option<String>, // "one_time" or "installments"
     #[serde(default)]
     pub is_payment_type_locked: bool,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub installments: Option<Vec<Installment>>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_charges_list: Option<Vec<ExtraCharge>>,
     // Due date for student's fee payment
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub due_date: Option<String>,
     // Remarks for student
     #[serde(default)]

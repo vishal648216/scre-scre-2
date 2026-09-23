@@ -773,27 +773,35 @@ pub async fn create_admin(
                 }),
             )
         }
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(LoginResponse {
-                success: false,
-                message: "Database error".to_string(),
-                token: None,
-                role: None,
-                username: None,
-                photo_url: None,
-                user_id: None,
-                email: None,
-                exam_mode: None,
-                _id: None,
-                full_name: None,
-                first_name: None,
-                last_name: None,
-                course: None,
-                enrollment_number: None,
-                roll_number: None,
-            }),
-        ),
+        Err(e) => {
+            eprintln!("[create_admin] Database insertion error: {:?}", e);
+            let msg = if e.to_string().contains("E11000") || e.to_string().contains("duplicate") {
+                "An account with this username, email, or credential already exists".to_string()
+            } else {
+                format!("Database error: {}", e)
+            };
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(LoginResponse {
+                    success: false,
+                    message: msg,
+                    token: None,
+                    role: None,
+                    username: None,
+                    photo_url: None,
+                    user_id: None,
+                    email: None,
+                    exam_mode: None,
+                    _id: None,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            )
+        }
     }
 }
 
