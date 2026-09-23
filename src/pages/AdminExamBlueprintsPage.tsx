@@ -1187,7 +1187,7 @@ const SubjectConfigForm = ({
             {t("Default Question Bank")}
           </Label>
           <Select
-            value={config.default_question_bank_id || ""}
+            value={config.default_question_bank_id}
             onValueChange={(val) =>
               updateConfig({ default_question_bank_id: val })
             }
@@ -1196,9 +1196,9 @@ const SubjectConfigForm = ({
               <SelectValue placeholder={t("Select Default Bank")} />
             </SelectTrigger>
             <SelectContent>
-              {banks.map((bank) => (
+              {banks.filter(bank => bank.subject_id === config.subject_id).map((bank) => (
                 <SelectItem key={bank._id} value={bank._id}>
-                  {bank.name} {bank.question_count !== undefined ? `(${bank.question_count} Qs)` : ""}
+                  {bank.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1221,9 +1221,9 @@ const SubjectConfigForm = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__use_default__">{t("Use Default Bank")}</SelectItem>
-              {banks.map((bank) => (
+              {banks.filter(bank => bank.subject_id === config.subject_id).map((bank) => (
                 <SelectItem key={bank._id} value={bank._id}>
-                  {bank.name} {bank.question_count !== undefined ? `(${bank.question_count} Qs)` : ""}
+                  {bank.name}
                 </SelectItem>
               ))}
             </SelectContent>

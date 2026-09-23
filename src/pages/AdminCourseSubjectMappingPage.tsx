@@ -48,22 +48,12 @@ const AdminCourseSubjectMappingPage = () => {
   const [allMappings, setAllMappings] = useState<Mapping[]>([]);
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
 
-  const toId = (val: any): string => {
-    if (!val) return "";
-    if (typeof val === "string") return val;
-    if (typeof val === "object") {
-      if (val.$oid) return String(val.$oid);
-      if (val._id) return toId(val._id);
-    }
-    return String(val);
-  };
-
-  // Filter courses based on selected category (or return all if no category selected)
+  // Filter courses based on selected category
   const filteredCourses = useMemo(() => {
     if (!selectedCategoryId) {
-      return courses;
+      return [];
     }
-    return courses.filter(course => toId((course as any).category_id) === toId(selectedCategoryId));
+    return courses.filter(course => (course as any).category_id === selectedCategoryId);
   }, [courses, selectedCategoryId]);
 
   useEffect(() => {
@@ -93,36 +83,14 @@ const AdminCourseSubjectMappingPage = () => {
       const catData = await catRes.json();
 
       if (coursesRes.ok) {
-        const rawCourses = Array.isArray(coursesData) ? coursesData : (coursesData.items || []);
-        const normCourses = rawCourses.map((c: any) => ({
-          ...c,
-          id: toId(c._id || c.id),
-          category_id: toId(c.category_id)
-        }));
-        setCourses(normCourses);
-        if (normCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(normCourses[0].id);
-        }
+        setCourses(coursesData);
       }
       if (subsRes.ok) {
-        const rawSubs = Array.isArray(subsData) ? subsData : (subsData.items || []);
-        const normSubs = rawSubs.map((s: any) => ({
-          ...s,
-          id: toId(s._id || s.id)
-        }));
-        setSubjects(normSubs);
-        if (normSubs.length > 0 && !selectedSubjectId) {
-          setSelectedSubjectId(normSubs[0].id);
-        }
+        setSubjects(subsData.items || []);
+        if (subsData.items?.length > 0) setSelectedSubjectId(subsData.items[0].id || subsData.items[0]._id);
       }
       if (catRes.ok) {
-        const rawCats = Array.isArray(catData) ? catData : (catData.items || []);
-        const normCats = rawCats.map((c: any) => ({
-          ...c,
-          id: toId(c._id || c.id),
-          name: c.name || c.category_name || "Category"
-        }));
-        setCategories(normCats);
+        setCategories(catData.items || []);
       }
 
     } catch (error) {
@@ -138,14 +106,10 @@ const AdminCourseSubjectMappingPage = () => {
       const response = await apiFetch(`/api/academic/course-subjects/${courseId}`);
       const data = await response.json();
       if (response.ok) {
-        const norm = (data || []).map((m: any) => ({
-          ...m,
-          id: toId(m._id || m.id),
-          course_id: toId(m.course_id),
-          subject_id: toId(m.subject_id)
-        }));
-        const sorted = norm.sort((a: Mapping, b: Mapping) => a.subject_order - b.subject_order);
+        const sorted = (data || []).sort((a: Mapping, b: Mapping) => a.subject_order - b.subject_order);
         setMappings(sorted);
+        // Pre-select items that are NOT in the mapping for easier adding
+        // Or actually, we should show which ones are ALREADY mapped.
       }
     } catch (error) {
       toast.error("Failed to load mappings");
@@ -157,13 +121,7 @@ const AdminCourseSubjectMappingPage = () => {
       const response = await apiFetch(`/api/academic/course-subjects/subject/${subjectId}`);
       const data = await response.json();
       if (response.ok) {
-        const norm = (data || []).map((m: any) => ({
-          ...m,
-          id: toId(m._id || m.id),
-          course_id: toId(m.course_id),
-          subject_id: toId(m.subject_id)
-        }));
-        setMappings(norm);
+        setMappings(data || []);
       }
     } catch (error) {
       toast.error("Failed to load mappings");
@@ -176,13 +134,7 @@ const AdminCourseSubjectMappingPage = () => {
       const response = await apiFetch("/api/academic/course-subjects/all");
       const data = await response.json();
       if (response.ok) {
-        const norm = (data || []).map((m: any) => ({
-          ...m,
-          id: toId(m._id || m.id),
-          course_id: toId(m.course_id),
-          subject_id: toId(m.subject_id)
-        }));
-        setMappings(norm);
+        setMappings(data || []);
       }
     } catch (error) {
       toast.error("Failed to load all mappings");
@@ -192,11 +144,10 @@ const AdminCourseSubjectMappingPage = () => {
   };
 
   const isAlreadyMapped = (itemId: string) => {
-    const cleanId = toId(itemId);
     if (mode === 'course-to-subject') {
-      return mappings.some(m => toId(m.subject_id) === cleanId);
+      return mappings.some(m => m.subject_id === itemId);
     } else if (mode === 'subject-to-course') {
-      return mappings.some(m => toId(m.course_id) === cleanId);
+      return mappings.some(m => m.course_id === itemId);
     }
     return false;
   };
@@ -206,9 +157,8 @@ const AdminCourseSubjectMappingPage = () => {
       toast.error("This item is already linked");
       return;
     }
-    const cleanId = toId(id);
     setSelectedItems(prev =>
-      prev.includes(cleanId) ? prev.filter(i => i !== cleanId) : [...prev, cleanId]
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
@@ -226,8 +176,8 @@ const AdminCourseSubjectMappingPage = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            course_id: toId(selectedCourseId),
-            subject_ids: selectedItems.map(toId)
+            course_id: selectedCourseId,
+            subject_ids: selectedItems
           })
         });
       } else {
@@ -235,8 +185,8 @@ const AdminCourseSubjectMappingPage = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            subject_id: toId(selectedSubjectId),
-            course_ids: selectedItems.map(toId)
+            subject_id: selectedSubjectId,
+            course_ids: selectedItems
           })
         });
       }
@@ -275,14 +225,8 @@ const AdminCourseSubjectMappingPage = () => {
     }
   };
 
-  const getSubjectName = (id: string) => {
-    const cleanId = toId(id);
-    return subjects.find(s => toId(s.id) === cleanId)?.subject_name || "Unknown";
-  };
-  const getCourseName = (id: string) => {
-    const cleanId = toId(id);
-    return courses.find(c => toId(c.id) === cleanId)?.course_name || "Unknown";
-  };
+  const getSubjectName = (id: string) => subjects.find(s => (s.id || (s as any)._id) === id)?.subject_name || "Unknown";
+  const getCourseName = (id: string) => courses.find(c => (c.id || (c as any)._id) === id)?.course_name || "Unknown";
 
   return (
     <DashboardLayout>

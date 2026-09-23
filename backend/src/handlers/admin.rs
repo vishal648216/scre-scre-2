@@ -443,219 +443,26 @@ pub async fn update_user_role(
         }
     };
 
-    let user_collection = db.collection::<User>("users");
-
-    let target_user = match user_collection.find_one(doc! { "_id": oid }, None).await {
-        Ok(Some(user)) => user,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(DeleteUserResponse {
-                    success: false,
-                    message: "User not found".to_string(),
-                }),
-            );
-        }
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DeleteUserResponse {
-                    success: false,
-                    message: "Database error".to_string(),
-                }),
-            );
-        }
-    };
-
-    // Protect Super Admin from having their role changed
-    if target_user.role == UserRole::SuperAdmin {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(DeleteUserResponse {
-                success: false,
-                message: "Super Admin role cannot be modified".to_string(),
-            }),
-        );
-    }
-
-    let role_str = serde_json::to_value(&payload.role).ok().and_then(|v| v.as_str().map(|s| s.to_string())).unwrap_or_else(|| "admin".to_string());
-
-    let mut set_fields = doc! {
-        "role": &role_str,
-        "active": true,
-        "is_deleted": false
-    };
-
-    if payload.role == UserRole::Center {
-        // Ensure Center document exists in `centers` collection
-        let center_coll = db.collection::<Center>("centers");
-        let existing = center_coll.find_one(doc! { "user_id": oid }, None).await.unwrap_or(None);
-        if existing.is_none() {
-            let now = Utc::now();
-            let name = target_user.full_name.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| target_user.username.clone());
-            let phone = target_user.phone.clone().unwrap_or_default();
-            let email = target_user.email.clone().unwrap_or_default();
-            let city = target_user.city.clone().unwrap_or_default();
-            let state = target_user.state.clone().unwrap_or_default();
-            let admin_id = ObjectId::parse_str(&claims.sub).unwrap_or(oid);
-            let new_center = Center {
-                id: None,
-                user_id: oid,
-                admin_id,
-                name: name.clone(),
-                code: target_user.username.clone(),
-                owner_name: name,
-                phone,
-                email,
-                address: String::new(),
-                city,
-                state,
-                about_center: None,
-                location: None,
-                infrastructure: None,
-                course_allotment: Vec::new(),
-                branding_media: None,
-                working_hours: None,
-                active: true,
-                district: None,
-                center_code: Some(target_user.username.clone()),
-                discount_coupon: None,
-                referral_code: None,
-                bank_details: None,
-                documents: Vec::new(),
-                key_documents: None,
-                config_validity: None,
-                is_email_verified: true,
-                email_verified_at: Some(now),
-                is_deleted: false,
-                deleted_at: None,
-                permanent_delete_at: None,
-                created_at: now,
-            };
-            let _ = center_coll.insert_one(new_center, None).await;
-        } else {
-            let _ = center_coll.update_one(
-                doc! { "user_id": oid },
-                doc! { "$set": { "is_deleted": false, "active": true } },
-                None
-            ).await;
-        }
-    } else if payload.role == UserRole::Student {
-        set_fields.insert("approval_status", "approved");
-        if target_user.enrollment_number.is_none() {
-            let ts = Utc::now().timestamp() % 10000;
-            set_fields.insert("enrollment_number", format!("SCRE{:04}", ts));
-        }
-        if target_user.full_name.is_none() {
-            set_fields.insert("full_name", &target_user.username);
-        }
-        // If center exists, deactivate center document
-        let center_coll = db.collection::<Center>("centers");
-        let _ = center_coll.update_one(
-            doc! { "user_id": oid },
-            doc! { "$set": { "active": false, "is_deleted": true } },
-            None
-        ).await;
-    } else if payload.role == UserRole::Admin {
-        // If center exists, deactivate center document
-        let center_coll = db.collection::<Center>("centers");
-        let _ = center_coll.update_one(
-            doc! { "user_id": oid },
-            doc! { "$set": { "active": false, "is_deleted": true } },
-            None
-        ).await;
-    }
-
-    match user_collection.update_one(doc! { "_id": oid }, doc! { "$set": set_fields }, None).await {
-        Ok(_) => {
-            invalidate_admin_dashboard_cache();
-            (StatusCode::OK, Json(DeleteUserResponse { success: true, message: "Role updated".to_string() }))
-        },
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DeleteUserResponse { success: false, message: "Update failed".to_string() })),
-    }
-}
-
-pub async fn toggle_user_status(
-    State(db): State<Database>,
-    claims: Claims,
-    Path(id): Path<String>,
-) -> (StatusCode, Json<DeleteUserResponse>) {
-    if !require_admin(&claims) {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(DeleteUserResponse {
-                success: false,
-                message: "Unauthorized".to_string(),
-            }),
-        );
-    }
-
-    let oid = match ObjectId::parse_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(DeleteUserResponse {
-                    success: false,
-                    message: "Invalid ID".to_string(),
-                }),
-            );
-        }
-    };
-
     let collection = db.collection::<User>("users");
 
+    // Protect Super Admin from having their role changed
     if let Ok(Some(target_user)) = collection.find_one(doc! { "_id": oid }, None).await {
         if target_user.role == UserRole::SuperAdmin {
             return (
                 StatusCode::FORBIDDEN,
                 Json(DeleteUserResponse {
                     success: false,
-                    message: "Super Admin status cannot be toggled".to_string(),
+                    message: "Super Admin role cannot be modified".to_string(),
                 }),
             );
         }
-        let new_active = !target_user.active;
-        let update_res = collection
-            .update_one(doc! { "_id": oid }, doc! { "$set": { "active": new_active } }, None)
-            .await;
+    }
 
-        if update_res.is_ok() {
-            // Also toggle corresponding Center document if one exists
-            let center_coll = db.collection::<Center>("centers");
-            let _ = center_coll
-                .update_one(doc! { "user_id": oid }, doc! { "$set": { "active": new_active } }, None)
-                .await;
-
-            invalidate_admin_dashboard_cache();
-
-            (
-                StatusCode::OK,
-                Json(DeleteUserResponse {
-                    success: true,
-                    message: format!("Status changed to {}", if new_active { "Active" } else { "Inactive" }),
-                }),
-            )
-        } else {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(DeleteUserResponse {
-                    success: false,
-                    message: "Update failed".to_string(),
-                }),
-            )
-        }
-    } else {
-        (
-            StatusCode::NOT_FOUND,
-            Json(DeleteUserResponse {
-                success: false,
-                message: "User not found".to_string(),
-            }),
-        )
+    match collection.update_one(doc! { "_id": oid }, doc! { "$set": { "role": serde_json::to_value(payload.role).unwrap().as_str().unwrap() } }, None).await {
+        Ok(_) => (StatusCode::OK, Json(DeleteUserResponse { success: true, message: "Role updated".to_string() })),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DeleteUserResponse { success: false, message: "Update failed".to_string() })),
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct ResetPasswordPayload {

@@ -48,16 +48,6 @@ const AdminSessionsPage = () => {
     status: "active"
   });
 
-  const toId = (val: any): string => {
-    if (!val) return "";
-    if (typeof val === "string") return val;
-    if (typeof val === "object") {
-      if (val.$oid) return String(val.$oid);
-      if (val._id) return toId(val._id);
-    }
-    return String(val);
-  };
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -75,30 +65,9 @@ const AdminSessionsPage = () => {
       const sessionsData = await sessionsRes.json();
       const categoriesData = await categoriesRes.json();
 
-      if (coursesRes.ok) {
-        const raw = Array.isArray(coursesData) ? coursesData : (coursesData.items || []);
-        setCourses(raw.map((c: any) => ({
-          ...c,
-          id: toId(c._id || c.id),
-          category_id: toId(c.category_id)
-        })));
-      }
-      if (sessionsRes.ok) {
-        const raw = Array.isArray(sessionsData) ? sessionsData : (sessionsData.items || []);
-        setSessions(raw.map((s: any) => ({
-          ...s,
-          id: toId(s._id || s.id),
-          course_id: toId(s.course_id)
-        })));
-      }
-      if (categoriesRes.ok) {
-        const raw = Array.isArray(categoriesData) ? categoriesData : (categoriesData.items || []);
-        setCategories(raw.map((c: any) => ({
-          ...c,
-          id: toId(c._id || c.id),
-          name: c.name || c.category_name || "Category"
-        })));
-      }
+      if (coursesRes.ok) setCourses(Array.isArray(coursesData) ? coursesData : (coursesData.items || []));
+      if (sessionsRes.ok) setSessions(Array.isArray(sessionsData) ? sessionsData : (sessionsData.items || []));
+      if (categoriesRes.ok) setCategories(Array.isArray(categoriesData) ? categoriesData : (categoriesData.items || []));
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -124,7 +93,6 @@ const AdminSessionsPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          course_id: toId(form.course_id)
         })
       });
 
@@ -148,11 +116,11 @@ const AdminSessionsPage = () => {
 
   const handleEdit = (session: Session) => {
     setForm({
-      course_id: toId(session.course_id),
+      course_id: session.course_id,
       session_name: session.session_name,
       status: session.status
     });
-    setEditingId(toId(session.id));
+    setEditingId(session.id);
     setIsEditing(true);
     setIsAdding(true);
   };
@@ -160,7 +128,7 @@ const AdminSessionsPage = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this session?")) return;
     try {
-      const response = await apiFetch(`/api/academic/sessions/${toId(id)}`, {
+      const response = await apiFetch(`/api/academic/sessions/${id}`, {
         method: "DELETE"
       });
       if (response.ok) {
@@ -174,20 +142,17 @@ const AdminSessionsPage = () => {
     }
   };
 
-  const getCourseName = (id: string) => {
-    const cleanId = toId(id);
-    return courses.find(c => toId(c.id) === cleanId)?.course_name || "Unknown Course";
-  };
+  const getCourseName = (id: string) => courses.find(c => (c.id === id || (c as any)._id === id))?.course_name || "Unknown";
 
   const filteredSessions = useMemo(() => {
     return sessions.filter(session => {
-      const course = courses.find(c => toId(c.id) === toId(session.course_id));
+      const course = courses.find(c => (c.id === session.course_id || (c as any)._id === session.course_id));
 
       // Category Filter
-      if (selectedCategory !== "all" && toId(course?.category_id) !== toId(selectedCategory)) return false;
+      if (selectedCategory !== "all" && course?.category_id !== selectedCategory) return false;
 
       // Course Filter
-      if (selectedCourse !== "all" && toId(course?.id) !== toId(selectedCourse)) return false;
+      if (selectedCourse !== "all" && (course?.id !== selectedCourse && (course as any)?._id !== selectedCourse)) return false;
 
       // Search Query
       if (searchQuery.trim() && !session.session_name.toLowerCase().includes(searchQuery.toLowerCase()) && !course?.course_name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -198,7 +163,7 @@ const AdminSessionsPage = () => {
 
   const filteredCoursesForFilter = useMemo(() => {
     if (selectedCategory === "all") return courses;
-    return courses.filter(c => toId(c.category_id) === toId(selectedCategory));
+    return courses.filter(c => c.category_id === selectedCategory);
   }, [courses, selectedCategory]);
 
   return (

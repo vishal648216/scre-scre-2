@@ -21,8 +21,7 @@ import {
   Globe, 
   Settings, 
   Check, 
-  Sparkles,
-  BookMarked
+  Sparkles 
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -43,7 +42,6 @@ interface ModulePermissions {
   staff: ActionPermissions;
   leads: ActionPermissions;
   cms: ActionPermissions;
-  library: ActionPermissions;
   settings: ActionPermissions;
 }
 
@@ -56,7 +54,6 @@ const defaultModulePermissions: ModulePermissions = {
   staff: { view: false, add: false, edit: false, delete: false },
   leads: { view: true, add: true, edit: true, delete: false },
   cms: { view: false, add: false, edit: false, delete: false },
-  library: { view: true, add: true, edit: true, delete: false },
   settings: { view: false, add: false, edit: false, delete: false },
 };
 
@@ -69,7 +66,6 @@ const fullPermissions: ModulePermissions = {
   staff: { view: true, add: true, edit: true, delete: true },
   leads: { view: true, add: true, edit: true, delete: true },
   cms: { view: true, add: true, edit: true, delete: true },
-  library: { view: true, add: true, edit: true, delete: true },
   settings: { view: true, add: true, edit: true, delete: true },
 };
 
@@ -82,7 +78,6 @@ const modulesConfig = [
   { key: "staff" as keyof ModulePermissions, label: "Staff & Interns", icon: Users, desc: "Staff directory, internal assignments, and intern task management" },
   { key: "leads" as keyof ModulePermissions, label: "CRM & Enquiries", icon: Headset, desc: "Student queries, admission leads, notes, and follow-ups" },
   { key: "cms" as keyof ModulePermissions, label: "CMS & Website Content", icon: Globe, desc: "Blogs, news updates, tickers, testimonials, and gallery items" },
-  { key: "library" as keyof ModulePermissions, label: "Library Management", icon: BookMarked, desc: "Digital & physical books, catalog, book issuing, return tracking" },
   { key: "settings" as keyof ModulePermissions, label: "System Administration", icon: Settings, desc: "Global system configurations, logs, and maintenance toggles" },
 ];
 
@@ -127,7 +122,6 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: true, add: true, edit: true, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
-        library: { view: true, add: false, edit: false, delete: false },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else if (presetKey === "exam_controller") {
@@ -140,20 +134,6 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: false, add: false, edit: false, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
-        library: { view: false, add: false, edit: false, delete: false },
-        settings: { view: false, add: false, edit: false, delete: false },
-      });
-    } else if (presetKey === "librarian") {
-      setPermissions({
-        centers: { view: true, add: false, edit: false, delete: false },
-        students: { view: true, add: false, edit: false, delete: false },
-        finance: { view: false, add: false, edit: false, delete: false },
-        courses: { view: true, add: false, edit: false, delete: false },
-        exams: { view: false, add: false, edit: false, delete: false },
-        staff: { view: false, add: false, edit: false, delete: false },
-        leads: { view: false, add: false, edit: false, delete: false },
-        cms: { view: false, add: false, edit: false, delete: false },
-        library: { view: true, add: true, edit: true, delete: true },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else if (presetKey === "accounts") {
@@ -166,7 +146,6 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: false, add: false, edit: false, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
-        library: { view: false, add: false, edit: false, delete: false },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else {
@@ -418,15 +397,6 @@ const AddAdminPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleApplyPreset("librarian")}
-                  className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                    selectedPreset === "librarian" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
-                  }`}
-                >
-                  Librarian Incharge
-                </button>
-                <button
-                  type="button"
                   onClick={() => handleApplyPreset("accounts")}
                   className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
                     selectedPreset === "accounts" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
@@ -484,27 +454,23 @@ const AddAdminPage = () => {
                       </div>
                       <p className="text-[10px] text-muted-foreground mb-3 line-clamp-2 h-7">{mod.desc}</p>
 
-                      {/* Action Checkboxes Matrix */}
-                      <div className="grid grid-cols-2 gap-2 text-left bg-muted/20 p-2 border border-border/40">
+                      {/* Action Toggles */}
+                      <div className="grid grid-cols-4 gap-1.5 text-center">
                         {(["view", "add", "edit", "delete"] as (keyof ActionPermissions)[]).map(act => {
                           const isActive = modPerms[act];
                           return (
-                            <label
+                            <button
                               key={act}
-                              className={`flex items-center gap-2 p-1.5 border transition-all cursor-pointer select-none ${
+                              type="button"
+                              onClick={() => toggleAction(mod.key, act)}
+                              className={`py-1.5 text-[10px] font-black uppercase tracking-widest border transition-all ${
                                 isActive 
-                                  ? "bg-primary/10 border-primary/60 text-primary font-black" 
-                                  : "bg-background border-border/50 text-muted-foreground hover:border-border"
+                                  ? "bg-primary/15 border-primary text-primary font-extrabold" 
+                                  : "border-border/60 text-muted-foreground/60 hover:border-border hover:text-foreground"
                               }`}
                             >
-                              <input
-                                type="checkbox"
-                                checked={isActive}
-                                onChange={() => toggleAction(mod.key, act)}
-                                className="w-4 h-4 rounded text-primary focus:ring-primary accent-primary cursor-pointer"
-                              />
-                              <span className="text-[10px] uppercase font-black tracking-widest">{act}</span>
-                            </label>
+                              {act}
+                            </button>
                           );
                         })}
                       </div>

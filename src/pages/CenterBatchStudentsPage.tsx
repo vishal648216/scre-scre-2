@@ -379,16 +379,16 @@ const CenterBatchStudentsPage = () => {
                               <ArrowLeftRight className="w-3 h-3 mr-1" />
                               Move Batch
                             </Button>
-                            <Button
+                            {/* <Button
                               size="sm"
                               variant="outline"
-                              className="rounded-none h-7 text-[10px] text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              className="rounded-none h-7 text-[10px]"
                               disabled={removingIds.has(s.id)}
                               onClick={() => unassignStudent(s.id)}
                             >
                               {removingIds.has(s.id) ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <UserMinus className="w-3 h-3 mr-1" />}
                               Remove
-                            </Button>
+                            </Button> */}
                           </div>
                         </div>
                       ))}

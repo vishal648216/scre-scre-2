@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowLeft,
   Save,
@@ -9,10 +9,10 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  AlertCircle,
   HelpCircle,
+  Hash,
   Search,
-  Check,
-  X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
@@ -20,16 +20,14 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Question {
   _id?: string;
   question_text: string;
-  question_type?: "MCQ" | "TRUE_FALSE" | "FILL_BLANKS" | "THEORY";
   options: string[];
   correct_option_index: number;
-  fill_blank_answer?: string;
-  theory_answer?: string;
   bank_id?: string;
   created_at?: string;
   isNew?: boolean;
@@ -68,8 +66,6 @@ const QuestionListPage = () => {
       const qData = await qRes.json();
       let allQuestions = qData.map((q: any) => ({
         ...q,
-        options: q.options || [],
-        question_type: q.question_type || (q.options && q.options.length > 0 ? "MCQ" : "THEORY"),
         isNew: false,
       }));
 
@@ -77,7 +73,6 @@ const QuestionListPage = () => {
         const numToAdd = foundBank.target_question_count - allQuestions.length;
         const newQs = Array.from({ length: numToAdd }, () => ({
           question_text: "",
-          question_type: "MCQ" as const,
           options: ["", "", "", ""],
           correct_option_index: 0,
           isNew: true,
@@ -102,7 +97,6 @@ const QuestionListPage = () => {
       ...questions,
       {
         question_text: "",
-        question_type: "MCQ",
         options: ["", "", "", ""],
         correct_option_index: 0,
         isNew: true,
@@ -122,7 +116,6 @@ const QuestionListPage = () => {
 
   const addOption = (index: number) => {
     const newQuestions = [...questions];
-    if (!newQuestions[index].options) newQuestions[index].options = [];
     newQuestions[index].options.push("");
     setQuestions(newQuestions);
   };
@@ -159,11 +152,8 @@ const QuestionListPage = () => {
         const payload = {
           bank_id: bankId,
           question_text: q.question_text,
-          question_type: q.question_type || "MCQ",
-          options: q.options || [],
-          correct_option_index: q.correct_option_index || 0,
-          fill_blank_answer: q.fill_blank_answer || "",
-          theory_answer: q.theory_answer || ""
+          options: q.options,
+          correct_option_index: q.correct_option_index,
         };
         let res;
         if (q._id && !q.isNew) {
@@ -260,19 +250,11 @@ const QuestionListPage = () => {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => navigate(`/dashboard/academics/question-bank/${bankId}/questions/new`)}
-              variant="outline"
-              className="rounded-none border-primary/40 text-primary font-black uppercase tracking-widest text-[10px] px-6 h-12 hover:bg-primary/10 transition-all"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Detailed Form Add
-            </Button>
-            <Button
               onClick={addQuestion}
               className="rounded-none bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-[10px] px-6 h-12 border-2 border-primary shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
             >
               <Plus className="w-4 h-4 mr-2" />
-              {t("Quick Add")}
+              {t("Add Question")}
             </Button>
             <Button
               onClick={saveAllQuestions}
@@ -291,239 +273,122 @@ const QuestionListPage = () => {
 
         {/* Question Cards */}
         <div className="grid grid-cols-1 gap-6">
-          {filteredQuestions.map((question, index) => {
-            const qType = question.question_type || "MCQ";
-            return (
-              <Card
-                key={`question-${index}-${question._id || "new"}`}
-                className="rounded-none border-2 border-border bg-card hover:border-primary transition-colors group"
-              >
-                <CardHeader className="p-6 border-b-2 border-border group-hover:bg-muted/30 transition-colors">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                        {/* Serial Number */}
-                        <div className="w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-black border-2 border-primary">
-                          {index + 1}
-                        </div>
-
-                        {/* Inline Type Selector */}
-                        <Select
-                          value={qType}
-                          onValueChange={(val: "MCQ" | "TRUE_FALSE" | "FILL_BLANKS" | "THEORY") => {
-                            updateQuestion(index, {
-                              question_type: val,
-                              options: val === "MCQ" ? (question.options?.length ? question.options : ["", "", "", ""]) : val === "TRUE_FALSE" ? ["True", "False"] : [],
-                              correct_option_index: 0,
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="w-[170px] h-10 rounded-none border-2 border-primary/40 bg-background text-primary font-black uppercase text-[10px] tracking-widest">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-none border-2 border-border font-bold uppercase text-xs">
-                            <SelectItem value="MCQ">Multiple Choice (MCQ)</SelectItem>
-                            <SelectItem value="TRUE_FALSE">True / False</SelectItem>
-                            <SelectItem value="FILL_BLANKS">Fill in Blanks</SelectItem>
-                            <SelectItem value="THEORY">Theory / Long Answer</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {qType === "MCQ" && (
-                          <span className="px-2.5 py-1 bg-muted border border-border text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                            {question.options?.length || 0} {t("Options")}
-                          </span>
-                        )}
+          {filteredQuestions.map((question, index) => (
+            <Card
+              key={`question-${index}-${question._id || "new"}`}
+              className="rounded-none border-2 border-border bg-card hover:border-primary transition-colors group"
+            >
+              <CardHeader className="p-6 border-b-2 border-border group-hover:bg-muted/30 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3 mb-2">
+                      {/* Serial Number */}
+                      <div className="w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-black border-2 border-primary">
+                        {index + 1}
                       </div>
+                      <span className="px-2 py-0.5 bg-muted border border-border text-muted-foreground text-[10px] font-black uppercase tracking-widest">
+                        {question.options.length} {t("Options")}
+                      </span>
+                    </div>
 
-                      <Textarea
-                        value={question.question_text}
-                        onChange={(e) =>
+                    <Textarea
+                      value={question.question_text}
+                      onChange={(e) =>
+                        updateQuestion(index, {
+                          question_text: e.target.value,
+                        })
+                      }
+                      placeholder={t("Enter your question here...")}
+                      className="rounded-none min-h-[100px] border-border bg-background text-sm font-medium focus:border-primary transition-all resize-none"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteQuestion(index)}
+                    className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-none"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {t("Answer Options")}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addOption(index)}
+                    className="rounded-none h-8 text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    {t("Add Option")}
+                  </Button>
+                </div>
+                <div className="space-y-3 pt-2">
+                  {question.options.map((opt, oIndex) => (
+                    <div
+                      key={oIndex}
+                      className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300"
+                    >
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-none border-2 transition-all cursor-pointer ${question.correct_option_index === oIndex
+                          ? "bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-200"
+                          : "bg-muted border-border text-muted-foreground"
+                          }`}
+                        onClick={() =>
                           updateQuestion(index, {
-                            question_text: e.target.value,
+                            correct_option_index: oIndex,
                           })
                         }
-                        placeholder={t("Enter your question statement here...")}
-                        className="rounded-none min-h-[90px] border-border bg-background text-sm font-medium focus:border-primary transition-all resize-none"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {question._id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/dashboard/academics/question-bank/${bankId}/questions/${question._id}`)}
-                          className="h-10 w-10 text-primary hover:bg-primary/10 rounded-none"
-                          title="Full Edit Form"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                        </Button>
-                      )}
+                      >
+                        <span className="text-sm font-black">
+                          {String.fromCharCode(65 + oIndex)}
+                        </span>
+                      </div>
+                      <div className="flex-1 relative">
+                        <Input
+                          required
+                          value={opt}
+                          onChange={(e) =>
+                            updateOption(index, oIndex, e.target.value)
+                          }
+                          placeholder={`${t("Option")} ${String.fromCharCode(
+                            65 + oIndex
+                          )}...`}
+                          className={`h-10 rounded-none border-border bg-background text-sm font-medium focus:border-primary transition-all pr-10 ${question.correct_option_index === oIndex
+                            ? "ring-1 ring-emerald-500/30 border-emerald-500/50"
+                            : ""
+                            }`}
+                        />
+                        {question.correct_option_index === oIndex && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          </div>
+                        )}
+                      </div>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteQuestion(index)}
+                        onClick={() => removeOption(index, oIndex)}
+                        disabled={question.options.length <= 2}
                         className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="p-6 space-y-4">
-                  {/* MCQ UI */}
-                  {qType === "MCQ" && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                            {t("Answer Options (Click option letter to select correct answer)")}
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addOption(index)}
-                          className="rounded-none h-8 text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5"
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1.5" />
-                          {t("Add Option")}
-                        </Button>
-                      </div>
-                      <div className="space-y-3 pt-1">
-                        {question.options.map((opt, oIndex) => (
-                          <div
-                            key={oIndex}
-                            className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300"
-                          >
-                            <div
-                              className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-none border-2 transition-all cursor-pointer ${
-                                question.correct_option_index === oIndex
-                                  ? "bg-emerald-600 border-emerald-600 text-white shadow-md"
-                                  : "bg-muted border-border text-muted-foreground hover:border-primary"
-                              }`}
-                              onClick={() =>
-                                updateQuestion(index, {
-                                  correct_option_index: oIndex,
-                                })
-                              }
-                              title="Click to set as correct answer"
-                            >
-                              <span className="text-sm font-black">
-                                {String.fromCharCode(65 + oIndex)}
-                              </span>
-                            </div>
-                            <div className="flex-1 relative">
-                              <Input
-                                required
-                                value={opt}
-                                onChange={(e) =>
-                                  updateOption(index, oIndex, e.target.value)
-                                }
-                                placeholder={`${t("Option")} ${String.fromCharCode(
-                                  65 + oIndex
-                                )}...`}
-                                className={`h-10 rounded-none border-border bg-background text-sm font-medium focus:border-primary transition-all pr-10 ${
-                                  question.correct_option_index === oIndex
-                                    ? "ring-1 ring-emerald-500/30 border-emerald-500/50"
-                                    : ""
-                                }`}
-                              />
-                              {question.correct_option_index === oIndex && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-emerald-600 font-bold text-[10px]">
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeOption(index, oIndex)}
-                              disabled={question.options.length <= 2}
-                              className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-none"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TRUE / FALSE UI */}
-                  {qType === "TRUE_FALSE" && (
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
-                        Select Correct Answer:
-                      </span>
-                      <div className="grid grid-cols-2 gap-4 max-w-md">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => updateQuestion(index, { correct_option_index: 0, options: ["True", "False"] })}
-                          className={`rounded-none h-12 font-black uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${
-                            question.correct_option_index === 0
-                              ? "bg-emerald-600 text-white border-emerald-700 shadow-md"
-                              : "border-border text-foreground hover:border-emerald-600"
-                          }`}
-                        >
-                          <Check className="w-5 h-5" />
-                          TRUE (CORRECT)
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => updateQuestion(index, { correct_option_index: 1, options: ["True", "False"] })}
-                          className={`rounded-none h-12 font-black uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${
-                            question.correct_option_index === 1
-                              ? "bg-rose-600 text-white border-rose-700 shadow-md"
-                              : "border-border text-foreground hover:border-rose-600"
-                          }`}
-                        >
-                          <X className="w-5 h-5" />
-                          FALSE (CORRECT)
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* FILL IN BLANKS UI */}
-                  {qType === "FILL_BLANKS" && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
-                        Correct Answer Phrase / Word:
-                      </span>
-                      <Input
-                        value={question.fill_blank_answer || ""}
-                        onChange={(e) => updateQuestion(index, { fill_blank_answer: e.target.value })}
-                        placeholder="e.g., Central Processing Unit"
-                        className="h-10 rounded-none border-2 border-primary/30 font-medium text-sm focus-visible:border-primary"
-                      />
-                    </div>
-                  )}
-
-                  {/* THEORY UI */}
-                  {qType === "THEORY" && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
-                        Model Answer / Rubric / Grading Key (Optional):
-                      </span>
-                      <Textarea
-                        value={question.theory_answer || ""}
-                        onChange={(e) => updateQuestion(index, { theory_answer: e.target.value })}
-                        placeholder="Enter reference answer or evaluation criteria..."
-                        className="rounded-none min-h-[80px] border-2 border-primary/30 font-medium text-sm focus-visible:border-primary resize-none"
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </DashboardLayout>

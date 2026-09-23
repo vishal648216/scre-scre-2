@@ -95,7 +95,7 @@ pub async fn generate_center_details_pdf(
     let abs_html_path = temp_dir.join(&html_filename);
     let abs_pdf_path = temp_dir.join(&pdf_filename);
 
-    if let Err(e) = fs::write(&abs_html_path, &html) {
+    if let Err(e) = fs::write(&abs_html_path, html) {
         eprintln!("Failed to write temp HTML: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -104,12 +104,8 @@ pub async fn generate_center_details_pdf(
             .into_response();
     }
 
-    // Try multiple possible chromium paths, prioritizing non-snap versions & Windows paths
+    // Try multiple possible chromium paths, prioritizing non-snap versions
     let chromium_paths = [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
@@ -119,8 +115,6 @@ pub async fn generate_center_details_pdf(
         "google-chrome",
         "chromium-browser",
         "chromium",
-        "chrome",
-        "msedge",
     ];
 
     let mut pdf_generated = false;
@@ -215,17 +209,11 @@ pub async fn generate_center_details_pdf(
         )
             .into_response()
     } else {
-        // Fallback: return printable HTML directly if headless PDF generation failed
-        eprintln!("Headless PDF failed: {}. Falling back to printable HTML.", last_error);
-        let printable_html = format!(
-            "{}\n<script>window.onload = function() {{ window.print(); }};</script>",
-            html
-        );
+        // Cleanup if failed
         let _ = fs::remove_file(&abs_html_path);
         (
-            StatusCode::OK,
-            [(header::CONTENT_TYPE, "text/html")],
-            printable_html,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to generate PDF. Error: {}", last_error),
         )
             .into_response()
     }

@@ -75,34 +75,10 @@ const SuperAdminDashboard = () => {
   ];
 
   const liveTracking = [
-    {
-      label: t("Active Centers"),
-      value: metrics?.totalCenters || 0,
-      sub: t("Operational"),
-      color: "text-green-500",
-      percent: metrics?.totalCenters ? Math.min(100, Math.round((metrics.totalCenters / 50) * 100)) : 0,
-    },
-    {
-      label: t("Active Students"),
-      value: metrics?.totalStudents || 0,
-      sub: t("Registered"),
-      color: "text-blue-500",
-      percent: metrics?.totalStudents ? Math.min(100, Math.round((metrics.totalStudents / 500) * 100)) : 0,
-    },
-    {
-      label: t("Active Announcements"),
-      value: metrics?.activeAnnouncements || 0,
-      sub: t("Live notices"),
-      color: "text-purple-500",
-      percent: metrics?.activeAnnouncements ? Math.min(100, Math.round((metrics.activeAnnouncements / 20) * 100)) : 0,
-    },
-    {
-      label: t("Uptime"),
-      value: "99.9%",
-      sub: t("System Healthy"),
-      color: "text-orange-500",
-      percent: 99.9,
-    },
+    { label: t("Active Centers"), value: metrics?.totalCenters || "0", sub: t("Operational"), color: "text-green-500" },
+    { label: t("Active Students"), value: metrics?.totalStudents || "0", sub: t("Registered"), color: "text-blue-500" },
+    { label: t("Active Announcements"), value: metrics?.activeAnnouncements || "0", sub: t("Live notices"), color: "text-purple-500" },
+    { label: t("Uptime"), value: "99.9%", sub: t("System Healthy"), color: "text-orange-500" },
   ];
 
   return (
@@ -135,11 +111,8 @@ const SuperAdminDashboard = () => {
                     <span className="text-[10px] font-bold text-muted-foreground">{t("users")}</span>
                   </div>
                   <p className="text-[10px] font-bold text-muted-foreground mt-1">{track.sub}</p>
-                  <div className="mt-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={cn("h-full transition-all duration-700 rounded-full", track.color.replace("text", "bg"))}
-                      style={{ width: `${track.percent}%` }}
-                    />
+                  <div className="mt-4 h-1 w-full bg-muted rounded-full overflow-hidden">
+                    <div className={cn("h-full w-2/3 rounded-full", track.color.replace("text", "bg"))} />
                   </div>
                 </CardContent>
               </Card>

@@ -964,26 +964,31 @@ pub async fn handle_create_student(
         }
     }
 
-    // Center, Admin, and SuperAdmin can create students
-    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    // Only Center can create students
+    if claims.role != UserRole::Center {
         return (
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({
                 "success": false,
-                "message": "Permission denied to enroll students".to_string()
+                "message": "Only center can enroll students".to_string()
             })),
         );
     }
 
     let user_collection = db.collection::<User>("users");
 
-    let creator_id = payload
-        .center_id
-        .clone()
-        .and_then(|id| ObjectId::parse_str(&id).ok())
-        .unwrap_or_else(|| {
-            ObjectId::parse_str(&claims.sub).unwrap_or_else(|_| ObjectId::new())
-        });
+    let creator_id = match ObjectId::parse_str(&claims.sub) {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "message": "Invalid creator ID"
+                })),
+            );
+        }
+    };
 
     let center_coll = db.collection::<Center>("centers");
     let center = if let Ok(Some(c)) = center_coll
@@ -1066,21 +1071,6 @@ pub async fn handle_create_student(
         .batch_id
         .clone()
         .and_then(|bid| ObjectId::parse_str(&bid).ok());
-
-    if let Some(bid) = batch_oid {
-        let batch_coll = db.collection::<crate::models::batch::Batch>("batches");
-        if let Ok(Some(batch)) = batch_coll.find_one(doc! { "_id": bid }, None).await {
-            if batch.current_count >= batch.max_capacity {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "success": false,
-                        "message": "Selected batch is full. Maximum capacity reached."
-                    })),
-                );
-            }
-        }
-    }
 
     let session_oid = payload
         .session_id
@@ -1378,21 +1368,6 @@ pub async fn public_register_student(
         .batch_id
         .clone()
         .and_then(|id| ObjectId::parse_str(&id).ok());
-
-    if let Some(bid) = batch_oid {
-        let batch_coll = db.collection::<crate::models::batch::Batch>("batches");
-        if let Ok(Some(batch)) = batch_coll.find_one(doc! { "_id": bid }, None).await {
-            if batch.current_count >= batch.max_capacity {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "success": false,
-                        "message": "Selected time slot / batch is full. Please select a different time slot or center."
-                    })),
-                );
-            }
-        }
-    }
     let session_oid = payload
         .session_id
         .clone()
@@ -1557,19 +1532,6 @@ pub async fn public_register_student(
     match user_collection.insert_one(new_user, None).await {
         Ok(res) => {
             let inserted_id = res.inserted_id.as_object_id().unwrap();
-
-            // Increment batch count if batch_id is provided
-            if let Some(bid) = batch_oid {
-                let batch_coll = db.collection::<crate::models::batch::Batch>("batches");
-                let _ = batch_coll
-                    .update_one(
-                        doc! { "_id": bid },
-                        doc! { "$inc": { "current_count": 1 } },
-                        None,
-                    )
-                    .await;
-            }
-
             (
                 StatusCode::CREATED,
                 Json(serde_json::json!({
@@ -1811,7 +1773,7 @@ pub async fn list_students(
     }
 
     let user_collection = db.collection::<User>("users");
-    let mut filter = doc! { "role": "student", "is_deleted": { "$ne": true } };
+    let mut filter = doc! { "role": "student", "is_deleted": false };
 
     if claims.role == UserRole::Center {
         let center_oid = match ObjectId::parse_str(&claims.sub) {
@@ -3144,10 +3106,6 @@ pub async fn generate_student_id_card_pdf(
     }
 
     let chromium_paths = [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
@@ -3157,8 +3115,6 @@ pub async fn generate_student_id_card_pdf(
         "google-chrome",
         "chromium-browser",
         "chromium",
-        "chrome",
-        "msedge",
     ];
 
     let mut pdf_generated = false;
@@ -3218,8 +3174,8 @@ pub async fn generate_student_id_card_pdf(
 
     if pdf_generated {
         if let Ok(pdf_bytes) = std::fs::read(&abs_pdf_path) {
-            let _ = std::fs::remove_file(&abs_html_path);
-            let _ = std::fs::remove_file(&abs_pdf_path);
+            let _ = std::fs::remove_file(abs_html_path);
+            let _ = std::fs::remove_file(abs_pdf_path);
             (
                 StatusCode::OK,
                 [
@@ -3240,18 +3196,9 @@ pub async fn generate_student_id_card_pdf(
                 .into_response()
         }
     } else {
-        // Fallback: return printable HTML if headless PDF generation failed
-        eprintln!("Enrollment headless PDF failed: {}. Falling back to printable HTML.", last_error);
-        let html_content = std::fs::read_to_string(&abs_html_path).unwrap_or_default();
-        let printable_html = format!(
-            "{}\n<script>window.onload = function() {{ window.print(); }};</script>",
-            html_content
-        );
-        let _ = std::fs::remove_file(&abs_html_path);
         (
-            StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "text/html")],
-            printable_html,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("PDF generation failed: {}", last_error),
         )
             .into_response()
     }

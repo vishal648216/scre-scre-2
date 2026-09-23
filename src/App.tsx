@@ -370,9 +370,8 @@ const AppRoutes = () => {
       <Route path="/dashboard/typing/lessons" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><TypingLessonsPage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/analytics" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingAnalyticsPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/typing/history" element={<ProtectedRoute allowedRoles={["student", "admin", "superadmin", "center"]}><TypingHistoryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/history" element={<ProtectedRoute allowedRoles={["student"]}><TypingHistoryPage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingTestsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/typing/practice" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student", "staff"]}><TypingPracticePage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingAllotPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/finance/wallet" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceWalletPage /></ProtectedRoute>} />
@@ -387,39 +386,34 @@ const AppRoutes = () => {
       <Route path="/dashboard/locations/states" element={<Navigate to="/dashboard/locations" replace />} />
       <Route path="/dashboard/locations/cities" element={<Navigate to="/dashboard/locations" replace />} />
       <Route path="/dashboard/system/roles" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminRolePermissionsPage /></ProtectedRoute>} />
-      {/* Academics & Exams Routes */}
-      <Route path="/dashboard/academics/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/courses" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminCoursesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/courses" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminCoursesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/subjects" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminSubjectsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/subjects" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminSubjectsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/mapping" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminCourseSubjectMappingPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/sessions" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminSessionsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/sessions" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminSessionsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/study-material" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStudyMaterialPage /></ProtectedRoute>} />
-      <Route path="/dashboard/study-material" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStudyMaterialPage /></ProtectedRoute>} />
-      <Route path="/dashboard/assets" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAssetsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/courses" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCoursesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/courses" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCoursesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/subjects" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSubjectsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/subjects" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSubjectsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/mapping" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCourseSubjectMappingPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/sessions" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSessionsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/sessions" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSessionsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/study-material" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminStudyMaterialPage /></ProtectedRoute>} />
+      <Route path="/dashboard/study-material" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminStudyMaterialPage /></ProtectedRoute>} />
+      <Route path="/dashboard/assets" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminAssetsPage /></ProtectedRoute>} />
       <Route path="/dashboard/certificates/approvals" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCertificateApprovalPage /></ProtectedRoute>} />
       <Route path="/dashboard/attachments/approvals" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCertificateApprovalPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exam-v2/hub" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamV2Hub /></ProtectedRoute>} />
-      <Route path="/dashboard/exam-v2/marks-approval" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminMarksApprovalPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/blueprints" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamBlueprintsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/mock-tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminMockTestsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><BankListPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><QuestionListPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><QuestionFormPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/questions/new" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><QuestionFormPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><QuestionFormPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/questions/:questionId" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><QuestionFormPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-feedback" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminQuestionFeedbackPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exam-v2/hub" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamV2Hub /></ProtectedRoute>} />
+      <Route path="/dashboard/exam-v2/marks-approval" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminMarksApprovalPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/blueprints" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamBlueprintsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/mock-tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminMockTestsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><BankListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionFormPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionFormPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-feedback" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminQuestionFeedbackPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamAllotPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/alloted" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/allotted" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/papers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamListPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/results" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamResultsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/center-requests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamCenterRequestsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/requests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamCenterRequestsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/center-requests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamCenterRequestsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/evaluate/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><ManualEvaluationPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/print/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><PrintQuestionPaper /></ProtectedRoute>} />
       <Route path="/dashboard/exams/results/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><ExamResultPage /></ProtectedRoute>} />
@@ -585,7 +579,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/exams/reappear" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterReappearManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/download-paper" element={<ProtectedRoute allowedRoles={["center"]}><CenterDownloadPaperPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "student"]}><CenterStudentsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterStudentsPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/add" element={<ProtectedRoute allowedRoles={["center"]}><AddStudentPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/edit/:id" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><EditStudentPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/bin" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><StudentRecycleBinPage /></ProtectedRoute>} />
@@ -675,8 +669,8 @@ const AppRoutes = () => {
       <Route path="/dashboard/student/subjects" element={<ProtectedRoute allowedRoles={["student"]}><StudentSubjectsPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/materials" element={<ProtectedRoute allowedRoles={["student"]}><StudentCourseMaterialsPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/recorded" element={<ProtectedRoute allowedRoles={["student"]}><StudentRecordedClassesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/student/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><StudentLibraryPage /></ProtectedRoute>} />
-      <Route path="/dashboard/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/library" element={<ProtectedRoute allowedRoles={["student"]}><StudentLibraryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><LibraryManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/admin/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><LibraryManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/center/library" element={<ProtectedRoute allowedRoles={["center"]}><LibraryManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/internships" element={<ProtectedRoute allowedRoles={["student"]}><StudentInternshipPortalPage /></ProtectedRoute>} />

@@ -49,19 +49,7 @@ const AdmissionPage = () => {
   const [currentStep, setCurrentStep] = useState(0); // 0 is hero, 1 is course selection, then form steps
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [centers, setCenters] = useState<{
-    id: string;
-    name: string;
-    code?: string;
-    state?: string;
-    district?: string;
-    city?: string;
-    pincode?: string;
-    address?: string;
-  }[]>([]);
-  const [centerStateFilter, setCenterStateFilter] = useState("all");
-  const [centerDistrictFilter, setCenterDistrictFilter] = useState("all");
-  const [centerSearchQuery, setCenterSearchQuery] = useState("");
+  const [centers, setCenters] = useState<{ id: string, name: string }[]>([]);
   const [centerBatches, setCenterBatches] = useState<any[]>([]);
   const [apiCourses, setApiCourses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -98,8 +86,6 @@ const AdmissionPage = () => {
     nationalId: "",
     qualification: "",
     center: "",
-    center2: "",
-    center3: "",
     batch: "",
     mode: "",
     photo: null,
@@ -249,18 +235,11 @@ const AdmissionPage = () => {
         const res = await apiFetch("/api/public/centers");
         if (res.ok) {
           const data = await res.json();
-          const rawList = Array.isArray(data) ? data : (data?.data || []);
           setCenters(
-            rawList
+            (data || [])
               .map((c: any) => ({
-                id: String(c.user_id ?? c.id ?? c._id ?? c.code ?? "").trim(),
+                id: String(c.id ?? c._id ?? c.code ?? "").trim(),
                 name: String(c.name ?? "").trim(),
-                code: String(c.code ?? "").trim(),
-                state: String(c.state ?? c.location?.state ?? "").trim(),
-                district: String(c.district ?? c.location?.district ?? "").trim(),
-                city: String(c.city ?? c.location?.city ?? "").trim(),
-                pincode: String(c.pincode ?? c.location?.pincode ?? "").trim(),
-                address: String(c.address ?? c.location?.address ?? "").trim(),
               }))
               .filter((x: any) => x.id && x.name),
           );
@@ -306,55 +285,6 @@ const AdmissionPage = () => {
     fetchCourses();
     fetchCountryFees();
   }, []);
-
-  const centerStates = useMemo(() => {
-    const states = new Set<string>();
-    centers.forEach((c) => {
-      if (c.state) states.add(c.state.trim());
-    });
-    return Array.from(states).sort();
-  }, [centers]);
-
-  const centerDistricts = useMemo(() => {
-    const districts = new Set<string>();
-    centers.forEach((c) => {
-      if (centerStateFilter !== "all" && c.state?.trim().toLowerCase() !== centerStateFilter.toLowerCase()) return;
-      if (c.district) districts.add(c.district.trim());
-      if (c.city) districts.add(c.city.trim());
-    });
-    return Array.from(districts).sort();
-  }, [centers, centerStateFilter]);
-
-  const filteredCenters = useMemo(() => {
-    return centers.filter((c) => {
-      if (centerStateFilter !== "all" && c.state?.trim().toLowerCase() !== centerStateFilter.toLowerCase()) {
-        return false;
-      }
-      if (
-        centerDistrictFilter !== "all" &&
-        c.district?.trim().toLowerCase() !== centerDistrictFilter.toLowerCase() &&
-        c.city?.trim().toLowerCase() !== centerDistrictFilter.toLowerCase()
-      ) {
-        return false;
-      }
-      if (centerSearchQuery.trim()) {
-        const q = centerSearchQuery.trim().toLowerCase();
-        const fullText = `${c.name} ${c.code || ""} ${c.city || ""} ${c.district || ""} ${c.state || ""} ${c.pincode || ""} ${c.address || ""}`.toLowerCase();
-        if (!fullText.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [centers, centerStateFilter, centerDistrictFilter, centerSearchQuery]);
-
-  useEffect(() => {
-    if (currentStep === 4 && formData.state) {
-      const studentState = formData.state.trim().toLowerCase();
-      const matchedState = centerStates.find((s) => s.toLowerCase() === studentState);
-      if (matchedState) {
-        setCenterStateFilter(matchedState);
-      }
-    }
-  }, [currentStep, formData.state, centerStates]);
 
   useEffect(() => {
     if (formData.center) {
@@ -413,21 +343,16 @@ const AdmissionPage = () => {
     try {
       const res = await apiFetch("/api/auth/send-email-otp", {
         method: "POST",
-        body: JSON.stringify({ email: formData.email }),
+        body: JSON.stringify({ email: formData.email })
       });
-      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setOtpSent(true);
-        if (data.dev_otp) {
-          toast.success(t("OTP sent! Verification Code: {{code}}", { code: data.dev_otp }), { duration: 10000 });
-        } else {
-          toast.success(t("OTP sent to {{email}}", { email: formData.email }));
-        }
+        toast.success(t("OTP sent to {{email}}", { email: formData.email }));
       } else {
-        toast.error(data.message || t("Failed to send OTP"));
+        toast.error(t("Failed to send OTP"));
       }
     } catch (err) {
-      toast.error(t("Error sending OTP. Please check backend connection."));
+      toast.error(t("Error sending OTP"));
     } finally {
       setVerifyingOtp(false);
     }
@@ -462,14 +387,13 @@ const AdmissionPage = () => {
     try {
       const res = await apiFetch("/api/auth/verify-email-otp", {
         method: "POST",
-        body: JSON.stringify({ email: formData.email, otp }),
+        body: JSON.stringify({ email: formData.email, otp })
       });
-      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setOtpVerified(true);
         toast.success(t("Email verified successfully"));
       } else {
-        toast.error(data.message || t("Invalid or expired OTP"));
+        toast.error(t("Invalid or expired OTP"));
       }
     } catch (err) {
       toast.error(t("Error verifying OTP"));
@@ -509,9 +433,6 @@ const AdmissionPage = () => {
         phone: formData.mobile,
         course: formData.course,
         centerId: formData.center,
-        priority1_center: formData.center,
-        priority2_center: formData.center2 || undefined,
-        priority3_center: formData.center3 || undefined,
         batch: formData.batch,
         mode: formData.mode,
         dob: formData.dob,
@@ -1115,178 +1036,21 @@ const AdmissionPage = () => {
                             </Select>
                           </div>
 
-                          <div className="space-y-3 border p-4 rounded-xl bg-muted/20 border-border">
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor="center" className="flex items-center gap-2 font-bold text-sm text-foreground">
-                                <MapPin className="w-4 h-4 text-primary" />
-                                {t("Select Nearby Franchise / Center")}
-                              </Label>
-                              {formData.state && (
-                                <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
-                                  {t("Your Location")}: {formData.state} {formData.city ? `• ${formData.city}` : ""}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Location Filter Controls */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
-                              <div>
-                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider mb-1 block">
-                                  {t("State")}
-                                </label>
-                                <Select
-                                  value={centerStateFilter}
-                                  onValueChange={(val) => {
-                                    setCenterStateFilter(val);
-                                    setCenterDistrictFilter("all");
-                                  }}
-                                >
-                                  <SelectTrigger className="h-9 text-xs bg-background rounded-lg">
-                                    <SelectValue placeholder={t("All States")} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">{t("All States")}</SelectItem>
-                                    {centerStates.map((s) => (
-                                      <SelectItem key={s} value={s}>
-                                        {s}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div>
-                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider mb-1 block">
-                                  {t("City / District")}
-                                </label>
-                                <Select value={centerDistrictFilter} onValueChange={setCenterDistrictFilter}>
-                                  <SelectTrigger className="h-9 text-xs bg-background rounded-lg">
-                                    <SelectValue placeholder={t("All Cities")} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">{t("All Cities / Districts")}</SelectItem>
-                                    {centerDistricts.map((d) => (
-                                      <SelectItem key={d} value={d}>
-                                        {d}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div>
-                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider mb-1 block">
-                                  {t("Search Nearby")}
-                                </label>
-                                <div className="relative">
-                                  <Input
-                                    value={centerSearchQuery}
-                                    onChange={(e) => setCenterSearchQuery(e.target.value)}
-                                    placeholder={t("Pincode / Center name...")}
-                                    className="h-9 text-xs pl-8 bg-background rounded-lg"
-                                  />
-                                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Priority 1 Center (Required) */}
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase text-primary tracking-wider">
-                                1st Priority Center (Primary Assignment) *
-                              </label>
-                              <Select
-                                value={formData.center}
-                                onValueChange={(val) => {
-                                  handleInputChange("center", val);
-                                  handleInputChange("batch", ""); // Reset batch on center change
-                                }}
-                              >
-                                <SelectTrigger className="h-12 rounded-lg border-primary/40 bg-background shadow-sm">
-                                  <SelectValue placeholder={t("Choose 1st Priority Center")} />
-                                </SelectTrigger>
-                                <SelectContent className="max-h-72">
-                                  {filteredCenters.length > 0 ? (
-                                    filteredCenters.map((center) => {
-                                      const isNearStudent =
-                                        formData.state &&
-                                        center.state?.toLowerCase() === formData.state.trim().toLowerCase();
-                                      return (
-                                        <SelectItem key={center.id} value={center.id} className="py-2.5 border-b border-border/40 last:border-0">
-                                          <div className="flex flex-col text-left space-y-0.5">
-                                            <div className="font-bold flex items-center gap-2 text-foreground">
-                                              {center.name}
-                                              {isNearStudent && (
-                                                <Badge className="text-[8px] font-black bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-1.5 py-0 rounded uppercase">
-                                                  {t("Near You")}
-                                                </Badge>
-                                              )}
-                                            </div>
-                                            <div className="text-[10px] text-muted-foreground">
-                                              {[center.city, center.district, center.state, center.pincode].filter(Boolean).join(", ")}
-                                            </div>
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })
-                                  ) : (
-                                    <div className="p-4 text-center text-xs text-muted-foreground">
-                                      {t("No franchise centers found matching your location filters.")}
-                                    </div>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Priority 2 Center (Optional Cascade) */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                                  2nd Priority Center (Auto-cascade if 1st rejects)
-                                </label>
-                                <Select
-                                  value={formData.center2}
-                                  onValueChange={(val) => handleInputChange("center2", val)}
-                                >
-                                  <SelectTrigger className="h-10 text-xs rounded-lg bg-background">
-                                    <SelectValue placeholder="Select 2nd Priority (Optional)" />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-60">
-                                    {filteredCenters
-                                      .filter((c) => c.id !== formData.center)
-                                      .map((center) => (
-                                        <SelectItem key={center.id} value={center.id}>
-                                          {center.name} ({center.city || center.state})
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Priority 3 Center (Optional Cascade) */}
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                                  3rd Priority Center (Auto-cascade if 2nd rejects)
-                                </label>
-                                <Select
-                                  value={formData.center3}
-                                  onValueChange={(val) => handleInputChange("center3", val)}
-                                >
-                                  <SelectTrigger className="h-10 text-xs rounded-lg bg-background">
-                                    <SelectValue placeholder="Select 3rd Priority (Optional)" />
-                                  </SelectTrigger>
-                                  <SelectContent className="max-h-60">
-                                    {filteredCenters
-                                      .filter((c) => c.id !== formData.center && c.id !== formData.center2)
-                                      .map((center) => (
-                                        <SelectItem key={center.id} value={center.id}>
-                                          {center.name} ({center.city || center.state})
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="center">{t("Training Center")}</Label>
+                            <Select value={formData.center} onValueChange={(val) => {
+                              handleInputChange('center', val);
+                              handleInputChange('batch', ''); // Reset batch on center change
+                            }}>
+                              <SelectTrigger className="h-12 rounded-lg">
+                                <SelectValue placeholder={t("Choose nearest center")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {centers.map(center => (
+                                  <SelectItem key={center.id} value={center.id}>{t(center.name)}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
 
                           {formData.center && (

@@ -400,9 +400,9 @@ pub async fn auth_middleware(
 
             let (limit, window) =
                 if path.starts_with("/api/public/centers/") {
-                    (200u32, 60u64)
+                    (20u32, 60u64)
                 } else {
-                    (600u32, 60u64)
+                    (60u32, 60u64)
                 };
 
             let limiter = IpRateLimit {

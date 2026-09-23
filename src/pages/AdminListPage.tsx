@@ -43,7 +43,7 @@ const AdminListPage = () => {
       const response = await apiFetch("/api/admin/users");
       if (response.ok) {
         const data = await response.json();
-        setAdmins((data as AdminUser[]).filter((u) => u.role === "admin" || u.role === "sub_admin" || u.role === "subadmin"));
+        setAdmins((data as AdminUser[]).filter((u) => u.role === "admin"));
       } else {
         toast.error(t("Failed to load admin directory"));
       }
@@ -87,50 +87,9 @@ const AdminListPage = () => {
     }
   };
 
-  const toggleStatus = async (id: string, currentActive: boolean) => {
-    // Optimistic UI update
-    setAdmins(prev =>
-      prev.map(u => {
-        const uid = u.id || u._id || "";
-        if (uid === id) {
-          return { ...u, status: currentActive ? "Inactive" : "Active" };
-        }
-        return u;
-      })
-    );
-
-    try {
-      const res = await apiFetch(`/api/admin/users/${id}/toggle-active`, {
-        method: "POST",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success !== false) {
-        toast.success(data.message || t("Status updated successfully"));
-      } else {
-        // Revert on error
-        setAdmins(prev =>
-          prev.map(u => {
-            const uid = u.id || u._id || "";
-            if (uid === id) {
-              return { ...u, status: currentActive ? "Active" : "Inactive" };
-            }
-            return u;
-          })
-        );
-        toast.error(data.message || t("Failed to update status"));
-      }
-    } catch (e) {
-      setAdmins(prev =>
-        prev.map(u => {
-          const uid = u.id || u._id || "";
-          if (uid === id) {
-            return { ...u, status: currentActive ? "Active" : "Inactive" };
-          }
-          return u;
-        })
-      );
-      toast.error(t("An error occurred while toggling status"));
-    }
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    // Note: Backend endpoint for status toggle needed
+    toast.info(t("Status toggle is being initialized..."));
   };
 
   const onRoleChange = (id: string, role: string) => {
@@ -142,16 +101,18 @@ const AdminListPage = () => {
     if (!role) return;
     try {
       setSaving(prev => ({ ...prev, [id]: true }));
-      const res = await apiFetch(`/api/admin/users/${id}/role`, {
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`/api/admin/users/${id}/role`, {
         method: "PUT",
         headers: {
+          "Authorization": `Bearer ${token || ""}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ role }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success !== false) {
-        toast.success(data.message || t("Role updated successfully"));
+      if (res.ok) {
+        toast.success(t("Role updated"));
         setPendingRole(prev => {
           const n = { ...prev };
           delete n[id];
@@ -264,7 +225,6 @@ const AdminListPage = () => {
                                 className="px-2 py-1 border border-border bg-background text-[10px] uppercase tracking-widest"
                               >
                                 <option value="admin">{t("admin")}</option>
-                                <option value="sub_admin">{t("sub_admin")}</option>
                                 <option value="center">{t("center")}</option>
                                 <option value="student">{t("student")}</option>
                               </select>

@@ -133,12 +133,57 @@ pub async fn create_blueprint(
             }
         };
         let default_question_bank_id =
-            ObjectId::parse_str(&subj_payload.default_question_bank_id)
-                .unwrap_or_else(|_| ObjectId::parse_str("000000000000000000000000").unwrap());
+            match ObjectId::parse_str(&subj_payload.default_question_bank_id) {
+                Ok(oid) => oid,
+                Err(_) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(ExamEngineResponse {
+                            success: false,
+                            message: "Invalid Default Question Bank ID".to_string(),
+                        }),
+                    );
+                }
+            };
         let reappear_question_bank_id = subj_payload
             .reappear_question_bank_id
             .as_ref()
             .and_then(|id| ObjectId::parse_str(id).ok());
+
+        // Validate question banks exist
+        let bank_coll = db.collection::<mongodb::bson::Document>("qb_banks");
+        if bank_coll
+            .find_one(doc! { "_id": default_question_bank_id }, None)
+            .await
+            .ok()
+            .flatten()
+            .is_none()
+        {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ExamEngineResponse {
+                    success: false,
+                    message: "Invalid Default Question Bank ID".to_string(),
+                }),
+            );
+        }
+        if let Some(rid) = &reappear_question_bank_id {
+            if bank_coll
+                .find_one(doc! { "_id": rid }, None)
+                .await
+                .ok()
+                .flatten()
+                .is_none()
+            {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ExamEngineResponse {
+                        success: false,
+                        message: "Invalid Reappear Question Bank ID".to_string(),
+                    }),
+                );
+            }
+        }
 
         // Validate question distribution
         let calculated_exam_total: f64 = subj_payload
@@ -364,12 +409,57 @@ pub async fn update_blueprint(
             }
         };
         let default_question_bank_id =
-            ObjectId::parse_str(&subj_payload.default_question_bank_id)
-                .unwrap_or_else(|_| ObjectId::parse_str("000000000000000000000000").unwrap());
+            match ObjectId::parse_str(&subj_payload.default_question_bank_id) {
+                Ok(oid) => oid,
+                Err(_) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(ExamEngineResponse {
+                            success: false,
+                            message: "Invalid Default Question Bank ID".to_string(),
+                        }),
+                    );
+                }
+            };
         let reappear_question_bank_id = subj_payload
             .reappear_question_bank_id
             .as_ref()
             .and_then(|id| ObjectId::parse_str(id).ok());
+
+        // Validate question banks exist
+        let bank_coll = db.collection::<mongodb::bson::Document>("qb_banks");
+        if bank_coll
+            .find_one(doc! { "_id": default_question_bank_id }, None)
+            .await
+            .ok()
+            .flatten()
+            .is_none()
+        {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ExamEngineResponse {
+                    success: false,
+                    message: "Invalid Default Question Bank ID".to_string(),
+                }),
+            );
+        }
+        if let Some(rid) = &reappear_question_bank_id {
+            if bank_coll
+                .find_one(doc! { "_id": rid }, None)
+                .await
+                .ok()
+                .flatten()
+                .is_none()
+            {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ExamEngineResponse {
+                        success: false,
+                        message: "Invalid Reappear Question Bank ID".to_string(),
+                    }),
+                );
+            }
+        }
 
         // Validate question distribution
         let calculated_exam_total: f64 = subj_payload
@@ -1675,19 +1765,7 @@ pub async fn list_student_papers(
 
     let filter = match claims.role {
         UserRole::Admin | UserRole::SuperAdmin => doc! {},
-        UserRole::Center => {
-            let center_coll = db.collection::<Document>("centers");
-            let center_doc = center_coll.find_one(doc! { "user_id": sub_oid }, None).await.ok().flatten();
-            if let Some(cdoc) = center_doc {
-                if let Ok(c_oid) = cdoc.get_object_id("_id") {
-                    doc! { "center_id": { "$in": [sub_oid, c_oid] } }
-                } else {
-                    doc! { "center_id": sub_oid }
-                }
-            } else {
-                doc! { "center_id": sub_oid }
-            }
-        }
+        UserRole::Center => doc! { "center_id": sub_oid },
         UserRole::Student => doc! { "student_id": sub_oid },
         _ => return (StatusCode::FORBIDDEN, Json(vec![])),
     };
@@ -2033,7 +2111,102 @@ pub async fn get_question_analytics(
     (StatusCode::OK, Json(analytics))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct QuestionFeedbackRequest {
+    pub question_id: String,
+    pub feedback_type: String, // "Error", "Suggestion", "Other"
+    pub comment: String,
+}
 
+pub async fn report_question_feedback(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<QuestionFeedbackRequest>,
+) -> (StatusCode, Json<ExamEngineResponse>) {
+    if claims.role != UserRole::Student {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ExamEngineResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+
+    let q_oid = match ObjectId::parse_str(&payload.question_id) {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ExamEngineResponse {
+                    success: false,
+                    message: "Invalid question ID".to_string(),
+                }),
+            );
+        }
+    };
+
+    let s_oid = match ObjectId::parse_str(&claims.sub) {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ExamEngineResponse {
+                    success: false,
+                    message: "Invalid user ID".to_string(),
+                }),
+            );
+        }
+    };
+
+    let coll = db.collection::<mongodb::bson::Document>("question_feedback");
+    let feedback = doc! {
+        "question_id": q_oid,
+        "student_id": s_oid,
+        "feedback_type": payload.feedback_type,
+        "comment": payload.comment,
+        "created_at": mongodb::bson::DateTime::now(),
+    };
+
+    match coll.insert_one(feedback, None).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(ExamEngineResponse {
+                success: true,
+                message: "Feedback submitted".to_string(),
+            }),
+        ),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ExamEngineResponse {
+                success: false,
+                message: "Submission failed".to_string(),
+            }),
+        ),
+    }
+}
+
+pub async fn list_question_feedback(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<Vec<mongodb::bson::Document>>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(vec![]));
+    }
+
+    let coll = db.collection::<mongodb::bson::Document>("question_feedback");
+    let mut cursor = coll
+        .find(None, None)
+        .await
+        .expect("Failed to query feedback");
+    let mut feedback_list = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(f) = result {
+            feedback_list.push(f);
+        }
+    }
+    (StatusCode::OK, Json(feedback_list))
+}
 
 pub async fn delete_student_paper(
     State(db): State<Database>,
@@ -3076,94 +3249,4 @@ pub async fn postpone_allotted_exams(
         "message": format!("Successfully postponed {} exam papers", updated_count),
         "updated_count": updated_count
     })))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct QuestionFeedbackRequest {
-    pub feedback_type: String,
-    pub comment: String,
-}
-
-pub async fn report_question_feedback(
-    State(db): State<Database>,
-    claims: Claims,
-    Path(id): Path<String>,
-    Json(payload): Json<QuestionFeedbackRequest>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    let coll = db.collection::<mongodb::bson::Document>("exam_question_feedback");
-    let mut doc = doc! {
-        "question_id": id.clone(),
-        "student_id": claims.sub.clone(),
-        "feedback_type": payload.feedback_type,
-        "comment": payload.comment,
-        "status": "Pending",
-        "created_at": mongodb::bson::DateTime::now(),
-    };
-    if let Ok(qid) = ObjectId::parse_str(&id) {
-        doc.insert("question_id", qid);
-    }
-    if let Ok(sid) = ObjectId::parse_str(&claims.sub) {
-        doc.insert("student_id", sid);
-    }
-    match coll.insert_one(doc, None).await {
-        Ok(_) => (StatusCode::CREATED, Json(serde_json::json!({ "success": true, "message": "Feedback submitted successfully" }))),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "success": false, "message": "Failed to submit feedback" }))),
-    }
-}
-
-pub async fn list_question_feedback(
-    State(db): State<Database>,
-    _claims: Claims,
-) -> (StatusCode, Json<Vec<serde_json::Value>>) {
-    let coll = db.collection::<mongodb::bson::Document>("exam_question_feedback");
-    let find_opts = mongodb::options::FindOptions::builder()
-        .sort(doc! { "created_at": -1 })
-        .build();
-    let mut cur = match coll.find(None, find_opts).await {
-        Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
-    };
-    let mut list = Vec::new();
-    while let Some(res) = cur.next().await {
-        if let Ok(doc) = res {
-            let mut val = serde_json::to_value(&doc).unwrap_or_default();
-            if let Some(obj) = val.as_object_mut() {
-                for key in &["_id", "question_id", "student_id"] {
-                    if let Some(v) = obj.get(*key) {
-                        if let Some(oid_str) = v.get("$oid").and_then(|s| s.as_str()) {
-                            obj.insert((*key).to_string(), serde_json::Value::String(oid_str.to_string()));
-                        }
-                    }
-                }
-            }
-            list.push(val);
-        }
-    }
-    (StatusCode::OK, Json(list))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateFeedbackStatusRequest {
-    pub status: String,
-}
-
-pub async fn update_question_feedback_status(
-    State(db): State<Database>,
-    claims: Claims,
-    Path(id): Path<String>,
-    Json(payload): Json<UpdateFeedbackStatusRequest>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({ "success": false, "message": "Unauthorized" })));
-    }
-    let coll = db.collection::<mongodb::bson::Document>("exam_question_feedback");
-    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
-        doc! { "_id": oid }
-    } else {
-        doc! { "_id": id.clone() }
-    };
-    match coll.update_one(filter, doc! { "$set": { "status": payload.status } }, None).await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "success": true, "message": "Feedback status updated" }))),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "success": false, "message": "Failed to update feedback status" }))),
-    }
 }

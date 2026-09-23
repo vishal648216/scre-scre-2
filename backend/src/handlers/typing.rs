@@ -1249,7 +1249,7 @@ pub struct LessonsQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitTypingResult {
-    pub lesson_id: Option<String>,
+    pub lesson_id: String,
     pub mode: TypingMode,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -1358,118 +1358,59 @@ pub async fn toggle_lesson_status(
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct UpdateLessonRequest {
-    pub language_id: Option<String>,
-    pub title: Option<String>,
-    pub content: Option<String>,
-    pub level: Option<TypingLevel>,
-    pub min_wpm: Option<f64>,
-    pub min_accuracy: Option<f64>,
-    pub active: Option<bool>,
-}
-
-pub async fn update_lesson(
-    State(db): State<Database>,
-    claims: Claims,
-    ax_path: axum::extract::Path<String>,
-    Json(payload): Json<UpdateLessonRequest>,
-) -> (StatusCode, Json<TypingResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
-        return (StatusCode::FORBIDDEN, Json(TypingResponse { success: false, message: "Unauthorized".to_string() }));
-    }
-
-    let lesson_oid = match ObjectId::parse_str(&ax_path.0) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(TypingResponse { success: false, message: "Invalid Lesson ID".to_string() })),
-    };
-
-    let collection = db.collection::<TypingLesson>("typing_lessons");
-
-    let mut update_doc = doc! {};
-    if let Some(title) = payload.title {
-        update_doc.insert("title", title);
-    }
-    if let Some(content) = payload.content {
-        update_doc.insert("content", content);
-    }
-    if let Some(level) = payload.level {
-        if let Ok(b) = mongodb::bson::to_bson(&level) {
-            update_doc.insert("level", b);
-        }
-    }
-    if let Some(lang_id) = payload.language_id {
-        if let Ok(lang_oid) = ObjectId::parse_str(&lang_id) {
-            update_doc.insert("language_id", lang_oid);
-        }
-    }
-    if let Some(wpm) = payload.min_wpm {
-        update_doc.insert("min_wpm", wpm);
-    }
-    if let Some(acc) = payload.min_accuracy {
-        update_doc.insert("min_accuracy", acc);
-    }
-    if let Some(active) = payload.active {
-        update_doc.insert("active", active);
-    }
-
-    if update_doc.is_empty() {
-        return (StatusCode::OK, Json(TypingResponse { success: true, message: "Nothing to update".to_string() }));
-    }
-
-    match collection.update_one(doc! { "_id": lesson_oid }, doc! { "$set": update_doc }, None).await {
-        Ok(_) => (StatusCode::OK, Json(TypingResponse { success: true, message: "Lesson updated successfully".to_string() })),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(TypingResponse { success: false, message: "Failed to update lesson".to_string() })),
-    }
-}
-
 pub async fn submit_typing_result(
     State(db): State<Database>,
     claims: Claims,
     Json(payload): Json<SubmitTypingResult>,
 ) -> (StatusCode, Json<TypingResponse>) {
-    let student_oid = match ObjectId::parse_str(&claims.sub) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(TypingResponse { success: false, message: "Invalid user ID".to_string() })),
-    };
+    if claims.role != UserRole::Student {
+        return (StatusCode::FORBIDDEN, Json(TypingResponse { success: false, message: "Unauthorized".to_string() }));
+    }
 
+    let student_oid = ObjectId::parse_str(&claims.sub).unwrap();
     let users_coll = db.collection::<User>("users");
-    let student = users_coll.find_one(doc! { "_id": student_oid }, None).await.ok().flatten();
-    let center_id = student.as_ref().and_then(|u| u.parent_id).unwrap_or(student_oid);
-
-    let lesson_oid_opt = match payload.lesson_id.as_deref() {
-        None | Some("") => None,
-        Some(id) => ObjectId::parse_str(id).ok(),
+    let student = match users_coll.find_one(doc! { "_id": student_oid }, None).await {
+        Ok(Some(u)) => u,
+        _ => return (StatusCode::NOT_FOUND, Json(TypingResponse { success: false, message: "Student not found".to_string() })),
     };
 
-    let lesson_oid = match lesson_oid_opt {
-        Some(oid) => oid,
-        None => {
-            // Quick lesson / unsaved lesson practice — still record a minimal result
-            return (StatusCode::OK, Json(TypingResponse { success: true, message: "Practice session completed!".to_string() }));
-        }
+    let center_id = student.parent_id.ok_or((StatusCode::BAD_REQUEST, Json(TypingResponse { success: false, message: "Center ID not found".to_string() })));
+    let center_id = match center_id {
+        Ok(id) => id,
+        Err(e) => return e,
+    };
+
+    let lesson_oid = match ObjectId::parse_str(&payload.lesson_id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(TypingResponse { success: false, message: "Invalid Lesson ID".to_string() })),
     };
 
     let lessons_coll = db.collection::<TypingLesson>("typing_lessons");
     let lesson = match lessons_coll.find_one(doc! { "_id": lesson_oid }, None).await {
         Ok(Some(l)) => l,
-        _ => return (StatusCode::OK, Json(TypingResponse { success: true, message: "Practice completed".to_string() })),
+        _ => return (StatusCode::NOT_FOUND, Json(TypingResponse { success: false, message: "Lesson not found".to_string() })),
     };
 
-    if claims.role == UserRole::Student {
-        if let Some(ref st) = student {
-            if let Some(allowed) = student_allowed_typing_lesson_ids(&db, st).await {
-                if !allowed.contains(&lesson_oid) {
-                    return (
-                        StatusCode::FORBIDDEN,
-                        Json(TypingResponse {
-                            success: false,
-                            message: "This typing lesson is not assigned to your course".to_string(),
-                        }),
-                    );
-                }
-            }
+    let allowed = match student_allowed_typing_lesson_ids(&db, &student).await {
+        Some(a) => a,
+        None => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(TypingResponse {
+                    success: false,
+                    message: "Typing tests are not available for your course".to_string(),
+                }),
+            )
         }
+    };
+    if !allowed.contains(&lesson_oid) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(TypingResponse {
+                success: false,
+                message: "This typing lesson is not assigned to your course".to_string(),
+            }),
+        );
     }
 
     let duration_sec = (payload.end_time - payload.start_time).num_seconds().max(1) as u32;
@@ -1533,8 +1474,7 @@ pub async fn submit_typing_result(
         let lang_name = lang.map(|l| l.name).unwrap_or_else(|| "Unknown".to_string());
 
         let ts = Utc::now().format("%Y%m%d").to_string();
-        let uname = student.as_ref().map(|s| s.username.as_str()).unwrap_or("USER");
-        let cert_no = format!("TYP-{}-{}-{}", ts, uname.chars().take(4).collect::<String>(), result_id.to_hex().chars().take(4).collect::<String>());
+        let cert_no = format!("TYP-{}-{}-{}", ts, student.username.chars().take(4).collect::<String>(), result_id.to_hex().chars().take(4).collect::<String>());
 
         let cert = TypingCertificate {
             id: None,

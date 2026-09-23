@@ -116,14 +116,7 @@ pub async fn send_otp_email(to_email: &str, otp: &str) -> Result<()> {
         .tls(tls)
         .build();
 
-    if let Err(e) = mailer.send(&email) {
-        println!(
-            "[SMTP NOTICE] Could not send OTP email to {} (Error: {:?}). Dev/Console OTP: {}",
-            to_email, e, otp
-        );
-    } else {
-        println!("[SMTP SUCCESS] OTP email sent to {}", to_email);
-    }
+    mailer.send(&email)?;
 
     Ok(())
 }

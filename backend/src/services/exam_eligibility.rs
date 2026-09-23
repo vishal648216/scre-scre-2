@@ -1544,7 +1544,7 @@ pub async fn check_reappear_eligibility(
 
 /// Marks entry list eligibility — student stays visible after marks submission.
 pub async fn check_marks_entry_list_visibility(
-    _db: &Database,
+    db: &Database,
     student: &User,
     course_id: &ObjectId,
     course_name: Option<&str>,
@@ -1555,10 +1555,46 @@ pub async fn check_marks_entry_list_visibility(
             reason: Some("Student does not belong to course".into()),
         };
     }
+    if !is_course_end_passed(&student.session_end_date) {
+        return EligibilityResult {
+            eligible: false,
+            reason: Some("Course not completed or end date has not passed".into()),
+        };
+    }
     if !is_student_active_eligible(student) {
         return EligibilityResult {
             eligible: false,
             reason: Some("Student not active".into()),
+        };
+    }
+
+    let sid = match student.id {
+        Some(id) => id,
+        None => {
+            return EligibilityResult {
+                eligible: false,
+                reason: Some("Invalid student".into()),
+            };
+        }
+    };
+
+    let subject_ids = {
+        let coll = db.collection::<Document>("course_subjects");
+        let mut ids = Vec::new();
+        if let Ok(mut cursor) = coll.find(doc! { "course_id": course_id }, None).await {
+            while let Some(Ok(d)) = cursor.next().await {
+                if let Ok(oid) = d.get_object_id("subject_id") {
+                    ids.push(oid);
+                }
+            }
+        }
+        ids
+    };
+
+    if !has_exam_allotment_for_course(db, &sid, &subject_ids).await {
+        return EligibilityResult {
+            eligible: false,
+            reason: Some("No exam allotment found for this student".into()),
         };
     }
 

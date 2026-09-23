@@ -19,11 +19,11 @@ export default defineConfig(({ mode }) => {
           hmr: false,
           proxy: {
             "/api": {
-              target: "http://127.0.0.1:3008",
+              target: "http://localhost:3008",
               changeOrigin: true,
             },
             "/uploads": {
-              target: "http://127.0.0.1:3008",
+              target: "http://localhost:3008",
               changeOrigin: true,
             },
           },
@@ -35,11 +35,11 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ["screduc.com", "www.screduc.com"],
       proxy: {
         "/api": {
-          target: "http://127.0.0.1:3008",
+          target: "http://localhost:3008",
           changeOrigin: true,
         },
         "/uploads": {
-          target: "http://127.0.0.1:3008",
+          target: "http://localhost:3008",
           changeOrigin: true,
         },
       },

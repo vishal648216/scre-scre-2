@@ -911,10 +911,10 @@ const AdminExamAllotPage = () => {
       return;
     }
 
-    if (!forceAllot && eligibleStudents.eligible === 0) {
+    if (eligibleStudents.eligible === 0) {
       toast.error(forReappearStudents
-        ? "No eligible reappear students found for this course. Turn on 'Force Allotment' to bypass."
-        : "No eligible first-attempt students found for this course. Turn on 'Force Allotment' to bypass.");
+        ? "No eligible reappear students found for this course"
+        : "No eligible first-attempt students found for this course");
       return;
     }
 

@@ -1083,12 +1083,8 @@ pub async fn generate_student_id_card(
     let pdf_filename = format!("id-card-{}-{}.pdf", name_slug, timestamp);
     let pdf_path = temp_dir.join(&pdf_filename);
 
-    // Try multiple possible chromium paths (Windows & Linux)
+    // Try multiple possible chromium paths
     let chromium_paths = [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
-        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
@@ -1098,8 +1094,6 @@ pub async fn generate_student_id_card(
         "google-chrome",
         "chromium-browser",
         "chromium",
-        "chrome",
-        "msedge",
     ];
 
     let mut pdf_generated = false;
@@ -1189,17 +1183,9 @@ pub async fn generate_student_id_card(
                 .into_response()
         }
     } else {
-        // Fallback: Return printable HTML if headless PDF generation fails
-        eprintln!("ID card headless PDF failed: {}. Falling back to printable HTML.", last_error);
-        let printable_html = format!(
-            "{}\n<script>window.onload = function() {{ window.print(); }};</script>",
-            html
-        );
-        let _ = std::fs::remove_file(&html_path);
         (
-            StatusCode::OK,
-            [(header::CONTENT_TYPE, "text/html")],
-            printable_html,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("PDF generation failed: {}", last_error),
         )
             .into_response()
     }

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { apiFetch, apiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 interface Student {
   _id: any;
@@ -51,25 +51,19 @@ const CenterStudentsPage = () => {
 
   const downloadEnrollmentPdf = async (studentId: string) => {
     try {
-      const res = await apiFetch(`/api/students/${studentId}/enrollment-pdf`);
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`/api/students/${studentId}/enrollment-pdf`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         const blob = await res.blob();
-        if (blob.type.includes("html")) {
-          const text = await blob.text();
-          const win = window.open("", "_blank");
-          if (win) {
-            win.document.write(text);
-            win.document.close();
-          }
-        } else {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `enrollment_${studentId}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `enrollment_${studentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       } else {
         toast.error(t("Failed to download PDF"));
       }
@@ -80,10 +74,13 @@ const CenterStudentsPage = () => {
 
   const downloadHallTicket = async (studentId: string) => {
     try {
-      const res = await apiFetch(`/api/exam/hall-ticket/${studentId}`);
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`/api/exam/hall-ticket/${studentId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await res.json();
       if (res.ok && data.pdf_url) {
-        window.open(apiUrl(data.pdf_url), '_blank');
+        window.open(data.pdf_url, '_blank');
       } else {
         toast.error(data.message || "Failed to generate hall ticket");
       }
@@ -94,25 +91,19 @@ const CenterStudentsPage = () => {
 
   const downloadIdCardPdf = async (studentId: string) => {
     try {
-      const res = await apiFetch(`/api/students/${studentId}/id-card-pdf`);
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(`/api/students/${studentId}/id-card-pdf`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         const blob = await res.blob();
-        if (blob.type.includes("html")) {
-          const text = await blob.text();
-          const win = window.open("", "_blank");
-          if (win) {
-            win.document.write(text);
-            win.document.close();
-          }
-        } else {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `id_card_${studentId}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `id_card_${studentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       } else {
         toast.error(t("Failed to download ID Card PDF"));
       }
@@ -133,11 +124,10 @@ const CenterStudentsPage = () => {
       const data = await res.json();
       if (res.ok) {
         // Map id to _id, full_name to fullName for frontend consistency
-        const mapped = (Array.isArray(data) ? data : []).map((s: any) => ({
+        const mapped = data.map((s: any) => ({
           ...s,
-          _id: s?.id || s?._id,
-          username: s?.username || s?.email || "student",
-          fullName: s?.fullName || s?.full_name || s?.name || "Not Provided"
+          _id: s.id,
+          fullName: s.fullName || s.full_name
         }));
         setStudents(mapped);
       }
@@ -150,7 +140,7 @@ const CenterStudentsPage = () => {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const res = await apiFetch(`/api/admin/users/${id}/toggle-active`, {
+      const res = await apiFetch(`/api/admin/students/${id}/toggle-active`, {
         method: "POST"
       });
       if (res.ok) {
@@ -183,17 +173,16 @@ const CenterStudentsPage = () => {
     }
   };
 
-  const filtered = (students || []).filter(s =>
-    (((s?.fullName || "").toLowerCase().includes((search || "").toLowerCase())) ||
-      ((s?.username || "").toLowerCase().includes((search || "").toLowerCase()))) &&
-    (selectedCourse === "All" || s?.course === selectedCourse)
+  const filtered = students.filter(s =>
+    ((s.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
+      s.username.toLowerCase().includes(search.toLowerCase())) &&
+    (selectedCourse === "All" || s.course === selectedCourse)
   );
 
-  const courses = ["All", ...Array.from(new Set((students || []).map(s => s?.course).filter(Boolean)))];
+  const courses = ["All", ...Array.from(new Set(students.map(s => s.course).filter(Boolean)))];
 
-  const parseDocs = (raw?: any): Record<string, string> => {
+  const parseDocs = (raw?: string): Record<string, string> => {
     if (!raw) return {};
-    if (typeof raw === "object") return raw;
     try {
       const parsed = JSON.parse(raw);
       return parsed && typeof parsed === "object" ? parsed : {};
@@ -291,9 +280,9 @@ const CenterStudentsPage = () => {
                           <td className="px-6 py-4 text-xs">{nationalId}</td>
                           <td className="px-6 py-4 text-xs">
                             <div className="flex flex-col gap-1">
-                              {docs.tenth_dmc_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={apiUrl(docs.tenth_dmc_url)}>{t("10th DMC")}</a> : null}
-                              {docs.national_id_image_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={apiUrl(docs.national_id_image_url)}>{t("Government ID Image")}</a> : null}
-                              {s.signature_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={apiUrl(s.signature_url)}>{t("Signature")}</a> : null}
+                              {docs.tenth_dmc_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.tenth_dmc_url}>{t("10th DMC")}</a> : null}
+                              {docs.national_id_image_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.national_id_image_url}>{t("Government ID Image")}</a> : null}
+                              {s.signature_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={s.signature_url}>{t("Signature")}</a> : null}
                               {!docs.tenth_dmc_url && !docs.national_id_image_url && !s.signature_url ? "—" : null}
                             </div>
                           </td>

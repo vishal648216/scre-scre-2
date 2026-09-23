@@ -68,11 +68,8 @@ export default function StudentLibraryPage() {
     try {
       setLoading(true);
       const res = await apiFetch("/api/library/books");
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.success) {
-          setBooks(data.data || []);
-        }
+      if (res && res.success) {
+        setBooks(res.data || []);
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to load library catalog");
@@ -84,14 +81,11 @@ export default function StudentLibraryPage() {
   const fetchStats = async () => {
     try {
       const res = await apiFetch("/api/library/reading/my-stats");
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.success && data.data) {
-          setStats({
-            total_minutes: data.data.total_minutes || 0,
-            books_count: data.data.books_count || 0,
-          });
-        }
+      if (res && res.success && res.data) {
+        setStats({
+          total_minutes: res.data.total_minutes || 0,
+          books_count: res.data.books_count || 0,
+        });
       }
     } catch (err) {
       console.warn("Could not fetch reading stats:", err);
@@ -175,12 +169,12 @@ export default function StudentLibraryPage() {
     return `${mins < 10 ? "0" : ""}${mins}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  const filteredBooks = (books || []).filter((b) => {
+  const filteredBooks = books.filter((b) => {
     const matchesSearch =
-      (b?.title || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (b?.author || "").toLowerCase().includes((search || "").toLowerCase());
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.author.toLowerCase().includes(search.toLowerCase());
     const matchesCategory =
-      selectedCategory === "all" || b?.category === selectedCategory;
+      selectedCategory === "all" || b.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -342,40 +336,13 @@ export default function StudentLibraryPage() {
                       <Flame className="w-3.5 h-3.5" /> Full Access
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => openReader(b)}
-                      className="flex-1 rounded-none font-black text-xs uppercase tracking-widest gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 shadow"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      Read Online
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        const bookId = b._id || b.id;
-                        if (!bookId) return;
-                        try {
-                          const res = await apiFetch("/api/library/reserve", {
-                            method: "POST",
-                            body: JSON.stringify({ book_id: bookId }),
-                          });
-                          const data = await res.json().catch(() => ({}));
-                          if (res.ok && data.success) {
-                            toast.success(data.message || "Book reserved! You are in queue for next issue.");
-                          } else {
-                            toast.error(data.message || "Could not reserve book");
-                          }
-                        } catch {
-                          toast.error("Failed to place reservation");
-                        }
-                      }}
-                      className="rounded-none font-bold text-[10px] uppercase border-purple-500/40 text-purple-600 hover:bg-purple-500/10 h-9"
-                      title="Reserve Physical Copy Next"
-                    >
-                      Reserve Next
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => openReader(b)}
+                    className="w-full rounded-none font-black text-xs uppercase tracking-widest gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 shadow"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Read Online Now
+                  </Button>
                 </div>
               </Card>
             ))}

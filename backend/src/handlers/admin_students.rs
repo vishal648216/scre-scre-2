@@ -80,63 +80,16 @@ pub async fn reject_student(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApproveResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
         return (StatusCode::FORBIDDEN, Json(ApproveResponse { success: false, message: "Unauthorized".to_string() }));
     }
     let users = db.collection::<User>("users");
-    let raw_users = db.collection::<mongodb::bson::Document>("users");
     let oid = match ObjectId::parse_str(&id) {
         Ok(oid) => oid,
         Err(_) => return (StatusCode::BAD_REQUEST, Json(ApproveResponse { success: false, message: "Invalid ID".to_string() })),
     };
-
-    // Auto-cascade to 2nd or 3rd priority center if present
-    if let Ok(Some(doc)) = raw_users.find_one(doc! { "_id": &oid, "role": "student" }, None).await {
-        let current_parent = doc.get_object_id("parent_id").ok().map(|o| o.to_hex());
-        let p2 = doc.get_str("priority2_center").or_else(|_| doc.get_str("center_priority_2")).ok();
-        let p3 = doc.get_str("priority3_center").or_else(|_| doc.get_str("center_priority_3")).ok();
-
-        if let Some(p2_str) = p2 {
-            if !p2_str.is_empty() && current_parent.as_deref() != Some(p2_str) {
-                if let Ok(p2_oid) = ObjectId::parse_str(p2_str) {
-                    let _ = users.update_one(
-                        doc! { "_id": &oid },
-                        doc! {
-                            "$set": {
-                                "parent_id": p2_oid,
-                                "approval_status": "pending",
-                                "priority2_center": null
-                            }
-                        },
-                        None
-                    ).await;
-                    return (StatusCode::OK, Json(ApproveResponse { success: true, message: "Application cascaded to 2nd Priority Center".to_string() }));
-                }
-            }
-        }
-
-        if let Some(p3_str) = p3 {
-            if !p3_str.is_empty() && current_parent.as_deref() != Some(p3_str) {
-                if let Ok(p3_oid) = ObjectId::parse_str(p3_str) {
-                    let _ = users.update_one(
-                        doc! { "_id": &oid },
-                        doc! {
-                            "$set": {
-                                "parent_id": p3_oid,
-                                "approval_status": "pending",
-                                "priority3_center": null
-                            }
-                        },
-                        None
-                    ).await;
-                    return (StatusCode::OK, Json(ApproveResponse { success: true, message: "Application cascaded to 3rd Priority Center".to_string() }));
-                }
-            }
-        }
-    }
-
     let _ = users.update_one(doc! { "_id": &oid, "role": "student" }, doc! { "$set": { "approval_status": "rejected" } }, None).await;
-    (StatusCode::OK, Json(ApproveResponse { success: true, message: "Student application rejected".to_string() }))
+    (StatusCode::OK, Json(ApproveResponse { success: true, message: "Student rejected".to_string() }))
 }
 
 pub async fn toggle_student_active(

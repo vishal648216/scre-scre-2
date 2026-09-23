@@ -525,22 +525,13 @@ const CenterListPage = () => {
         return;
       }
       const blob = await res.blob();
-      if (blob.type.includes("html")) {
-        const text = await blob.text();
-        const win = window.open("", "_blank");
-        if (win) {
-          win.document.write(text);
-          win.document.close();
-        }
-      } else {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `center_details_${id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `center_details_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
     } catch (e) {
       toast.error(t("An error occurred during printing"));
     } finally {

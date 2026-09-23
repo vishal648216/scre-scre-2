@@ -795,7 +795,7 @@ pub async fn internal_bulk_allot(
             .await
         };
 
-        if !force && !eligibility.eligible {
+        if !eligibility.eligible {
             skipped.push(SkippedStudent {
                 student_id: sid.to_hex(),
                 name: student.full_name.clone().unwrap_or_default(),

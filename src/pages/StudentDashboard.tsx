@@ -488,7 +488,7 @@ const StudentDashboard = () => {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">{t("Current Program")}</p>
-                <p className="text-sm font-black text-primary uppercase tracking-tight mt-0.5">{t((user as any)?.course || "ADCA (Advanced Diploma)")}</p>
+                <p className="text-sm font-black text-primary uppercase tracking-tight mt-0.5">{t("ADCA (Advanced Diploma)")}</p>
               </div>
             </div>
           </div>

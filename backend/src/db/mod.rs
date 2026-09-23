@@ -9,18 +9,6 @@ use mongodb::options::ReturnDocument;
 use mongodb::{Client, Database};
 use std::env;
 
-async fn create_mongo_client(uri: &str) -> Result<Client, mongodb::error::Error> {
-    if let Ok(mut opts) = mongodb::options::ClientOptions::parse(uri).await {
-        opts.max_pool_size = Some(100);
-        opts.min_pool_size = Some(5);
-        opts.connect_timeout = Some(std::time::Duration::from_secs(10));
-        opts.server_selection_timeout = Some(std::time::Duration::from_secs(15));
-        Client::with_options(opts)
-    } else {
-        Client::with_uri_str(uri).await
-    }
-}
-
 pub async fn connect_db() -> (Client, Database) {
     dotenv().ok();
     let database_name = env::var("DATABASE_NAME").unwrap_or("scre_db".to_string());
@@ -62,7 +50,7 @@ pub async fn connect_db() -> (Client, Database) {
     let fallback_uri_with_retry = set_retry_writes_false(fallback_uri);
 
     // First try to connect with MONGODB_URI
-    match create_mongo_client(&primary_uri_with_retry).await {
+    match Client::with_uri_str(&primary_uri_with_retry).await {
         Ok(client) => {
             // Actually test the connection by listing database names
             match client.list_database_names(None, None).await {
@@ -93,7 +81,7 @@ pub async fn connect_db() -> (Client, Database) {
     }
 
     // Fallback to localhost
-    let client = create_mongo_client(&fallback_uri_with_retry)
+    let client = Client::with_uri_str(&fallback_uri_with_retry)
         .await
         .expect("Failed to connect to MongoDB at localhost:27017");
     // Test the fallback connection too

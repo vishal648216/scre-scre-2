@@ -34,8 +34,6 @@ pub struct VerifyOtpRequest {
 pub struct AuthResponse {
     pub success: bool,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dev_otp: Option<String>,
 }
 
 pub async fn send_email_otp(
@@ -43,21 +41,9 @@ pub async fn send_email_otp(
     headers: HeaderMap,
     Json(payload): Json<SendOtpRequest>,
 ) -> (StatusCode, Json<AuthResponse>) {
-    let clean_email = payload.email.trim().to_lowercase();
-    if clean_email.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(AuthResponse {
-                success: false,
-                message: "Email address is required".to_string(),
-                dev_otp: None,
-            }),
-        );
-    }
-
     let ip = client_ip(&headers);
     let ip_limiter = IpRateLimit {
-        limit: 100,
+        limit: 8,
         window: Duration::from_secs(3600),
     };
     if !check_rate_limit(&format!("otp_ip:{ip}"), &ip_limiter) {
@@ -66,22 +52,21 @@ pub async fn send_email_otp(
             Json(AuthResponse {
                 success: false,
                 message: "Too many OTP requests. Please try again later.".to_string(),
-                dev_otp: None,
             }),
         );
     }
+    let email_key = payload.email.trim().to_lowercase();
     let email_limiter = IpRateLimit {
-        limit: 50,
+        limit: 5,
         window: Duration::from_secs(3600),
     };
-    if !check_rate_limit(&format!("otp_email:{clean_email}"), &email_limiter) {
+    if !check_rate_limit(&format!("otp_email:{email_key}"), &email_limiter) {
         return (
             StatusCode::TOO_MANY_REQUESTS,
             Json(AuthResponse {
                 success: false,
                 message: "Too many OTP requests for this email. Please try again later."
                     .to_string(),
-                dev_otp: None,
             }),
         );
     }
@@ -95,18 +80,17 @@ pub async fn send_email_otp(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(AuthResponse {
                     success: false,
-                    message: "Internal error hashing OTP".to_string(),
-                    dev_otp: None,
+                    message: "Internal error".to_string(),
                 }),
             );
         }
     };
 
-    let expires_at = Utc::now() + ChronoDuration::minutes(15);
+    let expires_at = Utc::now() + ChronoDuration::minutes(5);
 
     let otp_doc = EmailOtp {
         id: None,
-        email: clean_email.clone(),
+        email: payload.email.clone(),
         otp_hash,
         expires_at,
         verified: false,
@@ -117,126 +101,105 @@ pub async fn send_email_otp(
 
     // Invalidate any previous OTPs for this email
     let _ = collection
-        .delete_many(doc! { "$or": [ { "email": &clean_email }, { "email": &payload.email } ] }, None)
+        .delete_many(doc! { "email": &payload.email }, None)
         .await;
 
-    if let Err(e) = collection.insert_one(otp_doc, None).await {
-        eprintln!("[OTP ERROR] Failed to store OTP: {:?}", e);
+    if let Err(_) = collection.insert_one(otp_doc, None).await {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(AuthResponse {
                 success: false,
                 message: "Failed to store OTP".to_string(),
-                dev_otp: None,
             }),
         );
     }
 
-    println!("[OTP GENERATED] Email: {}, Code: {}", clean_email, otp);
-
-    let send_res = send_otp_email(&clean_email, &otp).await;
-    if let Err(ref e) = send_res {
-        eprintln!("[OTP EMAIL WARNING] send_otp_email error: {:?}", e);
+    match send_otp_email(&payload.email, &otp).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                success: true,
+                message: "OTP sent successfully".to_string(),
+            }),
+        ),
+        Err(e) => {
+            eprintln!("Email error: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    success: false,
+                    message: "Failed to send email".to_string(),
+                }),
+            )
+        }
     }
-
-    (
-        StatusCode::OK,
-        Json(AuthResponse {
-            success: true,
-            message: format!("OTP sent to {}", clean_email),
-            dev_otp: Some(otp),
-        }),
-    )
 }
 
 pub async fn verify_email_otp(
     State(db): State<Database>,
     Json(payload): Json<VerifyOtpRequest>,
 ) -> (StatusCode, Json<AuthResponse>) {
-    let clean_email = payload.email.trim().to_lowercase();
-    let input_otp = payload.otp.trim();
     let collection = db.collection::<EmailOtp>("email_otps");
 
-    println!("[OTP VERIFY REQUEST] Email: {}, OTP: {}", clean_email, input_otp);
-
-    // Master fallback OTP check for dev/testing
-    if input_otp == "123456" || input_otp == "000000" {
-        println!("[OTP VERIFY SUCCESS] Master fallback used for {}", clean_email);
-        return (
-            StatusCode::OK,
-            Json(AuthResponse {
-                success: true,
-                message: "OTP verified successfully".to_string(),
-                dev_otp: None,
-            }),
-        );
-    }
-
     let otp_record = match collection
-        .find_one(
-            doc! { "$or": [ { "email": &clean_email }, { "email": &payload.email } ], "verified": false },
-            None,
-        )
+        .find_one(doc! { "email": &payload.email, "verified": false }, None)
         .await
     {
         Ok(Some(r)) => r,
         _ => {
-            println!("[OTP VERIFY FAIL] No active record for {}", clean_email);
             return (
                 StatusCode::BAD_REQUEST,
                 Json(AuthResponse {
                     success: false,
-                    message: "No active OTP found for this email. Please request a new code.".to_string(),
-                    dev_otp: None,
+                    message: "No active OTP found for this email".to_string(),
                 }),
             );
         }
     };
 
     if Utc::now() > otp_record.expires_at {
-        println!("[OTP VERIFY FAIL] OTP expired for {}", clean_email);
         return (
             StatusCode::BAD_REQUEST,
             Json(AuthResponse {
                 success: false,
-                message: "OTP has expired. Please request a new code.".to_string(),
-                dev_otp: None,
+                message: "OTP has expired".to_string(),
             }),
         );
     }
 
-    if !verify(input_otp, &otp_record.otp_hash).unwrap_or(false) {
-        println!("[OTP VERIFY FAIL] Hash mismatch for {}", clean_email);
+    if !verify(&payload.otp, &otp_record.otp_hash).unwrap_or(false) {
         return (
             StatusCode::BAD_REQUEST,
             Json(AuthResponse {
                 success: false,
-                message: "Invalid OTP code. Please check and try again.".to_string(),
-                dev_otp: None,
+                message: "Invalid OTP".to_string(),
             }),
         );
     }
 
-    if let Some(record_id) = otp_record.id {
-        let _ = collection
-            .update_one(
-                doc! { "_id": record_id },
-                doc! { "$set": { "verified": true } },
-                None,
-            )
-            .await;
+    match collection
+        .update_one(
+            doc! { "_id": otp_record.id.unwrap() },
+            doc! { "$set": { "verified": true } },
+            None,
+        )
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                success: true,
+                message: "OTP verified successfully".to_string(),
+            }),
+        ),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(AuthResponse {
+                success: false,
+                message: "Verification failed".to_string(),
+            }),
+        ),
     }
-
-    println!("[OTP VERIFY SUCCESS] Successfully verified OTP for {}", clean_email);
-
-    (
-        StatusCode::OK,
-        Json(AuthResponse {
-            success: true,
-            message: "OTP verified successfully".to_string(),
-            dev_otp: None,
-        }),
-    )
 }
 
 #[derive(Debug, Deserialize)]

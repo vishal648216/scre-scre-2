@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TypingAnalyticsDashboard from "@/components/TypingAnalyticsDashboard";
 import TypingLeaderboard from "@/components/TypingLeaderboard";
 import { TypingScorecardCertificateModal } from "@/components/TypingScorecardCertificateModal";
-import VirtualKeyboard from "@/components/VirtualKeyboard";
 import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
@@ -96,35 +95,11 @@ const TypingPracticePage = () => {
   const [mistakes, setMistakes] = useState(0);
   const [extraChars, setExtraChars] = useState(0);
   
-  // Level & Exam Rules
-  const [examLevel, setExamLevel] = useState<"easy" | "medium" | "hard">("easy");
-  const [timerLimitSec, setTimerLimitSec] = useState<number>(0); // 0 = unlimited
-  const [soundAlert, setSoundAlert] = useState(true);
-  const [hasErrorShake, setHasErrorShake] = useState(false);
-
   // Scorecard / Certificate Modal
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docModalMode, setDocModalMode] = useState<"scorecard" | "certificate">("scorecard");
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const autoStartedRef = useRef(false);
-
-  const playBeepSound = () => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.12);
-    } catch {
-      // Audio context fallbacks
-    }
-  };
 
   const currentLanguage = languages.find(l => l._id === selectedLanguage);
   const isRtl = ["ar", "ur", "fa", "he"].includes((currentLanguage?.code || "").toLowerCase());
@@ -150,20 +125,6 @@ const TypingPracticePage = () => {
     return () => document.removeEventListener("contextmenu", handleContextMenu);
   }, []);
 
-  // Handle URL search params on load
-  useEffect(() => {
-    if (languages.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
-    const urlLangId = params.get("langId");
-    const urlLessonId = params.get("lessonId");
-
-    if (urlLangId && languages.some((l) => l._id === urlLangId)) {
-      setSelectedLanguage(urlLangId);
-    } else if (!selectedLanguage && languages.length > 0) {
-      setSelectedLanguage(languages[0]._id);
-    }
-  }, [languages]);
-
   useEffect(() => {
     if (selectedLanguage) {
       fetchLessons(selectedLanguage);
@@ -172,55 +133,6 @@ const TypingPracticePage = () => {
       setSelectedLesson(null);
     }
   }, [selectedLanguage]);
-
-  // If URL has lessonId, auto-start that lesson when lessons load (only once)
-  useEffect(() => {
-    if (autoStartedRef.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const urlLessonId = params.get("lessonId");
-    if (urlLessonId && lessons.length > 0) {
-      const match = lessons.find((l) => l._id === urlLessonId);
-      if (match) {
-        autoStartedRef.current = true;
-        startPractice(match);
-      }
-    }
-  }, [lessons]);
-
-  // Live Timer Ticker for WPM, Accuracy, and Time
-  useEffect(() => {
-    let interval: any;
-    if (startTime && !isFinished && !endTime && selectedLesson) {
-      interval = setInterval(() => {
-        const elapsedSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
-        
-        // Auto finish if countdown timer limit reached
-        if (timerLimitSec > 0 && elapsedSec >= timerLimitSec) {
-          finishPractice(userInput);
-          clearInterval(interval);
-          return;
-        }
-
-        const timeTakenMin = elapsedSec / 60;
-        const totalChars = userInput.length;
-        const liveWpm = Math.round((totalChars / 5) / (timeTakenMin || 1/60));
-
-        let correctChars = 0;
-        const origContent = selectedLesson.content || "";
-        for (let i = 0; i < userInput.length; i++) {
-          if (userInput[i] === origContent[i]) correctChars++;
-        }
-        const liveAccuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
-
-        setStats({
-          wpm: liveWpm,
-          accuracy: liveAccuracy,
-          time: timerLimitSec > 0 ? Math.max(0, timerLimitSec - elapsedSec) : elapsedSec,
-        });
-      }, 500);
-    }
-    return () => clearInterval(interval);
-  }, [startTime, isFinished, endTime, userInput, selectedLesson, timerLimitSec]);
 
   const fetchLanguages = async () => {
     try {
@@ -265,7 +177,7 @@ const TypingPracticePage = () => {
     setIsFinished(false);
     setMistakes(0);
     setExtraChars(0);
-    setStats({ wpm: 0, accuracy: 0, time: timerLimitSec || 0 });
+    setStats({ wpm: 0, accuracy: 0, time: 0 });
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -292,12 +204,6 @@ const TypingPracticePage = () => {
     
     const val = e.target.value;
     
-    // Hard level or strict mode backspace check: don't allow backspacing
-    if (examLevel === "hard" && val.length < userInput.length) {
-      toast.error("Backspace is disabled in Hard Exam Mode!", { duration: 1500 });
-      return;
-    }
-    
     // Prevent pasting using event inputType so multi-byte scripts & IMEs work flawlessly
     const nativeEvent = e.nativeEvent as (InputEvent & { inputType?: string }) | undefined;
     if (nativeEvent?.inputType === "insertFromPaste") {
@@ -313,9 +219,6 @@ const TypingPracticePage = () => {
       const targetSlice = selectedLesson.content.slice(userInput.length, val.length);
       if (added !== targetSlice) {
         setMistakes(prev => prev + 1);
-        if (soundAlert) playBeepSound();
-        setHasErrorShake(true);
-        setTimeout(() => setHasErrorShake(false), 300);
       }
     }
 
@@ -344,7 +247,7 @@ const TypingPracticePage = () => {
     for (let i = 0; i < originalContent.length; i++) {
       if (finalInput[i] === originalContent[i]) correctChars++;
     }
-    const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+    const accuracy = Math.round((correctChars / totalChars) * 100);
 
     setStats({
       wpm,
@@ -352,11 +255,10 @@ const TypingPracticePage = () => {
       time: durationSec
     });
     
-    // Pass startTime! and end directly to avoid React stale closure issues
-    submitResult(finalInput, wpm, accuracy, durationSec, correctChars, totalChars - correctChars, startTime!, end);
+    submitResult(finalInput, wpm, accuracy, durationSec, correctChars, totalChars - correctChars);
   };
 
-  const submitResult = async (finalInput: string, wpm: number, accuracy: number, duration: number, correct: number, incorrect: number, startMs: number, endMs: number) => {
+  const submitResult = async (finalInput: string, wpm: number, accuracy: number, duration: number, correct: number, incorrect: number) => {
     setSubmitting(true);
     try {
       const response = await apiFetch("/api/typing/results", {
@@ -365,10 +267,10 @@ const TypingPracticePage = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          lesson_id: selectedLesson?._id?.startsWith("quick-") ? null : selectedLesson?._id,
+          lesson_id: selectedLesson?._id?.startsWith("quick-") ? undefined : selectedLesson?._id,
           mode,
-          start_time: new Date(startMs).toISOString(),
-          end_time: new Date(endMs).toISOString(),
+          start_time: new Date(startTime!).toISOString(),
+          end_time: new Date(endTime!).toISOString(),
           total_chars: finalInput.length,
           correct_chars: correct,
           incorrect_chars: incorrect,
@@ -535,7 +437,7 @@ const TypingPracticePage = () => {
             ) : (
               <div className="max-w-4xl mx-auto">
                 <Card className="rounded-none border-primary shadow-2xl overflow-hidden">
-                  <div className="bg-primary p-4 text-primary-foreground flex flex-wrap justify-between items-center gap-3">
+                  <div className="bg-primary p-4 text-primary-foreground flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <BookOpen className="w-5 h-5" />
                       <div>
@@ -545,52 +447,8 @@ const TypingPracticePage = () => {
                         </p>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                      {/* Level Badges */}
-                      <div className="flex items-center bg-black/20 p-1 border border-white/20 text-[9px] font-black uppercase">
-                        <button
-                          onClick={() => setExamLevel("easy")}
-                          className={cn("px-2 py-0.5 transition-all", examLevel === "easy" ? "bg-white text-primary font-extrabold" : "opacity-70 hover:opacity-100")}
-                        >
-                          Easy
-                        </button>
-                        <button
-                          onClick={() => setExamLevel("medium")}
-                          className={cn("px-2 py-0.5 transition-all", examLevel === "medium" ? "bg-amber-400 text-black font-extrabold" : "opacity-70 hover:opacity-100")}
-                        >
-                          Medium
-                        </button>
-                        <button
-                          onClick={() => setExamLevel("hard")}
-                          className={cn("px-2 py-0.5 transition-all", examLevel === "hard" ? "bg-destructive text-white font-extrabold" : "opacity-70 hover:opacity-100")}
-                        >
-                          Hard
-                        </button>
-                      </div>
-
-                      {/* Timer Limit Selector */}
-                      <select
-                        value={timerLimitSec}
-                        onChange={(e) => setTimerLimitSec(Number(e.target.value))}
-                        className="bg-black/30 text-white border border-white/20 text-[10px] font-black px-2 py-1 outline-none uppercase"
-                      >
-                        <option value={0} className="bg-slate-900 text-white">No Time Limit</option>
-                        <option value={60} className="bg-slate-900 text-white">1 Min Test</option>
-                        <option value={120} className="bg-slate-900 text-white">2 Min Test</option>
-                        <option value={300} className="bg-slate-900 text-white">5 Min Test</option>
-                        <option value={600} className="bg-slate-900 text-white">10 Min Test</option>
-                      </select>
-
-                      {/* Sound Toggle */}
-                      <button
-                        onClick={() => setSoundAlert(!soundAlert)}
-                        className="text-[10px] font-black uppercase tracking-wider bg-black/20 px-2 py-1 border border-white/20 hover:bg-black/40 flex items-center gap-1"
-                      >
-                        {soundAlert ? "🔊 Sound On" : "🔇 Sound Off"}
-                      </button>
-
-                      <div className="flex items-center gap-2 border-l border-white/20 pl-3">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 opacity-70" />
                         <span className="text-lg font-black font-mono">{stats.time}s</span>
                       </div>
@@ -600,7 +458,7 @@ const TypingPracticePage = () => {
                   
                   <CardContent className="p-8 space-y-8">
                     {/* Live Stats Meter */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pb-6 border-b border-border/50">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-6 border-b border-border/50">
                       <div className="text-center">
                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{t("Live Speed")}</p>
                         <p className="text-xl font-black text-primary">{Math.round(stats.wpm)} <span className="text-[8px]">{t("WPM")}</span></p>
@@ -608,10 +466,6 @@ const TypingPracticePage = () => {
                       <div className="text-center border-l border-border/50">
                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{t("Accuracy")}</p>
                         <p className="text-xl font-black text-emerald-600">{Math.round(stats.accuracy)} <span className="text-[8px]">%</span></p>
-                      </div>
-                      <div className="text-center border-l border-border/50">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{t("Mistakes")}</p>
-                        <p className={cn("text-xl font-black transition-colors", mistakes > 0 ? "text-destructive" : "text-emerald-600")}>{mistakes}</p>
                       </div>
                       <div className="text-center border-l border-border/50">
                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{t("Characters")}</p>
@@ -626,8 +480,7 @@ const TypingPracticePage = () => {
                     {/* Content Display */}
                     <div 
                       className={cn(
-                        "bg-muted/30 p-8 border font-mono text-xl leading-relaxed select-none relative transition-all duration-150",
-                        hasErrorShake ? "border-destructive bg-destructive/5 ring-2 ring-destructive/40" : "border-border/50",
+                        "bg-muted/30 p-8 border border-border/50 font-mono text-xl leading-relaxed select-none relative",
                         isRtl && "text-right"
                       )}
                       dir={isRtl ? "rtl" : "ltr"}
@@ -645,7 +498,7 @@ const TypingPracticePage = () => {
                           key={i} 
                           className={cn(
                             "transition-colors",
-                            i < userInput.length ? (userInput[i] === char ? "text-primary font-bold" : "text-destructive bg-destructive/20 font-black underline decoration-destructive") : 
+                            i < userInput.length ? (userInput[i] === char ? "text-primary font-bold" : "text-destructive bg-destructive/10") : 
                             i === userInput.length ? "bg-primary/20 border-b-2 border-primary animate-pulse" : "text-muted-foreground/40"
                           )}
                         >
@@ -663,30 +516,11 @@ const TypingPracticePage = () => {
                       dir={isRtl ? "rtl" : "ltr"}
                       style={{ fontFamily: activeFontFamily }}
                       className={cn(
-                        "w-full h-32 p-6 bg-card border-2 rounded-none text-xl font-mono focus:border-primary outline-none transition-all resize-none shadow-inner",
-                        hasErrorShake ? "border-destructive ring-2 ring-destructive/40" : "border-border",
+                        "w-full h-32 p-6 bg-card border-2 border-border rounded-none text-xl font-mono focus:border-primary outline-none transition-all resize-none shadow-inner",
                         isRtl && "text-right"
                       )}
                       placeholder={isRtl ? "ابدأ الكتابة هنا..." : t("Start typing the text above...")}
                     />
-
-                    {/* Interactive Virtual Keyboard with Live Target Key Highlight */}
-                    {!isFinished && (
-                      <VirtualKeyboard
-                        nextChar={selectedLesson.content[userInput.length]}
-                        keyboardLayout={currentLanguage?.keyboard_layout || "QWERTY"}
-                        fontFamily={activeFontFamily}
-                        hideKeyHints={examLevel === "hard"}
-                        onKeyPress={(char) => {
-                          if (isFinished || !selectedLesson) return;
-                          const fakeEvent = {
-                            target: { value: userInput + char },
-                            nativeEvent: { inputType: "insertText" }
-                          } as any;
-                          handleInputChange(fakeEvent);
-                        }}
-                      />
-                    )}
 
                     <div className="flex justify-between items-center pt-4">
                       <div className="flex gap-2">
@@ -816,7 +650,13 @@ const TypingPracticePage = () => {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="mt-0">
-            <TypingLeaderboard />
+            <Card className="rounded-none border-border shadow-xl">
+              <CardContent className="p-8 text-center">
+                <Trophy className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h3 className="text-lg font-black uppercase tracking-tight">{t("Leaderboard Coming Soon")}</h3>
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mt-2">{t("Compete with other typists to reach the top of the rankings.")}</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-0">

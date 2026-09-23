@@ -9,8 +9,6 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-
 interface StudentPaper {
   _id: string;
   blueprint_id: string;
@@ -41,8 +39,6 @@ const AdminExamResultsPage = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
-  const [previewFormat, setPreviewFormat] = useState<"marksheet" | "scorecard">("marksheet");
 
   const toId = (v: any): string => {
     if (typeof v === "string") return v;
@@ -249,14 +245,6 @@ const AdminExamResultsPage = () => {
             </div>
             <Button 
               variant="outline" 
-              onClick={() => setPreviewDialogOpen(true)}
-              className="rounded-none font-black uppercase tracking-widest text-[10px] h-10 px-6 border-primary/40 text-primary hover:bg-primary/10"
-            >
-              <Eye className="w-3.5 h-3.5 mr-2" />
-              Preview Result Format
-            </Button>
-            <Button 
-              variant="outline" 
               onClick={exportResults}
               className="rounded-none font-black uppercase tracking-widest text-[10px] h-10 px-6"
             >
@@ -269,22 +257,12 @@ const AdminExamResultsPage = () => {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : filteredPapers.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 bg-muted/30 py-16 text-center">
-            <CardContent className="space-y-6">
+          <Card className="rounded-none border-dashed border-2 bg-muted/30 py-20 text-center">
+            <CardContent className="space-y-4">
               <div className="w-16 h-16 bg-muted border border-border mx-auto flex items-center justify-center">
-                <Award className="w-8 h-8 text-primary" />
+                <Filter className="w-8 h-8 text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <p className="text-foreground font-black uppercase tracking-widest text-sm">No evaluated results found</p>
-                <p className="text-muted-foreground text-xs">Evaluated student exam papers and generated marksheets will appear here automatically.</p>
-              </div>
-              <Button 
-                onClick={() => setPreviewDialogOpen(true)}
-                className="rounded-none font-black uppercase tracking-widest text-xs h-11 px-8 bg-primary hover:bg-primary/90"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                View Sample Result & Marksheet Format
-              </Button>
+              <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">No evaluated results found</p>
             </CardContent>
           </Card>
         ) : (
@@ -376,200 +354,6 @@ const AdminExamResultsPage = () => {
             </table>
           </div>
         )}
-      {/* Result & Marksheet Format Preview Dialog */}
-        <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-          <DialogContent className="max-w-4xl rounded-none border border-border bg-card p-6 max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="space-y-1 text-left border-b border-border pb-4">
-              <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-primary" />
-                  Official Examination Result & Marksheet Format
-                </span>
-              </DialogTitle>
-              <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Preview how student marksheets and exam scorecards are generated and printed
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              {/* Format selector */}
-              <div className="flex items-center gap-2 bg-muted p-1 border border-border">
-                <button
-                  type="button"
-                  onClick={() => setPreviewFormat("marksheet")}
-                  className={cn(
-                    "flex-1 py-2 text-xs font-black uppercase tracking-widest transition-all",
-                    previewFormat === "marksheet" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Official Marksheet (Detailed)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewFormat("scorecard")}
-                  className={cn(
-                    "flex-1 py-2 text-xs font-black uppercase tracking-widest transition-all",
-                    previewFormat === "scorecard" ? "bg-background text-primary shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Online Exam Scorecard (Summary)
-                </button>
-              </div>
-
-              {previewFormat === "marksheet" ? (
-                /* Sample Marksheet Preview */
-                <div className="border border-primary/30 p-8 bg-background shadow-md relative space-y-6">
-                  <div className="border-4 border-double border-primary/40 p-6 space-y-6">
-                    {/* Header */}
-                    <div className="text-center space-y-2 border-b-2 border-primary/30 pb-4">
-                      <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/30">
-                        NATIONAL SKILL & COMPUTER EDUCATION ACADEMY
-                      </div>
-                      <h2 className="text-2xl font-black uppercase tracking-wider text-foreground">STATEMENT OF MARKS & EVALUATION</h2>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">ISO 9001:2015 CERTIFIED INSTITUTION • OFFICIAL ACADEMIC TRANSCRIPT</p>
-                    </div>
-
-                    {/* Student Info Grid */}
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono bg-muted/30 p-4 border border-border">
-                      <div>
-                        <p><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Student Name</span> <strong className="text-foreground text-sm font-sans uppercase font-black">RAHUL KUMAR SHARMA</strong></p>
-                        <p className="mt-2"><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Enrollment No / Reg No</span> <span className="font-bold">STUD2026/DEL/0482</span></p>
-                        <p className="mt-2"><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Course Program</span> <span className="font-bold uppercase">DCCA - Diploma in Computer Application</span></p>
-                      </div>
-                      <div>
-                        <p><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Center Name & Code</span> <strong className="text-foreground font-sans font-bold uppercase">APEX IT SKILLS CENTER (CENT-019)</strong></p>
-                        <p className="mt-2"><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Examination Session</span> <span className="font-bold">ANNUAL SESSION 2026-27</span></p>
-                        <p className="mt-2"><span className="font-sans font-bold text-muted-foreground text-[10px] uppercase block">Issue Date</span> <span className="font-bold">23 SEP 2026</span></p>
-                      </div>
-                    </div>
-
-                    {/* Marks Table */}
-                    <table className="w-full text-left text-xs border-collapse border border-border">
-                      <thead>
-                        <tr className="bg-muted text-foreground border-b border-border">
-                          <th className="p-3 font-black uppercase text-[10px] border-r border-border">Code</th>
-                          <th className="p-3 font-black uppercase text-[10px] border-r border-border">Subject Title</th>
-                          <th className="p-3 font-black uppercase text-[10px] text-center border-r border-border">Max Marks</th>
-                          <th className="p-3 font-black uppercase text-[10px] text-center border-r border-border">Pass Marks</th>
-                          <th className="p-3 font-black uppercase text-[10px] text-center">Marks Obtained</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        <tr>
-                          <td className="p-3 font-mono border-r border-border">CS101</td>
-                          <td className="p-3 font-bold border-r border-border">Computer Fundamentals & Windows OS</td>
-                          <td className="p-3 text-center border-r border-border font-mono">100</td>
-                          <td className="p-3 text-center border-r border-border font-mono">40</td>
-                          <td className="p-3 text-center font-mono font-bold text-emerald-600">88</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-mono border-r border-border">CS102</td>
-                          <td className="p-3 font-bold border-r border-border">MS Office & Document Automation</td>
-                          <td className="p-3 text-center border-r border-border font-mono">100</td>
-                          <td className="p-3 text-center border-r border-border font-mono">40</td>
-                          <td className="p-3 text-center font-mono font-bold text-emerald-600">92</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-mono border-r border-border">CS103</td>
-                          <td className="p-3 font-bold border-r border-border">Practical Typing & Speed Assessment (English/Hindi)</td>
-                          <td className="p-3 text-center border-r border-border font-mono">100</td>
-                          <td className="p-3 text-center border-r border-border font-mono">40</td>
-                          <td className="p-3 text-center font-mono font-bold text-emerald-600">85</td>
-                        </tr>
-                      </tbody>
-                      <tfoot>
-                        <tr className="bg-muted/60 font-black border-t-2 border-border">
-                          <td colSpan={2} className="p-3 uppercase text-right border-r border-border">GRAND TOTAL</td>
-                          <td className="p-3 text-center border-r border-border font-mono">300</td>
-                          <td className="p-3 text-center border-r border-border font-mono">120</td>
-                          <td className="p-3 text-center font-mono text-base text-primary">265 / 300</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-
-                    {/* Result Footer */}
-                    <div className="flex items-center justify-between bg-primary/5 p-4 border border-primary/20">
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">PERCENTAGE & DIVISION</p>
-                        <p className="text-lg font-black text-foreground">88.33% — FIRST DIVISION WITH DISTINCTION</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">FINAL RESULT STATUS</p>
-                        <span className="inline-block px-4 py-1.5 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest">
-                          PASSED
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Sample Scorecard Preview */
-                <div className="border border-border p-6 bg-background shadow-md space-y-6">
-                  <div className="flex items-center justify-between border-b border-border pb-4">
-                    <div>
-                      <h3 className="text-lg font-black uppercase text-foreground">ONLINE EXAM SCORECARD</h3>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Instant Evaluation & Speed Analytics Report</p>
-                    </div>
-                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-black uppercase">EVALUATED</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-muted/40 border border-border text-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Score</p>
-                      <p className="text-2xl font-black text-primary mt-1">45 / 50</p>
-                    </div>
-                    <div className="p-4 bg-muted/40 border border-border text-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Accuracy Rate</p>
-                      <p className="text-2xl font-black text-emerald-600 mt-1">90.0%</p>
-                    </div>
-                    <div className="p-4 bg-muted/40 border border-border text-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Time Spent</p>
-                      <p className="text-2xl font-black text-foreground mt-1">18:45 Mins</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-foreground">Question Category Summary</h4>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between items-center p-2 bg-muted/20 border border-border">
-                        <span>Multiple Choice Questions (MCQ)</span>
-                        <span className="font-mono font-bold text-emerald-600">25 / 25 Correct</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-muted/20 border border-border">
-                        <span>True / False Questions</span>
-                        <span className="font-mono font-bold text-emerald-600">10 / 10 Correct</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-muted/20 border border-border">
-                        <span>Fill in the Blanks</span>
-                        <span className="font-mono font-bold text-amber-600">10 / 15 Correct</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="border-t border-border pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setPreviewDialogOpen(false)}
-                className="rounded-none font-black uppercase tracking-widest text-xs h-10 px-6"
-              >
-                Close Preview
-              </Button>
-              <Button 
-                onClick={() => {
-                  toast.success("Sample marksheets are dynamically rendered for all student results in the database");
-                  setPreviewDialogOpen(false);
-                }}
-                className="rounded-none font-black uppercase tracking-widest text-xs h-10 px-6 bg-primary hover:bg-primary/90"
-              >
-                <Printer className="w-3.5 h-3.5 mr-2" />
-                Print Sample Format
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   );
