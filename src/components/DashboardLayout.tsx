@@ -387,13 +387,18 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     {
       label: "Exams",
       icon: FlaskConical,
-      roles: ["center"],
+      roles: ["admin", "superadmin", "center", "staff"],
       subItems: [
-        { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/center" },
+        { icon: PlusCircle, label: "Allot Exam", href: "/dashboard/exams/allot", roles: ["admin", "superadmin", "staff"] },
+        { icon: List, label: "Allotted Exams", href: "/dashboard/exams/allotted", roles: ["admin", "superadmin", "staff"] },
+        { icon: FileText, label: "Exam Papers", href: "/dashboard/exams/papers", roles: ["admin", "superadmin", "staff"] },
+        { icon: Award, label: "Exam Results", href: "/dashboard/exams/results", roles: ["admin", "superadmin", "staff"] },
+        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
+        { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/center", roles: ["center"] },
         { icon: ClipboardCheck, label: "Marks Entry", href: "/dashboard/exams/marks-entry" },
         { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
-        { icon: ClipboardCheck, label: "Internal Marks Entry", href: "/dashboard/exam-v2/marks-entry" },
-        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+        { icon: ClipboardCheck, label: "Internal Marks Entry", href: "/dashboard/exam-v2/marks-entry", roles: ["center"] },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper", roles: ["center"] },
       ]
     },
     // --- CENTER SPECIFIC COURSES ---
@@ -441,20 +446,6 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Zap, label: "Practice Now", href: "/dashboard/student/typing" },
         { icon: History, label: "My History", href: "/dashboard/student/typing/history" },
         { icon: Trophy, label: "Leaderboard", href: "/dashboard/student/typing/leaderboard" },
-      ]
-    },
-    {
-      label: "Exams",
-      icon: FileText,
-      roles: ["admin", "superadmin", "staff"],
-      subItems: [
-        { icon: PlusCircle, label: "Allot Exam", href: "/dashboard/exams/allot" },
-        { icon: List, label: "Alloted Exams", href: "/dashboard/exams/alloted" },
-        { icon: List, label: "Exam Papers", href: "/dashboard/exams/papers" },
-        { icon: Award, label: "Exam Results", href: "/dashboard/exams/results" },
-        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
-        // { icon: FileSpreadsheet, label: "Academic Marksheets", href: "/dashboard/attachments/generate/marksheet" },
-        ...(USE_EXAM_V2_VAL ? [{ icon: Upload, label: "Exam V2 (Center)", href: "/dashboard/exam-v2/center" } as const] : []),
       ]
     },
     {
