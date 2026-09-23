@@ -268,24 +268,21 @@ const PortalRouteWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings } = useQuery({
     queryKey: ["public-settings"],
     queryFn: async () => {
-      const res = await apiFetch("/api/public/system-settings");
-      return res.json();
+      try {
+        const res = await apiFetch("/api/public/system-settings");
+        if (res.ok) return res.json();
+      } catch (e) {
+        // Ignore network error on initial load
+      }
+      return null;
     },
+    staleTime: 1000 * 60 * 10,
   });
 
   const isBypassed = localStorage.getItem("maintenance_bypass") === "true";
-
-  if (isLoading) return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Initializing Portal...</p>
-      </div>
-    </div>
-  );
 
   if (settings?.maintenance_mode && !isBypassed) {
     return (
