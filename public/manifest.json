@@ -1,0 +1,52 @@
+{
+  "short_name": "SCRE Academy",
+  "name": "State Council for Rural Education (SCRE)",
+  "description": "National Authorized Education Board & Computer Institute Portal",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Student Dashboard",
+      "url": "/dashboard/student",
+      "description": "Access enrolled courses and progress"
+    },
+    {
+      "name": "My Examinations",
+      "url": "/dashboard/student/exams",
+      "description": "View allotted online examinations and hall ticket"
+    },
+    {
+      "name": "Verify Certificate",
+      "url": "/verify-certificate",
+      "description": "Public certificate and marksheet verification"
+    },
+    {
+      "name": "Student Helpdesk",
+      "url": "/dashboard/student/helpdesk",
+      "description": "Submit academic queries and support tickets"
+    }
+  ]
+}

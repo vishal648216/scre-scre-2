@@ -1,0 +1,127 @@
+pub async fn get_student_paper(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let p_oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"success": false, "message": "Invalid paper ID"}))),
+    };
+
+    let paper_coll = db.collection::<StudentPaper>("student_papers");
+    let paper = match paper_coll.find_one(doc! { "_id": p_oid }, None).await {
+        Ok(Some(p)) => p,
+        _ => return (StatusCode::NOT_FOUND, Json(serde_json::json!({"success": false, "message": "Paper not found"}))),
+    };
+
+    // Access control
+    if claims.role == UserRole::Student {
+        if paper.student_id.to_hex() != claims.sub {
+            return (StatusCode::FORBIDDEN, Json(serde_json::json!({"success": false, "message": "Unauthorized"})));
+        }
+
+        // Attendance check for active exams
+        if paper.status == "Generated" || paper.status == "InProgress" {
+            let blueprint_coll = db.collection::<ExamBlueprint>("exam_blueprints");
+            if let Ok(Some(blueprint)) = blueprint_coll.find_one(doc! { "_id": paper.blueprint_id }, None).await {
+                if blueprint.require_attendance {
+                    let attendance_coll = db.collection::<mongodb::bson::Document>("student_attendance");
+                    let attendance = attendance_coll.find_one(doc! {
+                        "student_id": paper.student_id,
+                        "blueprint_id": paper.blueprint_id,
+                        "status": "Present"
+                    }, None).await;
+
+                    if let Ok(None) = attendance {
+                        return (StatusCode::FORBIDDEN, Json(serde_json::json!({
+                            "success": false,
+                            "message": "Attendance required. Please mark your attendance first."
+                        })));
+                    }
+                }
+            }
+        }
+    }
+
+    let blueprint_coll = db.collection::<ExamBlueprint>("exam_blueprints");
+    let blueprint: Option<ExamBlueprint> = blueprint_coll.find_one(doc! { "_id": paper.blueprint_id }, None).await.ok().flatten();
+
+    let q_bank_coll = db.collection::<mongodb::bson::Document>("qb_questions");
+    let mut questions = Vec::new();
+    
+    for q_mapping in &paper.questions {
+        match q_bank_coll.find_one(doc! { "_id": q_mapping.question_id }, None).await {
+            Ok(Some(doc)) => {
+                // Manually build QBQuestion to be extremely resilient to data format variations
+                let mut q = QBQuestion {
+                    id: doc.get_object_id("_id").ok(),
+                    bank_id: doc.get_object_id("bank_id").unwrap_or_default(),
+                    subject_id: doc.get_object_id("subject_id").ok(),
+                    question_text: doc.get_str("question_text").unwrap_or("").to_string(),
+                    question_type: doc.get_str("question_type").unwrap_or("MCQ").to_string(),
+                    marks: doc.get_f64("marks").or_else(|_| doc.get_i32("marks").map(|i| i as f64)).or_else(|_| doc.get_i64("marks").map(|i| i as f64)).unwrap_or(1.0),
+                    options: doc.get_array("options").map(|a| a.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()).unwrap_or_default(),
+                    correct_option_index: doc.get_i32("correct_option_index").unwrap_or(0),
+                    options_pool: doc.get_array("options_pool").ok().map(|a| a.iter().map(|v| {
+                        // Convert BSON to JSON for options_pool
+                        let bson_val = v.clone();
+                        serde_json::to_value(&bson_val).unwrap_or(serde_json::Value::Null)
+                    }).collect()),
+                    correct_option_id: doc.get_str("correct_option_id").ok().map(|s| s.to_string()),
+                    created_by: doc.get_object_id("created_by").ok(),
+                    created_at: doc.get_datetime("created_at").map(|dt| *dt).unwrap_or_else(|_| mongodb::bson::DateTime::now()),
+                };
+
+                // Auto-convert options_pool to options for legacy frontend compatibility
+                if q.options.is_empty() {
+                    if let Some(pool) = &q.options_pool {
+                        q.options = pool.iter()
+                            .filter_map(|v| v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()))
+                            .collect();
+                        
+                        if let Some(correct_id) = &q.correct_option_id {
+                            if let Some(idx) = pool.iter().position(|v| v.get("id").and_then(|i| i.as_str()) == Some(correct_id)) {
+                                q.correct_option_index = idx as i32;
+                            }
+                        }
+                    }
+                }
+
+                // Hide correct answer/index from student if exam is not evaluated
+                if claims.role == UserRole::Student && paper.status != "Evaluated" {
+                    q.correct_option_index = -1;
+                }
+                questions.push(q);
+            }
+            Ok(None) => {
+                eprintln!("WARNING: Question {} not found in qb_questions", q_mapping.question_id);
+            }
+            Err(e) => {
+                eprintln!("ERROR: Failed to load question {}: {}", q_mapping.question_id, e);
+            }
+        }
+    }
+
+    // Calculate class average for this blueprint
+    let mut class_average = None;
+    if let Ok(mut cursor) = paper_coll.find(doc! { "blueprint_id": paper.blueprint_id, "status": "Evaluated" }, None).await {
+        let mut total_marks = 0.0;
+        let mut count = 0;
+        while let Some(Ok(p)) = cursor.next().await {
+            total_marks += p.total_obtained_marks;
+            count += 1;
+        }
+        if count > 0 {
+            class_average = Some(total_marks / count as f64);
+        }
+    }
+
+    let response = StudentPaperWithDetails {
+        paper,
+        blueprint,
+        questions,
+        class_average,
+    };
+
+    (StatusCode::OK, Json(serde_json::json!(response)))
+}

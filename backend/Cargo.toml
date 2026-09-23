@@ -1,0 +1,98 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "backend"
+path = "src/lib.rs"
+
+[[bin]]
+name = "translate_all"
+path = "src/bin/translate_all.rs"
+
+[[bin]]
+name = "create_users"
+path = "src/bin/create_users.rs"
+
+[[bin]]
+name = "create_super_admin"
+path = "src/bin/create_super_admin.rs"
+
+[[bin]]
+name = "create_exam_e2e_accounts"
+path = "src/bin/create_exam_e2e_accounts.rs"
+
+[[bin]]
+name = "generate_marksheet_052"
+path = "src/bin/generate_marksheet_052.rs"
+
+[[bin]]
+name = "test_bcrypt"
+path = "src/bin/test_bcrypt.rs"
+
+[[bin]]
+name = "reset_user_password"
+path = "src/bin/reset_user_password.rs"
+
+# [[bin]]
+# name = "simulate_student_052"
+# path = "src/bin/simulate_student_052.rs"
+
+# [[bin]]
+# name = "generate_marksheet_052"
+# path = "src/bin/generate_marksheet_052.rs"
+
+# [[bin]]
+# name = "check_certificates"
+# path = "src/bin/check_certificates.rs"
+
+# [[bin]]
+# name = "test_get_certificates"
+# path = "src/bin/test_get_certificates.rs"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+axum = { version = "0.7", features = ["macros", "multipart"] }
+mongodb = "2.8"
+bson = { version = "2.8", features = ["chrono-0_4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dotenvy = "0.15"
+tower-http = { version = "0.5", features = ["cors", "fs", "set-header", "compression-full"] }
+futures-util = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+jsonwebtoken = "9.3"
+bcrypt = "0.15"
+urlencoding = "2.1"
+html-escape = "0.2"
+reqwest = { version = "0.12", features = ["json"] }
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+headless_chrome = { version = "1.0", features = ["fetch"] }
+tempfile = "3.8"
+fs_extra = "1.3"
+handlebars = "5.0"
+hex = "0.4.3"
+chrono-tz = "0.9"
+rand = "0.8"
+rand_chacha = "0.3"
+regex = "1.10"
+qrcode = { version = "0.12" }
+image = "0.24"
+lopdf = "0.26"
+anyhow = "1.0"
+lettre = { version = "0.11", features = ["native-tls", "smtp-transport", "builder", "hostname"] }
+futures = "0.3.32"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+once_cell = "1.21.4"
+uuid = { version = "1.0", features = ["v4"] }
+aes-gcm = "0.10"
+typenum = "1.17"
+
+[profile.release]
+opt-level = 3
+lto = "off"
+codegen-units = 16
+debug = false

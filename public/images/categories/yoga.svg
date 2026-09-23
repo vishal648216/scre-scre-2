@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350" width="100%" height="100%">
+  <defs>
+    <linearGradient id="yogaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="50%" stop-color="#0e7490" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="50%" cy="45%" r="40%">
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="600" height="350" fill="url(#yogaGrad)" />
+  <circle cx="300" cy="160" r="130" fill="url(#sunGlow)" />
+  <!-- Lotus & Meditating Yogi Silhouette -->
+  <g fill="#ffffff" opacity="0.92" transform="translate(300, 160) scale(1.1)">
+    <!-- Yogi silhouette -->
+    <circle cx="0" cy="-60" r="14" />
+    <path d="M-18 -42 C-18 -42 -6 -48 0 -48 C6 -48 18 -42 18 -42 C26 -35 28 -20 28 -10 C20 -6 14 0 10 10 L32 28 C35 31 32 36 26 34 L-2 20 L-30 34 C-36 36 -39 31 -36 28 L-14 10 C-18 0 -24 -6 -32 -10 C-32 -20 -30 -35 -18 -42 Z" />
+    <path d="M-36 34 C-20 28 0 32 0 32 C0 32 20 28 36 34 C44 37 32 46 20 44 C8 42 -8 42 -20 44 C-32 46 -44 37 -36 34 Z" />
+    <!-- Lotus Petals below -->
+    <path d="M0 48 C-18 40 -35 48 -45 58 C-30 62 -10 56 0 48 Z" fill="#99f6e4" opacity="0.8" />
+    <path d="M0 48 C18 40 35 48 45 58 C30 62 10 56 0 48 Z" fill="#99f6e4" opacity="0.8" />
+    <path d="M0 44 C-10 38 -24 44 -28 54 C-16 54 -4 48 0 44 Z" fill="#ccfbf1" opacity="0.9" />
+    <path d="M0 44 C10 38 24 44 28 54 C16 54 4 48 0 44 Z" fill="#ccfbf1" opacity="0.9" />
+  </g>
+  <!-- Course Tag -->
+  <g transform="translate(300, 280)">
+    <rect x="-95" y="-16" width="190" height="32" rx="16" fill="#042f2e" fill-opacity="0.6" stroke="#5eead4" stroke-width="1.5" />
+    <text x="0" y="5" text-anchor="middle" fill="#f0fdfa" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="1">YOGA &amp; WELLNESS</text>
+  </g>
+</svg>

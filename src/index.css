@@ -1,0 +1,365 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 96%;
+    --foreground: 214 86% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 214 86% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 86% 15%;
+
+    --primary: 212 83% 26%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 99 46% 29%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 40 20% 92%;
+    --muted-foreground: 214 20% 40%;
+
+    --accent: 44 80% 46%;
+    --accent-foreground: 214 86% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 212 83% 26%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --primary-dark: 214 86% 20%;
+    --primary-light: 212 30% 95%;
+    --secondary-dark: 99 46% 22%;
+    --secondary-light: 99 30% 92%;
+    --accent-dark: 44 80% 38%;
+    --accent-light: 43 83% 84%;
+    --green-vibrant: 122 41% 45%;
+    --teal-accent: 151 79% 52%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 212 83% 26%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 44 80% 46%;
+    --sidebar-accent-foreground: 214 86% 15%;
+    --sidebar-border: 214 20% 88%;
+    --sidebar-ring: 212 83% 26%;
+  }
+
+  /* Neutral near-black dark theme (no blue/slate cast) */
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 212 70% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 58%;
+    --accent: 44 80% 50%;
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 62.8% 32%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 212 70% 48%;
+
+    --primary-dark: 212 72% 40%;
+    --primary-light: 0 0% 18%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-border: 0 0% 14%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24 px-4;
+  }
+
+  .tabular-nums-dense {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .hover-popup {
+    @apply transition-all duration-500 ease-out border border-transparent;
+  }
+  .hover-popup:hover {
+    @apply scale-110 shadow-[0_30px_60px_-12px_rgba(0,74,137,0.4)] border-accent/40 z-10;
+  }
+
+  .hover-popup-subtle {
+    @apply transition-all duration-500 ease-out border border-transparent;
+  }
+  .hover-popup-subtle:hover {
+    @apply scale-105 shadow-[0_20px_40px_-12px_rgba(0,74,137,0.3)] border-accent/30 z-10;
+  }
+}
+
+/* Dashboard shell: glass surfaces, soft shadows, shared motion (admin / center / student) */
+@layer components {
+  .dashboard-page {
+    @apply space-y-10 pb-10 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700;
+  }
+
+  .dashboard-hero {
+    @apply relative flex flex-col gap-6 overflow-hidden rounded-[2rem] border border-white/80 p-6 shadow-dashboard-soft backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-8;
+    @apply transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:hover:transform-none;
+    background-image: linear-gradient(
+      to bottom right,
+      rgb(255 255 255 / 0.9),
+      rgb(255 255 255 / 0.75),
+      rgb(240 249 255 / 0.3)
+    );
+  }
+
+  .dashboard-hero::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 opacity-90;
+    background: radial-gradient(120% 80% at 100% 0%, hsl(var(--primary) / 0.08), transparent 55%),
+      radial-gradient(90% 60% at 0% 100%, hsl(var(--accent) / 0.06), transparent 50%);
+  }
+
+  .dashboard-hero > * {
+    @apply relative z-[1];
+  }
+
+  .dashboard-hero:hover {
+    @apply -translate-y-0.5 shadow-dashboard-soft-lg;
+  }
+
+  .dashboard-surface-panel {
+    @apply relative overflow-hidden rounded-[2rem] border border-white/70 text-card-foreground shadow-dashboard-soft backdrop-blur-xl;
+    @apply transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:hover:transform-none;
+    background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.78));
+  }
+
+  .dashboard-surface-panel::before {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80;
+  }
+
+  .dashboard-surface-panel:hover {
+    @apply -translate-y-0.5 border-primary/10 shadow-dashboard-hover;
+  }
+
+  .dashboard-surface-stat {
+    @apply relative overflow-hidden rounded-2xl border border-white/75 text-card-foreground shadow-dashboard-soft backdrop-blur-md;
+    @apply transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:hover:transform-none;
+    background-image: linear-gradient(
+      to bottom right,
+      rgb(255 255 255 / 0.95),
+      rgb(255 255 255 / 0.82),
+      rgb(240 249 255 / 0.25)
+    );
+  }
+
+  .dashboard-surface-stat::after {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 bottom-0 h-1 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(
+      to right,
+      hsl(var(--primary) / 0),
+      hsl(var(--primary) / 0.25),
+      hsl(var(--accent) / 0.2)
+    );
+  }
+
+  .dashboard-surface-stat:hover {
+    @apply -translate-y-1 border-primary/20 shadow-dashboard-stat-hover;
+  }
+
+  .dashboard-surface-stat:hover::after {
+    @apply opacity-100;
+  }
+
+  .dashboard-skeleton {
+    @apply rounded-2xl border border-white/70 bg-white/80 p-6 shadow-dashboard-soft backdrop-blur-sm;
+  }
+
+  /* Main layout shell (DashboardLayout): glass + soft elevation, hover lift */
+  .dashboard-sidebar-shell {
+    @apply border-r border-white/55 bg-white/50 backdrop-blur-2xl shadow-dashboard-soft-lg;
+    @apply transition-shadow duration-500 ease-out;
+  }
+
+  .dashboard-workspace-shell {
+    @apply relative max-w-[1600px] mx-auto min-h-full rounded-[2rem] border border-white/55 backdrop-blur-xl;
+    @apply shadow-dashboard-soft-lg ring-1 ring-white/40;
+    @apply transition-all duration-500 ease-out motion-reduce:transition-none motion-reduce:hover:transform-none;
+    background-image: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.55),
+      rgb(255 255 255 / 0.48),
+      rgb(240 249 255 / 0.2)
+    );
+  }
+
+  .dashboard-workspace-shell:hover {
+    @apply border-white/70 shadow-dashboard-hover -translate-y-px;
+  }
+
+  /* Keep admin/center/student dashboards visually zoomed out without affecting public pages. */
+  .dashboard-panel-scale {
+    font-size: 75%;
+  }
+
+  /* Dark mode: neutral charcoal / near-black panels */
+  .dark .dashboard-hero {
+    @apply border-white/10 shadow-lg;
+    background-image: linear-gradient(
+      to bottom right,
+      hsl(0 0% 8% / 0.98),
+      hsl(0 0% 5% / 0.99),
+      hsl(0 0% 7% / 0.95)
+    );
+  }
+
+  .dark .dashboard-hero::before {
+    background: radial-gradient(120% 80% at 100% 0%, hsl(0 0% 100% / 0.04), transparent 55%),
+      radial-gradient(90% 60% at 0% 100%, hsl(0 0% 100% / 0.03), transparent 50%);
+  }
+
+  .dark .dashboard-surface-panel {
+    @apply border-white/10 shadow-lg;
+    background-image: linear-gradient(to bottom, hsl(0 0% 9% / 0.98), hsl(0 0% 6% / 0.98));
+  }
+
+  .dark .dashboard-surface-panel::before {
+    opacity: 0.25;
+  }
+
+  .dark .dashboard-surface-panel:hover {
+    @apply border-primary/30;
+  }
+
+  .dark .dashboard-surface-stat {
+    @apply border-white/10;
+    background-image: linear-gradient(
+      to bottom right,
+      hsl(0 0% 10% / 0.98),
+      hsl(0 0% 7% / 0.96),
+      hsl(0 0% 5% / 0.92)
+    );
+  }
+
+  .dark .dashboard-skeleton {
+    @apply border-white/10 bg-zinc-900/90;
+  }
+
+  .dark .dashboard-sidebar-shell {
+    @apply border-white/10 bg-black/55 shadow-lg;
+  }
+
+  .dark .dashboard-workspace-shell {
+    @apply border-white/10 ring-white/5 shadow-lg;
+    background-image: linear-gradient(
+      to bottom,
+      hsl(0 0% 6% / 0.92),
+      hsl(0 0% 4% / 0.94),
+      hsl(0 0% 5% / 0.9)
+    );
+  }
+
+  .dark .dashboard-workspace-shell:hover {
+    @apply border-white/15;
+  }
+}
+
+/* Counter animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Marquee for partners */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+/* Fade in up */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Pulse glow for CTA */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(44 80% 46% / 0.4); }
+  50% { box-shadow: 0 0 20px 8px hsl(44 80% 46% / 0.2); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Hero carousel fade */
+@keyframes heroFade {
+  0%, 100% { opacity: 0; }
+  10%, 30% { opacity: 1; }
+  40% { opacity: 0; }
+}
+
+/* Make calendar icon white in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}

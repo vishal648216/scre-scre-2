@@ -1,0 +1,32 @@
+services:
+  # 1. Backend Web Service (Rust Axum + MongoDB + Schedulers)
+  - type: web
+    name: scre-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/public/system/time
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: DATABASE_NAME
+        value: scre_db
+      - key: JWT_SECRET
+        sync: false
+      - key: UPLOAD_DIR
+        value: uploads
+
+  # 2. Frontend Static Site (React Vite SPA)
+  - type: web
+    name: scre-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://scre-backend.onrender.com

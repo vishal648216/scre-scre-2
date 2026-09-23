@@ -1,0 +1,800 @@
+   Compiling backend v0.1.0 (/var/www/html/scre/backend)
+warning: unused import: `rfc3339_datetime`
+  --> src/handlers/blog.rs:22:63
+   |
+22 | use crate::models::serde_helpers::{optional_rfc3339_datetime, rfc3339_datetime};
+   |                                                               ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `CouponType`
+  --> src/handlers/coupon.rs:15:37
+   |
+15 | use crate::models::coupon::{Coupon, CouponType, DiscountType};
+   |                                     ^^^^^^^^^^
+
+warning: unused imports: `BlueprintComponentsPartPayload` and `SubjectBlueprintConfigPayload`
+  --> src/handlers/exam_engine.rs:13:30
+   |
+13 |     BlueprintComponentsPart, BlueprintComponentsPartPayload, ExamBlueprint, ExamBlueprintPayload, 
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |     PaperQuestionMapping, StudentPaper, SubjectBlueprintConfig, SubjectBlueprintConfigPayload,
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::center::Center`
+  --> src/handlers/exam_engine.rs:16:5
+   |
+16 | use crate::models::center::Center;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::services::exam_eligibility`
+  --> src/handlers/exam_engine.rs:23:5
+   |
+23 | use crate::services::exam_eligibility;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `template_computed_total`
+  --> src/handlers/exam_engine_v2.rs:33:39
+   |
+33 | use crate::services::exam_engine_v2::{template_computed_total, validate_template_structure};
+   |                                       ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `CourseSubjectMark`
+  --> src/handlers/exam_workflow.rs:21:46
+   |
+21 |     AllotmentSubjectSlot, CourseExamAttempt, CourseSubjectMark, ExamAllotmentBatch,
+   |                                              ^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `doc` and `oid::ObjectId`
+ --> src/handlers/exam_v2_migration_tags.rs:1:32
+  |
+1 | use mongodb::{Database, bson::{doc, oid::ObjectId}};
+  |                                ^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `futures_util::StreamExt`
+ --> src/handlers/exam_v2_migration_tags.rs:2:5
+  |
+2 | use futures_util::StreamExt;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::exam_engine_v2::ExamV2Question`
+ --> src/handlers/exam_v2_migration_tags.rs:3:5
+  |
+3 | use crate::models::exam_engine_v2::ExamV2Question;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::subject::Subject`
+ --> src/handlers/exam_v2_migration_tags.rs:4:5
+  |
+4 | use crate::models::subject::Subject;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::course::Course`
+ --> src/handlers/fee.rs:2:5
+  |
+2 | use crate::models::course::Course;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::academic::CourseSubject`
+ --> src/handlers/maintenance.rs:1:5
+  |
+1 | use crate::models::academic::CourseSubject;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::course::Course`
+ --> src/handlers/maintenance.rs:2:5
+  |
+2 | use crate::models::course::Course;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ExamV2Exam`, `ExamV2PaperSection`, `ExamV2PaperTemplate`, and `ExamV2Paper`
+ --> src/handlers/maintenance.rs:4:5
+  |
+4 |     ExamV2Exam, ExamV2Paper, ExamV2PaperSection, ExamV2PaperTemplate,
+  |     ^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::subject::Subject`
+ --> src/handlers/maintenance.rs:6:5
+  |
+6 | use crate::models::subject::Subject;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `User`
+ --> src/handlers/maintenance.rs:7:35
+  |
+7 | use crate::models::user::{Claims, User, UserRole};
+  |                                   ^^^^
+
+warning: unused import: `response::IntoResponse`
+ --> src/handlers/maintenance.rs:8:52
+  |
+8 | use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+  |                                                    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> src/handlers/maintenance.rs:15:5
+   |
+15 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `rfc3339_datetime`
+  --> src/handlers/news.rs:22:63
+   |
+22 | use crate::models::serde_helpers::{optional_rfc3339_datetime, rfc3339_datetime};
+   |                                                               ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `QuestionBank` and `Question`
+ --> src/handlers/qb.rs:1:25
+  |
+1 | use crate::models::qb::{Question, QuestionBank};
+  |                         ^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `ReferralRewardType`
+ --> src/handlers/referral.rs:1:41
+  |
+1 | use crate::models::referral::{Referral, ReferralRewardType};
+  |                                         ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Query`
+ --> src/handlers/referral.rs:5:15
+  |
+5 |     extract::{Query, State},
+  |               ^^^^^
+
+warning: unused import: `chrono::Utc`
+ --> src/handlers/referral.rs:8:5
+  |
+8 | use chrono::Utc;
+  |     ^^^^^^^^^^^
+
+warning: unused import: `header`
+  --> src/handlers/student.rs:14:24
+   |
+14 |     http::{StatusCode, header},
+   |                        ^^^^^^
+
+warning: unused import: `engine::general_purpose`
+  --> src/handlers/student.rs:17:27
+   |
+17 | use base64::{Engine as _, engine::general_purpose};
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::process::Command`
+  --> src/handlers/student.rs:22:5
+   |
+22 | use std::process::Command;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `anyhow`
+ --> src/services/email_service.rs:1:22
+  |
+1 | use anyhow::{Result, anyhow};
+  |                      ^^^^^^
+
+warning: unused imports: `ExamV2Option` and `ExamV2Paper`
+  --> src/services/exam_engine_v2.rs:16:37
+   |
+16 | use crate::models::exam_engine_v2::{ExamV2Option, ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question, ExamV2Paper};
+   |                                     ^^^^^^^^^^^^                                                            ^^^^^^^^^^^
+
+warning: unused imports: `DateTime as BsonDateTime` and `doc`
+  --> src/services/exam_engine_v2.rs:19:21
+   |
+19 | use mongodb::bson::{doc, DateTime as BsonDateTime};
+   |                     ^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashSet`
+  --> src/services/exam_engine_v2.rs:26:5
+   |
+26 | use std::collections::HashSet;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::models::subject::Subject`
+ --> src/services/marksheet_automation.rs:7:5
+  |
+7 | use crate::models::subject::Subject;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Deserialize` and `Serialize`
+  --> src/services/marksheet_automation.rs:15:13
+   |
+15 | use serde::{Serialize, Deserialize};
+   |             ^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `chrono::Utc`
+ --> src/services/certificate_automation.rs:7:5
+  |
+7 | use chrono::Utc;
+  |     ^^^^^^^^^^^
+
+warning: unused import: `crate::models::course::Course`
+ --> src/util/generators.rs:3:5
+  |
+3 | use crate::models::course::Course;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Datelike`
+ --> src/util/generators.rs:5:14
+  |
+5 | use chrono::{Datelike, Utc};
+  |              ^^^^^^^^
+
+warning: unused imports: `backfill_missing_translations` and `get_all_supported_languages`
+  --> src/lib.rs:20:5
+   |
+20 |     backfill_missing_translations, get_all_supported_languages,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+  --> src/handlers/exam_engine_v2.rs:29:89
+   |
+29 |     ExamV2Exam, ExamV2Marksheet, ExamV2Paper, ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question,
+   |                                                                                         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:424:24
+    |
+424 |     pub questions: Vec<ExamV2Question>,
+    |                        ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:469:34
+    |
+469 |     let q_coll = db.collection::<ExamV2Question>("exam_v2_questions");
+    |                                  ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:783:34
+    |
+783 |     let q_coll = db.collection::<ExamV2Question>("exam_v2_questions");
+    |                                  ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:853:38
+    |
+853 |         let q_coll = db.collection::<ExamV2Question>("exam_v2_questions");
+    |                                      ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:911:12
+    |
+911 |     bank: &ExamV2Question,
+    |            ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+ --> src/handlers/exam_v2_migration_tags.rs:3:36
+  |
+3 | use crate::models::exam_engine_v2::ExamV2Question;
+  |                                    ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Option`: Question Bank module is being rebuilt from scratch.
+   --> src/models/exam_engine_v2.rs:154:27
+    |
+154 |     pub options_pool: Vec<ExamV2Option>,
+    |                           ^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+   --> src/models/exam_engine_v2.rs:189:15
+    |
+189 |     pub data: ExamV2Question,
+    |               ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Option`: Question Bank module is being rebuilt from scratch.
+   --> src/models/exam_engine_v2.rs:204:30
+    |
+204 |     pub display_options: Vec<ExamV2Option>,
+    |                              ^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Option`: Question Bank module is being rebuilt from scratch.
+  --> src/services/exam_engine_v2.rs:16:37
+   |
+16 | use crate::models::exam_engine_v2::{ExamV2Option, ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question, ExamV2Paper};
+   |                                     ^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+  --> src/services/exam_engine_v2.rs:16:93
+   |
+16 | use crate::models::exam_engine_v2::{ExamV2Option, ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question, ExamV2Paper};
+   |                                                                                             ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+  --> src/services/exam_engine_v2.rs:85:23
+   |
+85 |     mut eligible: Vec<ExamV2Question>,
+   |                       ^^^^^^^^^^^^^^
+
+warning: use of deprecated struct `models::exam_engine_v2::ExamV2Question`: Question Bank module is being rebuilt from scratch.
+  --> src/services/exam_engine_v2.rs:88:17
+   |
+88 | ) -> Result<Vec<ExamV2Question>, String> {
+   |                 ^^^^^^^^^^^^^^
+
+warning: unused variable: `db`
+   --> src/handlers/center.rs:130:11
+    |
+130 |     State(db): State<Database>,
+    |           ^^ help: if this is intentional, prefix it with an underscore: `_db`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `payload`
+   --> src/handlers/center.rs:132:10
+    |
+132 |     Json(payload): Json<serde_json::Value>,
+    |          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_payload`
+
+warning: unused variable: `db`
+   --> src/handlers/center.rs:389:11
+    |
+389 |     State(db): State<Database>,
+    |           ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `id`
+   --> src/handlers/center.rs:391:10
+    |
+391 |     Path(id): Path<String>,
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `db`
+   --> src/handlers/center.rs:400:11
+    |
+400 |     State(db): State<Database>,
+    |           ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `id`
+   --> src/handlers/center.rs:402:10
+    |
+402 |     Path(id): Path<String>,
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `db`
+   --> src/handlers/center.rs:411:11
+    |
+411 |     State(db): State<Database>,
+    |           ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `id`
+   --> src/handlers/center.rs:413:10
+    |
+413 |     Path(id): Path<String>,
+    |          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: variable does not need to be mutable
+   --> src/handlers/certificate.rs:159:19
+    |
+159 |         if let Ok(mut cert) = result {
+    |                   ----^^^^
+    |                   |
+    |                   help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/handlers/cms.rs:361:10
+    |
+361 |     Json(mut item): Json<serde_json::Value>,
+    |          ----^^^^
+    |          |
+    |          help: remove this `mut`
+
+warning: unused variable: `existing`
+   --> src/handlers/coupon.rs:212:24
+    |
+212 |         if let Ok(Some(existing)) = coll.find_one(doc! { "code": &upper_code, "_id": { "$ne": oid } }, None).await {
+    |                        ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_existing`
+
+warning: variable does not need to be mutable
+   --> src/handlers/course.rs:209:9
+    |
+209 |     let mut course_code = if let Some(provided_code) = &payload.course_code {
+    |         ----^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `filter`
+    --> src/handlers/course.rs:1127:21
+     |
+1127 |             let mut filter = doc! {};
+     |                     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_filter`
+
+warning: variable does not need to be mutable
+    --> src/handlers/course.rs:1127:17
+     |
+1127 |             let mut filter = doc! {};
+     |                 ----^^^^^^
+     |                 |
+     |                 help: remove this `mut`
+
+error[E0308]: mismatched types
+    --> src/handlers/exam_engine.rs:495:46
+     |
+ 495 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+     |                                    --------- ^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `Option<ObjectId>`
+     |                                    |
+     |                                    arguments to this method are incorrect
+     |
+     = note: expected struct `mongodb::bson::oid::ObjectId`
+                  found enum `std::option::Option<mongodb::bson::oid::ObjectId>`
+help: the return type of this call is `std::option::Option<mongodb::bson::oid::ObjectId>` due to the type of the argument passed
+    --> src/handlers/exam_engine.rs:495:9
+     |
+ 495 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-----------------^
+     |                                              |
+     |                                              this argument influences the return type of `unwrap_or`
+note: method defined here
+    --> /home/codearya/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:1032:18
+     |
+1032 |     pub const fn unwrap_or(self, default: T) -> T
+     |                  ^^^^^^^^^
+help: consider using `Option::expect` to unwrap the `std::option::Option<mongodb::bson::oid::ObjectId>` value, panicking if the value is an `Option::None`
+     |
+ 495 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id.expect("REASON"))
+     |                                                               +++++++++++++++++
+
+error[E0308]: `if` and `else` have incompatible types
+   --> src/handlers/exam_engine.rs:497:9
+    |
+494 |       } else if use_reappear_bank {
+    |  ____________-
+495 | |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+    | |         ------------------------------------------------------- expected because of this
+496 | |     } else {
+497 | |         blueprint.bank_id
+    | |         ^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `Option<ObjectId>`
+498 | |     };
+    | |_____- `if` and `else` have incompatible types
+    |
+    = note: expected struct `mongodb::bson::oid::ObjectId`
+                 found enum `std::option::Option<mongodb::bson::oid::ObjectId>`
+help: consider using `Option::expect` to unwrap the `std::option::Option<mongodb::bson::oid::ObjectId>` value, panicking if the value is an `Option::None`
+    |
+498 |     }.expect("REASON");
+    |      +++++++++++++++++
+
+error[E0308]: mismatched types
+    --> src/handlers/exam_engine.rs:717:46
+     |
+ 717 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+     |                                    --------- ^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `Option<ObjectId>`
+     |                                    |
+     |                                    arguments to this method are incorrect
+     |
+     = note: expected struct `mongodb::bson::oid::ObjectId`
+                  found enum `std::option::Option<mongodb::bson::oid::ObjectId>`
+help: the return type of this call is `std::option::Option<mongodb::bson::oid::ObjectId>` due to the type of the argument passed
+    --> src/handlers/exam_engine.rs:717:9
+     |
+ 717 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-----------------^
+     |                                              |
+     |                                              this argument influences the return type of `unwrap_or`
+note: method defined here
+    --> /home/codearya/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:1032:18
+     |
+1032 |     pub const fn unwrap_or(self, default: T) -> T
+     |                  ^^^^^^^^^
+help: consider using `Option::expect` to unwrap the `std::option::Option<mongodb::bson::oid::ObjectId>` value, panicking if the value is an `Option::None`
+     |
+ 717 |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id.expect("REASON"))
+     |                                                               +++++++++++++++++
+
+error[E0308]: `if` and `else` have incompatible types
+   --> src/handlers/exam_engine.rs:719:9
+    |
+716 |       } else if use_reappear_bank {
+    |  ____________-
+717 | |         blueprint.reappear_bank_id.unwrap_or(blueprint.bank_id)
+    | |         ------------------------------------------------------- expected because of this
+718 | |     } else {
+719 | |         blueprint.bank_id
+    | |         ^^^^^^^^^^^^^^^^^ expected `ObjectId`, found `Option<ObjectId>`
+720 | |     };
+    | |_____- `if` and `else` have incompatible types
+    |
+    = note: expected struct `mongodb::bson::oid::ObjectId`
+                 found enum `std::option::Option<mongodb::bson::oid::ObjectId>`
+help: consider using `Option::expect` to unwrap the `std::option::Option<mongodb::bson::oid::ObjectId>` value, panicking if the value is an `Option::None`
+    |
+720 |     }.expect("REASON");
+    |      +++++++++++++++++
+
+warning: variable does not need to be mutable
+   --> src/handlers/exam_engine.rs:838:9
+    |
+838 |     let mut start_window = payload
+    |         ----^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> src/handlers/exam_engine.rs:1798:17
+     |
+1798 |             let mut overall_pass = total_score >= comp.exam_min_marks;
+     |                 ----^^^^^^^^^^^^
+     |                 |
+     |                 help: remove this `mut`
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::options_pool`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:487:13
+    |
+487 |             q.options_pool = m.display_options.clone();
+    |             ^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::question_type`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:817:12
+    |
+817 |         if q.question_type == "MCQ" {
+    |            ^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+    --> src/handlers/exam_workflow.rs:1308:33
+     |
+1308 |         let (mut exam_obtained, mut loaded_exam_total, from_online, mut exam_readonly) =
+     |                                 ----^^^^^^^^^^^^^^^^^
+     |                                 |
+     |                                 help: remove this `mut`
+
+warning: unused variable: `db`
+ --> src/handlers/exam_v2_migration_tags.rs:6:40
+  |
+6 | pub async fn migrate_questions_to_tags(db: &Database) -> Result<String, String> {
+  |                                        ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: variable does not need to be mutable
+    --> src/handlers/generate_certificates.rs:1081:17
+     |
+1081 |             let mut all_subjects = Vec::new();
+     |                 ----^^^^^^^^^^^^
+     |                 |
+     |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> src/handlers/generate_certificates.rs:1134:17
+     |
+1134 |             let mut sorted_v1_papers = all_papers.clone();
+     |                 ----^^^^^^^^^^^^^^^^
+     |                 |
+     |                 help: remove this `mut`
+
+warning: unused variable: `claims`
+   --> src/handlers/intern_task.rs:127:5
+    |
+127 |     claims: Claims,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_claims`
+
+warning: unused variable: `claims`
+   --> src/handlers/intern_task.rs:231:5
+    |
+231 |     claims: Claims,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_claims`
+
+warning: unused variable: `cert_doc`
+   --> src/handlers/marksheets.rs:119:21
+    |
+119 |                 let cert_doc = certs_coll
+    |                     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cert_doc`
+
+warning: unused variable: `cert_doc`
+   --> src/handlers/marksheets.rs:135:21
+    |
+135 |                 let cert_doc = certs_coll
+    |                     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cert_doc`
+
+warning: unused variable: `is_enquiries`
+   --> src/middleware/auth_middleware.rs:182:13
+    |
+182 |         let is_enquiries = path.starts_with("/api/admin/enquiries");
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_is_enquiries`
+
+warning: unused variable: `creator_id`
+  --> src/services/marksheet_automation.rs:78:52
+   |
+78 | async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> String {
+   |                                                    ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_creator_id`
+
+warning: unused variable: `student_id`
+  --> src/services/marksheet_automation.rs:92:33
+   |
+92 | async fn generate_serial_number(student_id: &ObjectId) -> String {
+   |                                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_student_id`
+
+warning: variable `grand_total_max` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:239:17
+    |
+239 |         let mut grand_total_max = 0.0;
+    |                 ^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_grand_total_max` instead
+help: you might have meant to pattern match on the similarly named constant `PASS_PERCENTAGE`
+    |
+239 -         let mut grand_total_max = 0.0;
+239 +         let mut services::marks_calculation::PASS_PERCENTAGE = 0.0;
+    |
+
+warning: variable `grand_total_obtained` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:240:17
+    |
+240 |         let mut grand_total_obtained = 0.0;
+    |                 ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_grand_total_obtained` instead
+help: you might have meant to pattern match on the similarly named constant `PASS_PERCENTAGE`
+    |
+240 -         let mut grand_total_obtained = 0.0;
+240 +         let mut services::marks_calculation::PASS_PERCENTAGE = 0.0;
+    |
+
+warning: variable `paper_idx` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:249:17
+    |
+249 |         let mut paper_idx = 0;
+    |                 ^^^^^^^^^
+    |
+    = note: consider using `_paper_idx` instead
+
+warning: variable `grand_total_max` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:781:21
+    |
+781 |             let mut grand_total_max = 0.0;
+    |                     ^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_grand_total_max` instead
+help: you might have meant to pattern match on the similarly named constant `PASS_PERCENTAGE`
+    |
+781 -             let mut grand_total_max = 0.0;
+781 +             let mut services::marks_calculation::PASS_PERCENTAGE = 0.0;
+    |
+
+warning: variable `grand_total_obtained` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:782:21
+    |
+782 |             let mut grand_total_obtained = 0.0;
+    |                     ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_grand_total_obtained` instead
+help: you might have meant to pattern match on the similarly named constant `PASS_PERCENTAGE`
+    |
+782 -             let mut grand_total_obtained = 0.0;
+782 +             let mut services::marks_calculation::PASS_PERCENTAGE = 0.0;
+    |
+
+warning: variable `paper_idx` is assigned to, but never used
+   --> src/services/marksheet_automation.rs:791:21
+    |
+791 |             let mut paper_idx = 0;
+    |                     ^^^^^^^^^
+    |
+    = note: consider using `_paper_idx` instead
+
+warning: unused variable: `creator_id`
+  --> src/services/certificate_automation.rs:78:52
+   |
+78 | async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> String {
+   |                                                    ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_creator_id`
+
+warning: unused variable: `student_id`
+   --> src/services/certificate_automation.rs:101:33
+    |
+101 | async fn generate_serial_number(student_id: &ObjectId) -> String {
+    |                                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_student_id`
+
+warning: unused variable: `db`
+   --> src/util/generators.rs:149:37
+    |
+149 | pub async fn generate_referral_code(db: &Database, user_id: &ObjectId) -> String {
+    |                                     ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `db`
+  --> src/lib.rs:81:47
+   |
+81 | async fn start_translation_backfill_scheduler(db: mongodb::Database) {
+   |                                               ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::correct_option_id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:923:32
+    |
+923 |     let mut ok = ans.trim() == bank.correct_option_id.trim();
+    |                                ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::options_pool`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:927:36
+    |
+927 |         if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                    ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:927:70
+    |
+927 |         if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                                                      ^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::correct_option_id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:927:78
+    |
+927 |         if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                                                              ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::text`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:929:45
+    |
+929 |             if ans.trim().to_lowercase() == correct_opt.text.trim().to_lowercase() {
+    |                                             ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::options_pool`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:937:37
+    |
+937 |         if let Some(selected_opt) = bank.options_pool.iter().find(|o| o.id == *ans) {
+    |                                     ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:937:71
+    |
+937 |         if let Some(selected_opt) = bank.options_pool.iter().find(|o| o.id == *ans) {
+    |                                                                       ^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::options_pool`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:938:40
+    |
+938 |             if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                        ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:938:74
+    |
+938 |             if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                                                          ^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::correct_option_id`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:938:82
+    |
+938 |             if let Some(correct_opt) = bank.options_pool.iter().find(|o| o.id == bank.correct_option_id) {
+    |                                                                                  ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::text`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:939:20
+    |
+939 |                 if selected_opt.text.trim().to_lowercase() == correct_opt.text.trim().to_lowercase() {
+    |                    ^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Option::text`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:939:63
+    |
+939 |                 if selected_opt.text.trim().to_lowercase() == correct_opt.text.trim().to_lowercase() {
+    |                                                               ^^^^^^^^^^^^^^^^
+
+warning: use of deprecated field `models::exam_engine_v2::ExamV2Question::marks`: Question Bank module is being rebuilt from scratch.
+   --> src/handlers/exam_engine_v2.rs:947:17
+    |
+947 |         return (bank.marks, true);
+    |                 ^^^^^^^^^^
+
+warning: unused import: `futures_util::StreamExt`
+  --> src/handlers/center_pdf.rs:11:5
+   |
+11 | use futures_util::StreamExt;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `TryStreamExt`
+ --> src/handlers/marksheets.rs:9:31
+  |
+9 | use futures_util::{StreamExt, TryStreamExt};
+  |                               ^^^^^^^^^^^^
+
+warning: unused import: `futures_util::StreamExt`
+  --> src/services/exam_engine_v2.rs:17:5
+   |
+17 | use futures_util::StreamExt;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `field`
+    --> src/handlers/generate_certificates.rs:1759:28
+     |
+1759 | fn format_marks_table_html(field: &TemplateField, ctx: &CertContext) -> String {
+     |                            ^^^^^ help: if this is intentional, prefix it with an underscore: `_field`
+
+For more information about this error, try `rustc --explain E0308`.
+warning: `backend` (lib) generated 109 warnings (2 duplicates)
+error: could not compile `backend` (lib) due to 4 previous errors; 109 warnings emitted
