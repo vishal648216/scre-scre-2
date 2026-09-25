@@ -984,3 +984,220 @@ pub async fn seed_super_admin_with_force(db: &Database, force: bool) {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyMagicLinkRequest {
+    pub token: String,
+}
+
+pub async fn generate_magic_link(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::SuperAdmin && claims.role != UserRole::Admin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+
+    let user_coll = db.collection::<User>("users");
+    let user_oid = match ObjectId::parse_str(&claims.sub) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({ "success": false, "message": "Invalid user ID" }))),
+    };
+
+    let user = match user_coll.find_one(doc! { "_id": user_oid }, None).await {
+        Ok(Some(u)) => u,
+        _ => return (StatusCode::NOT_FOUND, Json(json!({ "success": false, "message": "User not found" }))),
+    };
+
+    let token_uuid = uuid::Uuid::new_v4().to_string();
+    let magic_token = format!("MAGIC_{}", token_uuid);
+    let expires_at = Utc::now() + ChronoDuration::days(30);
+
+    let magic_coll = db.collection::<mongodb::bson::Document>("magic_access_tokens");
+    let magic_doc = doc! {
+        "token": &magic_token,
+        "user_id": user_oid,
+        "username": &user.username,
+        "role": serde_json::to_value(&user.role).unwrap().as_str().unwrap(),
+        "expires_at": expires_at,
+        "created_at": Utc::now()
+    };
+
+    let _ = magic_coll.insert_one(magic_doc, None).await;
+
+    let base_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:8085".to_string());
+    let direct_url = format!("{}/direct-access?token={}", base_url.trim_end_matches('/'), magic_token);
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "token": magic_token,
+            "directUrl": direct_url,
+            "message": "Direct Managed Access Link generated successfully"
+        })),
+    )
+}
+
+pub async fn verify_magic_link(
+    State(db): State<Database>,
+    Json(payload): Json<VerifyMagicLinkRequest>,
+) -> (StatusCode, Json<LoginResponse>) {
+    let magic_coll = db.collection::<mongodb::bson::Document>("magic_access_tokens");
+    let token_doc = match magic_coll.find_one(doc! { "token": &payload.token }, None).await {
+        Ok(Some(doc)) => doc,
+        _ => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(LoginResponse {
+                    success: false,
+                    message: "Invalid or expired direct access link".to_string(),
+                    token: None,
+                    role: None,
+                    username: None,
+                    photo_url: None,
+                    user_id: None,
+                    email: None,
+                    exam_mode: None,
+                    _id: None,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            );
+        }
+    };
+
+    let user_id = match token_doc.get_object_id("user_id") {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(LoginResponse {
+                    success: false,
+                    message: "Invalid user reference in token".to_string(),
+                    token: None,
+                    role: None,
+                    username: None,
+                    photo_url: None,
+                    user_id: None,
+                    email: None,
+                    exam_mode: None,
+                    _id: None,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            );
+        }
+    };
+
+    let user_coll = db.collection::<User>("users");
+    let user = match user_coll.find_one(doc! { "_id": user_id, "is_deleted": false }, None).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(LoginResponse {
+                    success: false,
+                    message: "User account no longer active".to_string(),
+                    token: None,
+                    role: None,
+                    username: None,
+                    photo_url: None,
+                    user_id: None,
+                    email: None,
+                    exam_mode: None,
+                    _id: None,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            );
+        }
+    };
+
+    let sub = user_id.to_hex();
+    let now = Utc::now();
+    let expiration = (now + ChronoDuration::days(1))
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_local_timezone(Utc)
+        .unwrap()
+        .timestamp() as usize;
+
+    let claims = Claims {
+        sub: sub.clone(),
+        username: user.username.clone(),
+        role: user.role.clone(),
+        exp: expiration,
+    };
+
+    let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret_key_change_me".to_string());
+    let token = match encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
+    ) {
+        Ok(t) => t,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(LoginResponse {
+                    success: false,
+                    message: "Failed to generate session token".to_string(),
+                    token: None,
+                    role: None,
+                    username: None,
+                    photo_url: None,
+                    user_id: None,
+                    email: None,
+                    exam_mode: None,
+                    _id: None,
+                    full_name: None,
+                    first_name: None,
+                    last_name: None,
+                    course: None,
+                    enrollment_number: None,
+                    roll_number: None,
+                }),
+            );
+        }
+    };
+
+    (
+        StatusCode::OK,
+        Json(LoginResponse {
+            success: true,
+            message: "Direct access granted".to_string(),
+            token: Some(token),
+            role: Some(user.role),
+            username: Some(user.username),
+            photo_url: user.photo_url,
+            user_id: Some(sub.clone()),
+            email: user.email,
+            exam_mode: user.exam_mode,
+            _id: Some(sub),
+            full_name: user.full_name,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            course: user.course,
+            enrollment_number: user.enrollment_number,
+            roll_number: user.roll_number,
+        }),
+    )
+}
+

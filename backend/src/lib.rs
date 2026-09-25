@@ -278,6 +278,8 @@ pub async fn run_server() {
         .route("/api/auth/me", get(handlers::auth::get_current_user))
         .route("/api/auth/send-email-otp", post(handlers::auth::send_email_otp))
         .route("/api/auth/verify-email-otp", post(handlers::auth::verify_email_otp))
+        .route("/api/auth/generate-magic-link", post(handlers::auth::generate_magic_link))
+        .route("/api/auth/verify-magic-link", post(handlers::auth::verify_magic_link))
         .route("/api/content", get(handlers::translate::get_translated_content))
         .route("/api/translate", post(handlers::translate::translate_text))
         .route("/api/translate/bulk", post(handlers::translate::translate_bulk))

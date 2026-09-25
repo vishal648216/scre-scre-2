@@ -13,6 +13,7 @@ import { PortalErrorBoundary } from "@/components/PortalErrorBoundary";
 // Core Pages
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const DirectAccessPage = lazy(() => import("./pages/DirectAccessPage"));
 
 // Dashboards
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdminDashboard"));
@@ -309,6 +310,7 @@ const AppRoutes = () => {
       <Route path="/en/*" element={<LanguageRouteRedirect lang="en" />} />
       <Route path="/hi/*" element={<LanguageRouteRedirect lang="hi" />} />
       <Route path="/" element={<Index />} />
+      <Route path="/direct-access" element={<DirectAccessPage />} />
       <Route path="/shop" element={<ShopPage />} />
       <Route path="/verification-letter" element={<VerificationLetterPage />} />
       <Route path="/franchise/login" element={<FranchiseLoginPage />} />
