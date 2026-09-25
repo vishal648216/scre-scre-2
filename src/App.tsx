@@ -105,12 +105,12 @@ import AdminInternshipEnquiriesPage from "./pages/AdminInternshipEnquiriesPage";
 import AdminInternLettersPage from "./pages/AdminInternLettersPage";
 import AdminInternAttendancePage from "./pages/AdminInternAttendancePage";
 import AdminInternshipManagerPage from "./pages/AdminInternshipManagerPage";
-const InternTasksManagerPage = lazy(() => import("./pages/InternTasksManagerPage"));
-const InternProgressPage = lazy(() => import("./pages/InternProgressPage"));
-const InternDashboard = lazy(() => import("./pages/InternDashboard"));
-const InternAttendancePage = lazy(() => import("./pages/InternAttendancePage"));
-const InternTasksPage = lazy(() => import("./pages/InternTasksPage"));
-const InternCertificatesPage = lazy(() => import("./pages/InternCertificatesPage"));
+import InternTasksManagerPage from "./pages/InternTasksManagerPage";
+import InternProgressPage from "./pages/InternProgressPage";
+import InternDashboard from "./pages/InternDashboard";
+import InternAttendancePage from "./pages/InternAttendancePage";
+import InternTasksPage from "./pages/InternTasksPage";
+import InternCertificatesPage from "./pages/InternCertificatesPage";
 
 const StudentExamListPage = lazy(() => import("./pages/StudentExamListPage"));
 const TakeExamPage = lazy(() => import("./pages/TakeExamPage"));
@@ -227,7 +227,6 @@ const AdminCertificateApprovalPage = lazy(() => import("./pages/AdminCertificate
 const LibraryManagementPage = lazy(() => import("./pages/LibraryManagementPage"));
 const StudentLibraryPage = lazy(() => import("./pages/StudentLibraryPage"));
 const StudentInternshipPortalPage = lazy(() => import("./pages/StudentInternshipPortalPage"));
-const AdminInternshipManagerPage = lazy(() => import("./pages/AdminInternshipManagerPage"));
 
 const queryClient = new QueryClient();
 
