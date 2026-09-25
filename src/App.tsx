@@ -8,7 +8,7 @@ import { Suspense, lazy, useEffect } from "react";
 import i18n from "@/i18n";
 import { syncServerTime } from "@/lib/time";
 import LanguageSync from "@/components/LanguageSync";
-import { PortalErrorBoundary } from "./main";
+import { PortalErrorBoundary } from "@/components/PortalErrorBoundary";
 
 // Core Pages
 const Index = lazy(() => import("./pages/Index"));

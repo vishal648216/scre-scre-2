@@ -116,4 +116,4 @@ if (container) {
   );
 }
 
-export { PortalErrorBoundary };
+export { PortalErrorBoundary } from "@/components/PortalErrorBoundary";
