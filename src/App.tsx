@@ -97,19 +97,20 @@ const CenterAllottedCoursesPage = lazy(() => import("./pages/CenterAllottedCours
 const CenterStudentsPage = lazy(() => import("./pages/CenterStudentsPage"));
 const StudentMarksheetsPage = lazy(() => import("./pages/StudentMarksheetsPage"));
 const EditStudentPage = lazy(() => import("./pages/EditStudentPage"));
-const AddInternPage = lazy(() => import("./pages/AddInternPage"));
-const InternListPage = lazy(() => import("./pages/InternListPage"));
-const EditInternPage = lazy(() => import("./pages/EditInternPage"));
+import AddInternPage from "./pages/AddInternPage";
+import InternListPage from "./pages/InternListPage";
+import EditInternPage from "./pages/EditInternPage";
+import AdminCollegesPage from "./pages/AdminCollegesPage";
+import AdminInternshipEnquiriesPage from "./pages/AdminInternshipEnquiriesPage";
+import AdminInternLettersPage from "./pages/AdminInternLettersPage";
+import AdminInternAttendancePage from "./pages/AdminInternAttendancePage";
+import AdminInternshipManagerPage from "./pages/AdminInternshipManagerPage";
 const InternTasksManagerPage = lazy(() => import("./pages/InternTasksManagerPage"));
 const InternProgressPage = lazy(() => import("./pages/InternProgressPage"));
 const InternDashboard = lazy(() => import("./pages/InternDashboard"));
 const InternAttendancePage = lazy(() => import("./pages/InternAttendancePage"));
 const InternTasksPage = lazy(() => import("./pages/InternTasksPage"));
 const InternCertificatesPage = lazy(() => import("./pages/InternCertificatesPage"));
-const AdminCollegesPage = lazy(() => import("./pages/AdminCollegesPage"));
-const AdminInternshipEnquiriesPage = lazy(() => import("./pages/AdminInternshipEnquiriesPage"));
-const AdminInternLettersPage = lazy(() => import("./pages/AdminInternLettersPage"));
-const AdminInternAttendancePage = lazy(() => import("./pages/AdminInternAttendancePage"));
 
 const StudentExamListPage = lazy(() => import("./pages/StudentExamListPage"));
 const TakeExamPage = lazy(() => import("./pages/TakeExamPage"));
