@@ -41,6 +41,15 @@ pub struct CreateContactRequest {
     pub source: Option<String>,
     pub city: Option<String>,
     pub state: Option<String>,
+    pub qualification: Option<String>,
+    pub branch: Option<String>,
+    pub passing_year: Option<String>,
+    pub internship_domain: Option<String>,
+    pub internship_mode: Option<String>,
+    pub duration: Option<String>,
+    pub resume_url: Option<String>,
+    pub gender: Option<String>,
+    pub dob: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -143,6 +152,33 @@ pub async fn handle_create_enquiry(
     }
     if let Some(src) = payload.source {
         doc_bson.insert("source", src);
+    }
+    if let Some(v) = payload.qualification {
+        doc_bson.insert("qualification", v);
+    }
+    if let Some(v) = payload.branch {
+        doc_bson.insert("branch", v);
+    }
+    if let Some(v) = payload.passing_year {
+        doc_bson.insert("passing_year", v);
+    }
+    if let Some(v) = payload.internship_domain {
+        doc_bson.insert("internship_domain", v);
+    }
+    if let Some(v) = payload.internship_mode {
+        doc_bson.insert("internship_mode", v);
+    }
+    if let Some(v) = payload.duration {
+        doc_bson.insert("duration", v);
+    }
+    if let Some(v) = payload.resume_url {
+        doc_bson.insert("resume_url", v);
+    }
+    if let Some(v) = payload.gender {
+        doc_bson.insert("gender", v);
+    }
+    if let Some(v) = payload.dob {
+        doc_bson.insert("dob", v);
     }
 
     // Insert enquiry document
@@ -276,6 +312,15 @@ pub struct EnquiryListItem {
     pub center_name: Option<String>,
     pub enquiry_type: Option<String>,
     pub college: Option<String>,
+    pub qualification: Option<String>,
+    pub branch: Option<String>,
+    pub passing_year: Option<String>,
+    pub internship_domain: Option<String>,
+    pub internship_mode: Option<String>,
+    pub duration: Option<String>,
+    pub resume_url: Option<String>,
+    pub gender: Option<String>,
+    pub dob: Option<String>,
     pub status: String,
     pub assigned_to: Option<String>,
     pub next_follow_up_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -442,6 +487,15 @@ pub async fn list_enquiries(
                     center_name,
                     enquiry_type: e.get_str("enquiry_type").ok().map(|s| s.to_string()),
                     college: e.get_str("college").ok().map(|s| s.to_string()),
+                    qualification: e.get_str("qualification").ok().map(|s| s.to_string()),
+                    branch: e.get_str("branch").ok().map(|s| s.to_string()),
+                    passing_year: e.get_str("passing_year").ok().map(|s| s.to_string()),
+                    internship_domain: e.get_str("internship_domain").ok().map(|s| s.to_string()),
+                    internship_mode: e.get_str("internship_mode").ok().map(|s| s.to_string()),
+                    duration: e.get_str("duration").ok().map(|s| s.to_string()),
+                    resume_url: e.get_str("resume_url").ok().map(|s| s.to_string()),
+                    gender: e.get_str("gender").ok().map(|s| s.to_string()),
+                    dob: e.get_str("dob").ok().map(|s| s.to_string()),
                     status: e.get_str("status").unwrap_or("new").to_string(),
                     assigned_to: e.get_object_id("assigned_to").ok().map(|x| x.to_hex()),
                     next_follow_up_at: e
