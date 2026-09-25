@@ -86,6 +86,24 @@ const StudentRecycleBinPage = () => {
     }
   };
 
+  const handlePermanentDelete = async (id: string) => {
+    if (!window.confirm("PERMANENT DELETE WARNING: This action cannot be undone and will permanently delete all student data and records. Continue?")) return;
+    setActionLoading(id);
+    try {
+      const res = await apiFetch(`/api/students/${id}/permanent`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Student account permanently deleted");
+        fetchDeletedStudents();
+      } else {
+        toast.error("Failed to permanently delete student");
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredStudents = students.filter(s => 
     (s.full_name || s.fullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.username.toLowerCase().includes(searchQuery.toLowerCase())
@@ -161,7 +179,7 @@ const StudentRecycleBinPage = () => {
                         <button 
                           onClick={() => handleRestore(id)}
                           disabled={!!actionLoading}
-                          className="px-8 py-6 bg-background hover:bg-emerald-500 hover:text-white text-emerald-500 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 border-b md:border-b-0 md:border-r border-border"
+                          className="px-6 py-6 bg-background hover:bg-emerald-500 hover:text-white text-emerald-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 border-b md:border-b-0 md:border-r border-border"
                         >
                           {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                           Restore
@@ -169,10 +187,18 @@ const StudentRecycleBinPage = () => {
                         <button 
                           onClick={() => handleMoveToAdminBin(id)}
                           disabled={!!actionLoading}
-                          className="px-8 py-6 bg-background hover:bg-destructive hover:text-white text-destructive flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                          className="px-6 py-6 bg-background hover:bg-amber-500 hover:text-white text-amber-500 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50 border-b md:border-b-0 md:border-r border-border"
                         >
                           {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                           Move to Admin Bin
+                        </button>
+                        <button 
+                          onClick={() => handlePermanentDelete(id)}
+                          disabled={!!actionLoading}
+                          className="px-6 py-6 bg-background hover:bg-destructive hover:text-white text-destructive flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                        >
+                          {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          Delete Permanently
                         </button>
                       </div>
                     </div>

@@ -1283,6 +1283,7 @@ pub async fn list_reappear_students(
 #[derive(Debug, Deserialize)]
 pub struct ReappearUpdateRequest {
     pub allow_reappear: bool,
+    pub reappear_fee: Option<f64>,
 }
 
 pub async fn update_reappear_permission(
@@ -1410,6 +1411,8 @@ pub async fn update_reappear_permission(
         );
     }
 
+    let fee_val = payload.reappear_fee.unwrap_or(500.0);
+
     match coll
         .update_one(
             doc! { "_id": current.id },
@@ -1418,6 +1421,8 @@ pub async fn update_reappear_permission(
                     "allow_reappear": payload.allow_reappear,
                     "reappear_locked": true,
                     "is_reappear_student": current_attempt_no > 1,
+                    "reappear_fee": fee_val,
+                    "reappear_fee_status": if payload.allow_reappear { "unpaid" } else { "none" },
                     "updated_at": mongodb::bson::DateTime::now(),
                 }
             },

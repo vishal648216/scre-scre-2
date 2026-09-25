@@ -227,7 +227,7 @@ use axum::{
 fn is_public_path(path: &str) -> bool {
     path.starts_with("/api/public/")
         || path == "/api/public"
-        || path.starts_with("/api/auth/")
+        || (path.starts_with("/api/auth/") && path != "/api/auth/create-admin")
         || path == "/api/auth"
         || path == "/api/health"
         || path == "/rss.xml"
@@ -350,7 +350,7 @@ fn is_allowed_public_method(path: &str, method: &Method) -> bool {
     // Default allow for /api/public/* and /api/auth/*
     // ---------------------------------------------------------
     path.starts_with("/api/public/")
-        || path.starts_with("/api/auth/")
+        || (path.starts_with("/api/auth/") && path != "/api/auth/create-admin")
 }
 
 fn requires_admin(path: &str) -> bool {

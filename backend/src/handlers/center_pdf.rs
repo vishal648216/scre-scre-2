@@ -83,7 +83,7 @@ pub async fn generate_center_details_pdf(
         "[DEBUG] PDF generation for center {} courses: {:?}",
         center_id, course_names
     );
-    let html = generate_center_html(&center, course_names);
+    let html = generate_center_html(&center, course_names.clone());
 
     // Use chromium to generate PDF
     let temp_dir = std::env::temp_dir();
@@ -106,6 +106,12 @@ pub async fn generate_center_details_pdf(
 
     // Try multiple possible chromium paths, prioritizing non-snap versions
     let chromium_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        "chrome.exe",
+        "msedge.exe",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
@@ -209,11 +215,16 @@ pub async fn generate_center_details_pdf(
         )
             .into_response()
     } else {
-        // Cleanup if failed
+        // Fallback: Return printable HTML with auto-print script so window pops up
+        let print_html = format!(
+            "{}\n<script>window.onload = function() {{ window.print(); }};</script>",
+            generate_center_html(&center, course_names)
+        );
         let _ = fs::remove_file(&abs_html_path);
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to generate PDF. Error: {}", last_error),
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "text/html")],
+            print_html,
         )
             .into_response()
     }

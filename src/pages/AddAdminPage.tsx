@@ -15,6 +15,7 @@ import {
   GraduationCap, 
   IndianRupee, 
   BookOpen, 
+  BookMarked,
   FileText, 
   Users, 
   Headset, 
@@ -42,6 +43,7 @@ interface ModulePermissions {
   staff: ActionPermissions;
   leads: ActionPermissions;
   cms: ActionPermissions;
+  library: ActionPermissions;
   settings: ActionPermissions;
 }
 
@@ -54,6 +56,7 @@ const defaultModulePermissions: ModulePermissions = {
   staff: { view: false, add: false, edit: false, delete: false },
   leads: { view: true, add: true, edit: true, delete: false },
   cms: { view: false, add: false, edit: false, delete: false },
+  library: { view: true, add: true, edit: true, delete: false },
   settings: { view: false, add: false, edit: false, delete: false },
 };
 
@@ -66,6 +69,7 @@ const fullPermissions: ModulePermissions = {
   staff: { view: true, add: true, edit: true, delete: true },
   leads: { view: true, add: true, edit: true, delete: true },
   cms: { view: true, add: true, edit: true, delete: true },
+  library: { view: true, add: true, edit: true, delete: true },
   settings: { view: true, add: true, edit: true, delete: true },
 };
 
@@ -78,6 +82,7 @@ const modulesConfig = [
   { key: "staff" as keyof ModulePermissions, label: "Staff & Interns", icon: Users, desc: "Staff directory, internal assignments, and intern task management" },
   { key: "leads" as keyof ModulePermissions, label: "CRM & Enquiries", icon: Headset, desc: "Student queries, admission leads, notes, and follow-ups" },
   { key: "cms" as keyof ModulePermissions, label: "CMS & Website Content", icon: Globe, desc: "Blogs, news updates, tickers, testimonials, and gallery items" },
+  { key: "library" as keyof ModulePermissions, label: "Library Management", icon: BookMarked, desc: "E-books catalog, reference manuals, physical book issues & returns" },
   { key: "settings" as keyof ModulePermissions, label: "System Administration", icon: Settings, desc: "Global system configurations, logs, and maintenance toggles" },
 ];
 

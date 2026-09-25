@@ -8,11 +8,13 @@ import { format } from "date-fns";
 import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
 
 interface Student {
-  _id: string;
+  _id?: string;
+  id?: string;
   username: string;
   fullName?: string;
   course?: string;
   total_fees?: number;
+  totalFee?: number;
   parent_id?: string;
   centerName?: string;
 }
@@ -54,6 +56,11 @@ const AdminFeesPage = () => {
   });
   const [selectedReceipt, setSelectedReceipt] = useState<FeeReceiptData | null>(null);
 
+  const getStudentId = (s: Student | null | undefined): string => {
+    if (!s) return "";
+    return s.id || s._id || (s as any).id || "";
+  };
+
   useEffect(() => {
     fetchData();
   }, [filters]);
@@ -81,9 +88,9 @@ const AdminFeesPage = () => {
       const centerData = await centerRes.json();
       
       if (studentRes.ok && feeRes.ok && centerRes.ok) {
-        setStudents(studentData);
-        setFees(feeData);
-        setCenters(centerData);
+        setStudents(Array.isArray(studentData) ? studentData : []);
+        setFees(Array.isArray(feeData) ? feeData : []);
+        setCenters(Array.isArray(centerData) ? centerData : []);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -97,6 +104,12 @@ const AdminFeesPage = () => {
     e.preventDefault();
     if (!selectedStudent) return;
 
+    const studentId = getStudentId(selectedStudent);
+    if (!studentId) {
+      toast.error("Invalid student selected");
+      return;
+    }
+
     setCollectingFee(true);
     try {
       const token = sessionStorage.getItem("token");
@@ -107,11 +120,13 @@ const AdminFeesPage = () => {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          student_id: selectedStudent._id,
+          student_id: studentId,
           amount: parseFloat(feeForm.amount),
           mode: feeForm.mode,
           receipt_no: feeForm.receipt_no,
-          remarks: feeForm.remarks
+          remarks: feeForm.remarks,
+          payment_type: "one_time",
+          payment_name: "One Time Payment"
         })
       });
 
@@ -121,12 +136,19 @@ const AdminFeesPage = () => {
         setFeeForm({ amount: "", mode: "cash", receipt_no: `RCP-${Date.now().toString().slice(-6)}`, remarks: "" });
         fetchData();
       } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to collect fee");
+        const errorText = await response.text();
+        let message = "Failed to collect fee";
+        try {
+          const parsed = JSON.parse(errorText);
+          message = parsed.message || message;
+        } catch {
+          if (errorText) message = errorText;
+        }
+        toast.error(message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error collecting fee:", error);
-      toast.error("An error occurred");
+      toast.error(error?.message || "An error occurred");
     } finally {
       setCollectingFee(false);
     }
@@ -135,6 +157,12 @@ const AdminFeesPage = () => {
   const handleSetTotalFees = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
+
+    const studentId = getStudentId(selectedStudent);
+    if (!studentId) {
+      toast.error("Invalid student selected");
+      return;
+    }
 
     setUpdatingTotal(true);
     try {
@@ -146,7 +174,7 @@ const AdminFeesPage = () => {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          student_id: selectedStudent._id,
+          student_id: studentId,
           total_fees: parseFloat(totalFees)
         })
       });
@@ -155,14 +183,22 @@ const AdminFeesPage = () => {
         toast.success("Total fees updated successfully");
         setIsSettingTotal(false);
         setTotalFees("");
+        setSelectedStudent(prev => prev ? { ...prev, total_fees: parseFloat(totalFees), totalFee: parseFloat(totalFees) } : null);
         fetchData();
       } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to update total fees");
+        const errorText = await response.text();
+        let message = "Failed to update total fees";
+        try {
+          const parsed = JSON.parse(errorText);
+          message = parsed.message || message;
+        } catch {
+          if (errorText) message = errorText;
+        }
+        toast.error(message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating total fees:", error);
-      toast.error("An error occurred");
+      toast.error(error?.message || "An error occurred");
     } finally {
       setUpdatingTotal(false);
     }
@@ -170,7 +206,8 @@ const AdminFeesPage = () => {
 
   const handlePreviewFeeSlip = () => {
     if (!selectedStudent) return;
-    const studentFeesList = getStudentFees(selectedStudent._id);
+    const studentId = getStudentId(selectedStudent);
+    const studentFeesList = getStudentFees(studentId);
     if (studentFeesList.length > 0) {
       const latest = studentFeesList[0];
       setSelectedReceipt({
@@ -180,7 +217,7 @@ const AdminFeesPage = () => {
         mode: latest.mode,
         remarks: latest.remarks,
         student_name: selectedStudent.fullName || selectedStudent.username,
-        enrollment_no: (selectedStudent as any).enrollment_number || (selectedStudent as any).roll_number || "SCRE-ENR-OK",
+        enrollment_no: (selectedStudent as any).enrollment_number || (selectedStudent as any).enrollmentNumber || (selectedStudent as any).roll_number || "SCRE-ENR-OK",
         course_name: selectedStudent.course || "Certified Course",
       });
     } else {
@@ -197,7 +234,10 @@ const AdminFeesPage = () => {
     s.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStudentFees = (studentId: string) => fees.filter(f => f.student_id === studentId);
+  const getStudentFees = (studentId: string) => {
+    if (!studentId) return [];
+    return fees.filter(f => f.student_id === studentId || (f as any).studentId === studentId);
+  };
   
   const getStudentTotalPaid = (studentId: string) => 
     getStudentFees(studentId).reduce((acc, fee) => acc + fee.amount, 0);
@@ -205,12 +245,14 @@ const AdminFeesPage = () => {
   const getYears = () => {
     const years = new Set<string>();
     fees.forEach(f => {
-      years.add(new Date(f.payment_date).getFullYear().toString());
+      if (f.payment_date) {
+        years.add(new Date(f.payment_date).getFullYear().toString());
+      }
     });
     return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
   };
 
-  const totalCollected = fees.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalCollected = fees.reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
   return (
     <DashboardLayout>
@@ -285,23 +327,29 @@ const AdminFeesPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="rounded-none border-primary/30 shadow-lg">
             <CardContent className="p-6">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Collected</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Center Fees Collected</p>
               <p className="text-2xl font-black text-primary">₹{totalCollected.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="rounded-none border-emerald-600/30 shadow-lg">
             <CardContent className="p-6">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Students</p>
-              <p className="text-2xl font-black text-emerald-600">{students.length}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Super Admin Royalty (15%)</p>
+              <p className="text-2xl font-black text-emerald-600">₹{(totalCollected * 0.15).toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-none border-amber-500/30 shadow-lg">
+            <CardContent className="p-6">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Center Net Share (85%)</p>
+              <p className="text-2xl font-black text-amber-500">₹{(totalCollected * 0.85).toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="rounded-none border-blue-600/30 shadow-lg">
             <CardContent className="p-6">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Transactions</p>
-              <p className="text-2xl font-black text-blue-600">{fees.length}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Students / Txns</p>
+              <p className="text-2xl font-black text-blue-600">{students.length} / {fees.length}</p>
             </CardContent>
           </Card>
         </div>
@@ -316,39 +364,43 @@ const AdminFeesPage = () => {
               ) : filteredStudents.length === 0 ? (
                 <p className="text-center py-10 text-xs font-bold uppercase tracking-widest text-muted-foreground">No students found</p>
               ) : (
-                filteredStudents.map(student => (
-                  <button
-                    key={student._id}
-                    onClick={() => {
-                      setSelectedStudent(student);
-                      setIsCollecting(false);
-                      setIsSettingTotal(false);
-                    }}
-                    className={cn(
-                      "w-full p-4 border text-left transition-all rounded-none group",
-                      selectedStudent?._id === student._id 
-                        ? "bg-primary border-transparent shadow-lg" 
-                        : "bg-card border-border hover:border-primary/50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 flex items-center justify-center border transition-all",
-                        selectedStudent?._id === student._id ? "bg-white/10 border-white/20" : "bg-primary/5 border-primary/10"
-                      )}>
-                        <User className={cn("w-5 h-5", selectedStudent?._id === student._id ? "text-white" : "text-primary")} />
+                filteredStudents.map(student => {
+                  const sId = getStudentId(student);
+                  const isSelected = getStudentId(selectedStudent) === sId;
+                  return (
+                    <button
+                      key={sId}
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setIsCollecting(false);
+                        setIsSettingTotal(false);
+                      }}
+                      className={cn(
+                        "w-full p-4 border text-left transition-all rounded-none group",
+                        isSelected 
+                          ? "bg-primary border-transparent shadow-lg" 
+                          : "bg-card border-border hover:border-primary/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 flex items-center justify-center border transition-all",
+                          isSelected ? "bg-white/10 border-white/20" : "bg-primary/5 border-primary/10"
+                        )}>
+                          <User className={cn("w-5 h-5", isSelected ? "text-white" : "text-primary")} />
+                        </div>
+                        <div>
+                          <p className={cn("text-xs font-black uppercase tracking-tight", isSelected ? "text-white" : "text-foreground")}>
+                            {student.fullName || student.username}
+                          </p>
+                          <p className={cn("text-[9px] font-bold", isSelected ? "text-white/70" : "text-muted-foreground")}>
+                            {student.course || "No Course Allotted"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className={cn("text-xs font-black uppercase tracking-tight", selectedStudent?._id === student._id ? "text-white" : "text-foreground")}>
-                          {student.fullName || student.username}
-                        </p>
-                        <p className={cn("text-[9px] font-bold", selectedStudent?._id === student._id ? "text-white/70" : "text-muted-foreground")}>
-                          {student.course || "No Course Allotted"}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
@@ -365,7 +417,7 @@ const AdminFeesPage = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
                   <div>
                     <h3 className="text-xl font-black uppercase tracking-tight text-foreground">{selectedStudent.fullName || selectedStudent.username}</h3>
-                    <p className="text-xs font-bold text-primary uppercase tracking-widest">{selectedStudent.course}</p>
+                    <p className="text-xs font-bold text-primary uppercase tracking-widest">{selectedStudent.course || "No Course Allotted"}</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button
@@ -406,13 +458,13 @@ const AdminFeesPage = () => {
                   <Card className="rounded-none border-primary/30 shadow-lg">
                     <CardContent className="p-6">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Fees</p>
-                      <p className="text-2xl font-black text-primary">₹{(selectedStudent.total_fees || 0).toLocaleString()}</p>
+                      <p className="text-2xl font-black text-primary">₹{(selectedStudent.total_fees || selectedStudent.totalFee || 0).toLocaleString()}</p>
                     </CardContent>
                   </Card>
                   <Card className="rounded-none border-emerald-600/30 shadow-lg">
                     <CardContent className="p-6">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Total Paid</p>
-                      <p className="text-2xl font-black text-emerald-600">₹{getStudentTotalPaid(selectedStudent._id).toLocaleString()}</p>
+                      <p className="text-2xl font-black text-emerald-600">₹{getStudentTotalPaid(getStudentId(selectedStudent)).toLocaleString()}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -449,9 +501,10 @@ const AdminFeesPage = () => {
                             onChange={(e) => setFeeForm({...feeForm, mode: e.target.value})}
                           >
                             <option value="cash">CASH</option>
-                            <option value="online">ONLINE</option>
+                            <option value="upi">UPI / ONLINE</option>
                             <option value="cheque">CHEQUE</option>
-                            <option value="transfer">BANK TRANSFER</option>
+                            <option value="banktransfer">BANK TRANSFER</option>
+                            <option value="card">CARD</option>
                           </select>
                         </div>
                         <div className="space-y-2">
@@ -529,12 +582,12 @@ const AdminFeesPage = () => {
                   <div className="space-y-4">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Payment History</h4>
                     <div className="space-y-3">
-                      {getStudentFees(selectedStudent._id).length === 0 ? (
+                      {getStudentFees(getStudentId(selectedStudent)).length === 0 ? (
                         <p className="text-center py-20 border border-border border-dashed text-xs font-bold uppercase tracking-widest text-muted-foreground bg-muted/5">
                           No payments recorded yet
                         </p>
                       ) : (
-                        getStudentFees(selectedStudent._id).map(fee => (
+                        getStudentFees(getStudentId(selectedStudent)).map(fee => (
                           <div key={fee._id} className="bg-card border border-border p-4 flex items-center justify-between group hover:border-primary/40 transition-all">
                             <div className="flex items-center gap-4">
                               <div className="w-10 h-10 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 interface Language {
   _id: string;
@@ -67,17 +67,10 @@ const TypingLanguagesPage: React.FC = () => {
     fetchLanguages();
   }, []);
 
-  const getAuthToken = () => {
-    return localStorage.getItem("token") || sessionStorage.getItem("token");
-  };
-
   const fetchLanguages = async () => {
     try {
       setLoading(true);
-      const token = getAuthToken();
-      const response = await fetch(apiUrl("/api/typing/languages"), {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const response = await apiFetch("/api/typing/languages");
       const data = await response.json();
       if (response.ok && Array.isArray(data)) {
         setLanguages(data.map((l: any) => ({
@@ -96,13 +89,8 @@ const TypingLanguagesPage: React.FC = () => {
   const handleSeedAllLanguages = async () => {
     setSeeding(true);
     try {
-      const token = getAuthToken();
-      const response = await fetch(apiUrl("/api/typing/languages/seed-default"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        }
+      const response = await apiFetch("/api/typing/languages/seed-default", {
+        method: "POST"
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -121,10 +109,8 @@ const TypingLanguagesPage: React.FC = () => {
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
     try {
-      const token = getAuthToken();
-      const response = await fetch(apiUrl(`/api/typing/languages/${id}`), {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+      const response = await apiFetch(`/api/typing/languages/${id}`, {
+        method: "DELETE"
       });
       if (response.ok) {
         toast.success(`${name} removed successfully`);
@@ -141,13 +127,8 @@ const TypingLanguagesPage: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const token = getAuthToken();
-      const response = await fetch(apiUrl("/api/typing/languages"), {
+      const response = await apiFetch("/api/typing/languages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
         body: JSON.stringify(form)
       });
 

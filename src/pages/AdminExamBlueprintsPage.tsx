@@ -634,18 +634,34 @@ const AdminExamBlueprintsPage = () => {
 
   return (
     <DashboardLayout role="superadmin">
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-tight text-foreground flex items-center gap-3">
-              <ClipboardList className="w-8 h-8 text-primary" />
-              Exam Blueprints
-            </h1>
-            <p className="text-muted-foreground font-bold uppercase text-[10px] tracking-[0.2em] mt-1">
-              Design dynamic rule-based exam structures
-            </p>
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16 relative">
+        {/* Ambient background glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+        {/* Page Header Banner */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+              <ClipboardList className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading font-black text-2xl md:text-3xl text-white uppercase tracking-tight">
+                  Exam Blueprints
+                </h1>
+                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                  {blueprints.length} Blueprints
+                </span>
+              </div>
+              <p className="text-slate-400 mt-1 text-xs md:text-sm font-medium">
+                Design dynamic rule-based exam structures, marks distributions, and duration limits.
+              </p>
+            </div>
           </div>
-          <Button
+
+          <button
             onClick={() => {
               setForm({
                 name: "",
@@ -664,209 +680,195 @@ const AdminExamBlueprintsPage = () => {
               setSelectedSubjectId(null);
               setIsAdding(true);
             }}
-            className="rounded-none font-black uppercase tracking-widest text-xs h-12 px-8"
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all transform active:scale-95 shrink-0"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Blueprint
-          </Button>
+            <Plus className="w-4 h-4" /> Design Blueprint
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 p-6 bg-muted/30 border border-border rounded-none">
+        {/* Filter Toolbar Card */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-5 shadow-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search Bar */}
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest">Search</Label>
-            <Input
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</label>
+            <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search blueprints..."
-              className="rounded-none border-border"
+              placeholder="Search blueprints or courses..."
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
             />
           </div>
 
           {/* Course Category Filter */}
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest">Course Category</Label>
-            <Select value={filterCategory} onValueChange={handleFilterCategoryChange}>
-              <SelectTrigger className="rounded-none border-border">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Course Category</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => handleFilterCategoryChange(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-xs font-bold text-slate-200 uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Course Filter */}
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest">Course</Label>
-            <Select value={filterCourse} onValueChange={setFilterCourse}>
-              <SelectTrigger className="rounded-none border-border">
-                <SelectValue placeholder={filterCategory ? "All Courses" : "Select Category First"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {getFilterCourses().map((course) => (
-                  <SelectItem key={course.id} value={course.id}>{course.course_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Course</label>
+            <select
+              value={filterCourse}
+              onChange={(e) => setFilterCourse(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-xs font-bold text-slate-200 uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+            >
+              <option value="all">All Courses</option>
+              {getFilterCourses().map((course) => (
+                <option key={course.id} value={course.id}>{course.course_name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Sort Filter */}
-          <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest">Sort</Label>
-            <Select value={sortOrder} onValueChange={(val: "new" | "old") => setSortOrder(val)}>
-              <SelectTrigger className="rounded-none border-border">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">New to Old</SelectItem>
-                <SelectItem value="old">Old to New</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sort</label>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as "new" | "old")}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-2.5 text-xs font-bold text-slate-200 uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+            >
+              <option value="new">New to Old</option>
+              <option value="old">Old to New</option>
+            </select>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="w-12 h-12 text-primary animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Loading Blueprints...
-            </p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Blueprints...</p>
           </div>
         ) : filteredBlueprints.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 bg-muted/30">
-            <CardContent className="py-20 text-center">
-              <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">
-                No blueprints found. Try adjusting your filters.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center text-center">
+            <ClipboardList className="w-12 h-12 text-slate-600 mb-4 opacity-40" />
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">No Blueprints Found</h3>
+            <p className="text-slate-400 text-xs max-w-sm mt-1 mb-6">
+              No blueprints match your filter criteria. Design a blueprint to structure candidate examinations.
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBlueprints.map((bp) => (
-              <Card
+              <div
                 key={bp._id}
-                className="rounded-none border-border shadow-md hover:border-primary/50 transition-all group"
+                className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl p-6 shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group flex flex-col justify-between space-y-4"
               >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg font-black uppercase tracking-tight leading-none pr-4">
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="font-heading font-black text-lg text-white group-hover:text-indigo-300 transition-colors uppercase tracking-tight">
                       {bp.name}
-                    </CardTitle>
-                    <Settings2 className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                    </h3>
+                    <Settings2 className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors shrink-0" />
                   </div>
-                  <div className="space-y-1 mt-2">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {courses.find((c) => c.id === bp.course_id)?.course_name ||
-                        "Unknown Course"}
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                      {courses.find((c) => c.id === bp.course_id)?.course_name || "Unknown Course"}
                     </p>
-                    <p className="text-[10px] font-bold text-primary/70 uppercase tracking-widest">
-                      {sessions.find((s) => s.id === bp.session_id)
-                        ?.session_name || "No Session Selected"}
-                      <span className="mx-2 opacity-30">|</span>
+                    <p className="text-[11px] font-semibold text-slate-400">
+                      {sessions.find((s) => s.id === bp.session_id)?.session_name || "No Session Selected"}
+                      <span className="mx-2 text-slate-600">|</span>
                       {bp.subjects.length} Subjects
                     </p>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between pt-2 border-t border-border gap-2">
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-1">
-                        {formatDuration(bp.total_duration_minutes || 0)}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-800/80">
+                    <span className="text-[10px] font-bold uppercase text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded-xl">
+                      {formatDuration(bp.total_duration_minutes || 0)}
+                    </span>
+                    {bp.exam_pattern && (
+                      <span className="text-[10px] font-bold uppercase text-purple-300 bg-purple-500/10 border border-purple-500/30 px-2.5 py-1 rounded-xl">
+                        {bp.exam_pattern} {bp.term_number ? `• Term ${bp.term_number}` : ''}
                       </span>
-                      {bp.exam_pattern && (
-                        <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-500/10 border border-indigo-500/20 px-2 py-1">
-                          {bp.exam_pattern} {bp.term_number ? `• Term ${bp.term_number}` : ''}
-                        </span>
-                      )}
-                      {bp.created_at && (
-                        <span className="text-[9px] font-black uppercase text-muted-foreground bg-muted px-2 py-1">
-                          {formatDate(bp.created_at)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setForm(bp);
-                          setSameInstructionsForAll(false);
-                          setSharedInstructions("");
-                          setSelectedSubjectId(
-                            bp.subjects.length > 0 ? bp.subjects[0].subject_id : null
+                    )}
+                    {bp.created_at && (
+                      <span className="text-[10px] font-bold uppercase text-slate-400 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                        {formatDate(bp.created_at)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                    <button
+                      onClick={() => {
+                        setForm(bp);
+                        setSameInstructionsForAll(false);
+                        setSharedInstructions("");
+                        setSelectedSubjectId(
+                          bp.subjects.length > 0 ? bp.subjects[0].subject_id : null
+                        );
+                        setIsAdding(true);
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5 inline mr-1" /> Edit
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await apiFetch(
+                            `/api/exam/blueprints/${bp._id}/set-default`,
+                            { method: "POST" }
                           );
-                          setIsAdding(true);
-                        }}
-                        className="h-8 rounded-none font-black uppercase text-[10px] tracking-widest"
-                      >
-                        <Pencil className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
+                          if (res.ok) {
+                            toast.success("Default blueprint set successfully");
+                            fetchData();
+                          }
+                        } catch (error) {
+                          toast.error("Failed to set default blueprint");
+                        }
+                      }}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl border font-bold text-xs uppercase tracking-wider transition-all",
+                        bp.default_blueprint
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                          : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
+                      )}
+                    >
+                      {bp.default_blueprint ? "Default" : "Make Default"}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm("Are you sure you want to delete this blueprint?")) {
                           try {
-                            const res = await apiFetch(
-                              `/api/exam/blueprints/${bp._id}/set-default`,
-                              { method: "POST" }
-                            );
+                            const res = await apiFetch(`/api/exam/blueprints/${bp._id}`, { method: "DELETE" });
                             if (res.ok) {
-                              toast.success("Default blueprint set successfully");
+                              toast.success("Blueprint deleted");
                               fetchData();
                             }
                           } catch (error) {
-                            toast.error("Failed to set default blueprint");
+                            toast.error("Failed to delete");
                           }
-                        }}
-                        className="h-8 rounded-none font-black uppercase text-[10px] tracking-widest"
-                      >
-                        {bp.default_blueprint ? "Default" : "Set as Default"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          if (
-                            confirm("Are you sure you want to delete this blueprint?")
-                          ) {
-                            try {
-                              const res = await apiFetch(
-                                `/api/exam/blueprints/${bp._id}`,
-                                { method: "DELETE" }
-                              );
-                              if (res.ok) {
-                                toast.success("Blueprint deleted");
-                                fetchData();
-                              }
-                            } catch (error) {
-                              toast.error("Failed to delete");
-                            }
-                          }
-                        }}
-                        className="h-8 rounded-none font-black uppercase text-[10px] tracking-widest text-red-500"
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
+                        }
+                      }}
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/20 text-rose-400 border border-slate-700/60 transition-all"
+                      title="Delete Blueprint"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         <Dialog open={isAdding} onOpenChange={setIsAdding}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-none border-primary">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8">
+            <DialogHeader className="border-b border-slate-800/80 pb-4">
+              <DialogTitle className="font-heading font-black text-xl text-white uppercase tracking-tight flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-indigo-400" />
                 {form._id ? t("Edit Exam Blueprint") : t("Design Exam Blueprint")}
               </DialogTitle>
             </DialogHeader>
@@ -879,57 +881,57 @@ const AdminExamBlueprintsPage = () => {
                     1. Basic Information
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 bg-muted/30 border border-border">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5 bg-muted/20 border border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {t("Exam Name")}
                     </Label>
                     <Input
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder={t("e.g., ADCA Final Exam 2026")}
-                      className="rounded-none border-border font-bold"
+                      className="rounded-none border-border font-bold text-xs h-10"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {t("Course Category")}
                     </Label>
                     <Select
                       value={form.category_id}
                       onValueChange={handleCategoryChange}
                     >
-                      <SelectTrigger className="rounded-none border-border font-bold">
+                      <SelectTrigger className="rounded-none border-border font-bold text-xs h-10">
                         <SelectValue placeholder={t("Select Category")} />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
+                          <SelectItem key={cat.id} value={cat.id} className="text-xs font-bold">
                             {cat.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {t("Course")}
                     </Label>
                     <Select value={form.course_id} onValueChange={handleCourseChange}>
-                      <SelectTrigger className="rounded-none border-border font-bold">
+                      <SelectTrigger className="rounded-none border-border font-bold text-xs h-10">
                         <SelectValue placeholder={t("Select Course")} />
                       </SelectTrigger>
                       <SelectContent>
                         {getFilteredCourses().map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
+                          <SelectItem key={course.id} value={course.id} className="text-xs font-bold">
                             {course.course_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {t("Session")}
                     </Label>
                     <Select
@@ -938,66 +940,65 @@ const AdminExamBlueprintsPage = () => {
                         setForm({ ...form, session_id: val })
                       }
                     >
-                      <SelectTrigger className="rounded-none border-border font-bold">
+                      <SelectTrigger className="rounded-none border-border font-bold text-xs h-10">
                         <SelectValue placeholder={t("Select Session")} />
                       </SelectTrigger>
                       <SelectContent>
                         {getFilteredSessions().map((session) => (
-                          <SelectItem key={session.id} value={session.id}>
+                          <SelectItem key={session.id} value={session.id} className="text-xs font-bold">
                             {session.session_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      Exam Pattern
+                    </Label>
+                    <Select
+                      value={form.exam_pattern || "Semester"}
+                      onValueChange={(val) => setForm({ ...form, exam_pattern: val })}
+                    >
+                      <SelectTrigger className="rounded-none border-border font-bold text-xs h-10">
+                        <SelectValue placeholder="Select Pattern" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Semester">Semester Pattern</SelectItem>
+                        <SelectItem value="Yearly">Yearly Pattern</SelectItem>
+                        <SelectItem value="Monthly">Monthly Pattern</SelectItem>
+                        <SelectItem value="Weekly">Weekly Pattern</SelectItem>
+                        <SelectItem value="Days">Custom Days Pattern</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      Term / Sequence No.
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.term_number ?? 1}
+                      onChange={(e) =>
+                        setForm({ ...form, term_number: parseInt(e.target.value) || 1 })
+                      }
+                      className="rounded-none border-border font-bold text-xs h-10"
+                      placeholder="e.g. 1 (for Sem 1 or Year 1)"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 lg:col-span-3 pt-2 border-t border-border flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
+                        id="default_bp_cb"
                         checked={form.default_blueprint || false}
                         onChange={(e) => setForm({ ...form, default_blueprint: e.target.checked })}
-                        className="h-4 w-4"
+                        className="h-4 w-4 rounded-none accent-primary cursor-pointer"
                       />
-                      <Label className="text-[10px] font-black uppercase tracking-widest">
-                        Set as Default Blueprint
+                      <Label htmlFor="default_bp_cb" className="text-xs font-black uppercase tracking-wider cursor-pointer">
+                        Set As Default Blueprint For Course
                       </Label>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest">
-                        Exam Pattern
-                      </Label>
-                      <Select
-                        value={form.exam_pattern || "Semester"}
-                        onValueChange={(val) => setForm({ ...form, exam_pattern: val })}
-                      >
-                        <SelectTrigger className="rounded-none border-border font-bold">
-                          <SelectValue placeholder="Select Pattern" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Semester">Semester Pattern</SelectItem>
-                          <SelectItem value="Yearly">Yearly Pattern</SelectItem>
-                          <SelectItem value="Monthly">Monthly Pattern</SelectItem>
-                          <SelectItem value="Weekly">Weekly Pattern</SelectItem>
-                          <SelectItem value="Days">Custom Days Pattern</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest">
-                        Term / Sequence No.
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={form.term_number ?? 1}
-                        onChange={(e) =>
-                          setForm({ ...form, term_number: parseInt(e.target.value) || 1 })
-                        }
-                        className="rounded-none border-border font-bold"
-                        placeholder="e.g. 1 (for Sem 1 or Year 1)"
-                      />
                     </div>
                   </div>
                 </div>

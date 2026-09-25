@@ -119,7 +119,7 @@ pub async fn create_mock_test(
     claims: Claims,
     Json(payload): Json<MockTestCreateRequest>,
 ) -> (StatusCode, Json<ExamEngineResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin | UserRole::Center | UserRole::Staff) {
         return (
             StatusCode::FORBIDDEN,
             Json(ExamEngineResponse {
@@ -257,7 +257,7 @@ pub async fn list_mock_tests_admin(
     claims: Claims,
     Query(q): Query<MockTestListQuery>,
 ) -> (StatusCode, Json<Vec<MockTestListItem>>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin | UserRole::Center | UserRole::Staff) {
         return (StatusCode::FORBIDDEN, Json(vec![]));
     }
 
@@ -265,30 +265,62 @@ pub async fn list_mock_tests_admin(
     if let Some(cid) = &q.course_id {
         if let Ok(oid) = ObjectId::parse_str(cid) {
             filter.insert("course_id", oid);
+        } else if !cid.trim().is_empty() {
+            filter.insert("course_id", cid.trim());
         }
     }
 
-    let coll = db.collection::<MockTest>("mock_tests");
+    let coll = db.collection::<mongodb::bson::Document>("mock_tests");
     let mut cursor = match coll.find(filter, None).await {
         Ok(c) => c,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
     };
 
     let mut out = Vec::new();
-    while let Some(Ok(mt)) = cursor.next().await {
-        let id = match mt.id {
-            Some(i) => i.to_hex(),
-            None => continue,
-        };
-        out.push(MockTestListItem {
-            id,
-            name: mt.name,
-            course_id: mt.course_id.to_hex(),
-            subject_id: mt.subject_id.to_hex(),
-            blueprint_id: mt.blueprint_id.to_hex(),
-            status: mt.status,
-            created_at: mt.created_at,
-        });
+    while let Some(res) = cursor.next().await {
+        if let Ok(doc) = res {
+            let id = doc
+                .get_object_id("_id")
+                .map(|o| o.to_hex())
+                .or_else(|_| doc.get_str("id").map(|s| s.to_string()))
+                .unwrap_or_default();
+            if id.is_empty() {
+                continue;
+            }
+
+            let name = doc.get_str("name").unwrap_or("").to_string();
+            let course_id = doc
+                .get_object_id("course_id")
+                .map(|o| o.to_hex())
+                .or_else(|_| doc.get_str("course_id").map(|s| s.to_string()))
+                .unwrap_or_default();
+            let subject_id = doc
+                .get_object_id("subject_id")
+                .map(|o| o.to_hex())
+                .or_else(|_| doc.get_str("subject_id").map(|s| s.to_string()))
+                .unwrap_or_default();
+            let blueprint_id = doc
+                .get_object_id("blueprint_id")
+                .map(|o| o.to_hex())
+                .or_else(|_| doc.get_str("blueprint_id").map(|s| s.to_string()))
+                .unwrap_or_default();
+            let status = doc.get_str("status").unwrap_or("active").to_string();
+
+            let created_at = doc
+                .get_datetime("created_at")
+                .map(|dt| chrono::DateTime::<Utc>::from(dt.to_chrono()))
+                .unwrap_or_else(|_| Utc::now());
+
+            out.push(MockTestListItem {
+                id,
+                name,
+                course_id,
+                subject_id,
+                blueprint_id,
+                status,
+                created_at,
+            });
+        }
     }
     (StatusCode::OK, Json(out))
 }
@@ -299,7 +331,7 @@ pub async fn update_mock_test(
     Path(id): Path<String>,
     Json(payload): Json<MockTestUpdateRequest>,
 ) -> (StatusCode, Json<ExamEngineResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin | UserRole::Center | UserRole::Staff) {
         return (
             StatusCode::FORBIDDEN,
             Json(ExamEngineResponse {
@@ -417,7 +449,7 @@ pub async fn delete_mock_test(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ExamEngineResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin | UserRole::Center | UserRole::Staff) {
         return (
             StatusCode::FORBIDDEN,
             Json(ExamEngineResponse {
@@ -927,6 +959,258 @@ pub async fn start_mock_test_for_student(
                 success: false,
                 message: eng.message,
                 paper_id: None,
+            }),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BulkItemsPayload {
+    pub items: Vec<serde_json::Value>,
+}
+
+pub async fn bulk_create_mock_tests(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<BulkItemsPayload>,
+) -> (StatusCode, Json<ExamEngineResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ExamEngineResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+
+    let created_by = match ObjectId::parse_str(&claims.sub) {
+        Ok(o) => o,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ExamEngineResponse {
+                    success: false,
+                    message: "Invalid user session".to_string(),
+                }),
+            )
+        }
+    };
+
+    let coll = db.collection::<MockTest>("mock_tests");
+    let courses_coll = db.collection::<Course>("courses");
+    let subjects_coll = db.collection::<crate::models::subject::Subject>("subjects");
+    let blueprints_coll = db.collection::<ExamBlueprint>("exam_blueprints");
+    let course_subjects_coll = db.collection::<CourseSubject>("course_subjects");
+
+    let mut docs = Vec::new();
+    let now = Utc::now();
+
+    for mut item in payload.items {
+        if let Some(obj) = item.as_object_mut() {
+            let name = obj
+                .get("name")
+                .or_else(|| obj.get("mock_test_name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if name.is_empty() {
+                continue;
+            }
+
+            let course_id_str = obj
+                .get("course_id")
+                .or_else(|| obj.get("course"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let subject_id_str = obj
+                .get("subject_id")
+                .or_else(|| obj.get("subject"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let blueprint_id_str = obj
+                .get("blueprint_id")
+                .or_else(|| obj.get("blueprint"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let status_str = obj
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("active");
+
+            // 1. Resolve course_oid
+            let course_oid = match ObjectId::parse_str(course_id_str) {
+                Ok(o) => o,
+                Err(_) => {
+                    // Search course by name, code, or short_code
+                    let filter = doc! {
+                        "$or": [
+                            { "course_name": { "$regex": course_id_str, "$options": "i" } },
+                            { "course_code": course_id_str },
+                            { "short_code": course_id_str },
+                        ]
+                    };
+                    if let Ok(Some(c)) = courses_coll.find_one(filter, None).await {
+                        c.id.unwrap_or_else(ObjectId::new)
+                    } else if let Ok(Some(c)) = courses_coll.find_one(doc! {}, None).await {
+                        c.id.unwrap_or_else(ObjectId::new)
+                    } else {
+                        continue;
+                    }
+                }
+            };
+
+            // 2. Resolve subject_oid
+            let subject_oid = match ObjectId::parse_str(subject_id_str) {
+                Ok(o) => o,
+                Err(_) => {
+                    let filter = doc! {
+                        "$or": [
+                            { "subject_name": { "$regex": subject_id_str, "$options": "i" } },
+                            { "subject_code": subject_id_str },
+                        ]
+                    };
+                    if let Ok(Some(s)) = subjects_coll.find_one(filter, None).await {
+                        s.id.unwrap_or_else(ObjectId::new)
+                    } else if let Ok(Some(cs)) = course_subjects_coll
+                        .find_one(doc! { "course_id": course_oid }, None)
+                        .await
+                    {
+                        cs.subject_id
+                    } else if let Ok(Some(s)) = subjects_coll.find_one(doc! {}, None).await {
+                        s.id.unwrap_or_else(ObjectId::new)
+                    } else {
+                        continue;
+                    }
+                }
+            };
+
+            // Ensure course-subject mapping exists so student start works
+            let mapping_exists = course_subjects_coll
+                .find_one(
+                    doc! { "course_id": course_oid, "subject_id": subject_oid },
+                    None,
+                )
+                .await
+                .ok()
+                .flatten()
+                .is_some();
+
+            if !mapping_exists {
+                let _ = course_subjects_coll
+                    .insert_one(
+                        CourseSubject {
+                            id: None,
+                            course_id: course_oid,
+                            subject_id: subject_oid,
+                            subject_order: 1,
+                        },
+                        None,
+                    )
+                    .await;
+            }
+
+            // 3. Resolve blueprint_oid
+            let blueprint_oid = match ObjectId::parse_str(blueprint_id_str) {
+                Ok(o) => o,
+                Err(_) => {
+                    let filter = doc! {
+                        "course_id": course_oid,
+                        "name": { "$regex": blueprint_id_str, "$options": "i" }
+                    };
+                    if let Ok(Some(b)) = blueprints_coll.find_one(filter, None).await {
+                        b.id.unwrap_or_else(ObjectId::new)
+                    } else if let Ok(Some(b)) = blueprints_coll
+                        .find_one(doc! { "course_id": course_oid }, None)
+                        .await
+                    {
+                        b.id.unwrap_or_else(ObjectId::new)
+                    } else {
+                        // Auto-create blueprint for this course if none exists
+                        let new_bp = ExamBlueprint {
+                            id: None,
+                            category_id: None,
+                            course_id: course_oid,
+                            session_id: None,
+                            bank_id: None,
+                            reappear_bank_id: None,
+                            subject_id: None,
+                            name: format!("Default Mock Blueprint - {}", name),
+                            total_marks: 100.0,
+                            minimum_marks: 40.0,
+                            duration_minutes: 60,
+                            total_duration_minutes: 60,
+                            max_attempts: 5,
+                            instructions: Some("Answer all questions.".to_string()),
+                            mode: "Flex".to_string(),
+                            exam_mode: Some("Computer Based Test (CBT)".to_string()),
+                            practical_enabled: false,
+                            assignment_enabled: false,
+                            components: None,
+                            allow_bank_override: false,
+                            rules: vec![],
+                            sections: vec![],
+                            require_attendance: false,
+                            subjects: vec![],
+                            created_by: Some(created_by),
+                            created_at: Some(mongodb::bson::DateTime::now()),
+                            default_blueprint: true,
+                            exam_pattern: None,
+                            term_number: None,
+                        };
+                        match blueprints_coll.insert_one(new_bp, None).await {
+                            Ok(res) => res.inserted_id.as_object_id().unwrap_or_else(ObjectId::new),
+                            Err(_) => continue,
+                        }
+                    }
+                }
+            };
+
+            docs.push(MockTest {
+                id: None,
+                name,
+                course_id: course_oid,
+                subject_id: subject_oid,
+                blueprint_id: blueprint_oid,
+                status: if status_str == "inactive" {
+                    "inactive".to_string()
+                } else {
+                    "active".to_string()
+                },
+                created_by,
+                created_at: now,
+            });
+        }
+    }
+
+    if docs.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ExamEngineResponse {
+                success: false,
+                message: "No valid mock test records could be parsed from the CSV.".to_string(),
+            }),
+        );
+    }
+
+    let count = docs.len();
+    match coll.insert_many(docs, None).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(ExamEngineResponse {
+                success: true,
+                message: format!("Successfully imported {} mock tests!", count),
+            }),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ExamEngineResponse {
+                success: false,
+                message: format!("Bulk insert failed: {}", e),
             }),
         ),
     }

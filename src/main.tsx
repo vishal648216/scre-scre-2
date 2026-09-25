@@ -15,7 +15,8 @@ class PublicErrorBoundary extends React.Component<{ children: React.ReactNode },
     return { hasError: true, error };
   }
 
-  componentDidCatch() {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error caught by PublicErrorBoundary:", error, errorInfo);
   }
 
   render() {
@@ -26,6 +27,14 @@ class PublicErrorBoundary extends React.Component<{ children: React.ReactNode },
           <p style={{ color: '#64748b', marginTop: '10px' }}>
             Something went wrong. Please try refreshing the page.
           </p>
+          {this.state.error && (
+            <div style={{ marginTop: '20px', padding: '15px', background: '#f1f5f9', borderRadius: '8px', textAlign: 'left', maxWidth: '800px', margin: '20px auto', overflow: 'auto' }}>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#ef4444' }}>{this.state.error.toString()}</p>
+              {this.state.error.stack && (
+                <pre style={{ margin: '10px 0 0 0', fontSize: '11px', color: '#475569', whiteSpace: 'pre-wrap' }}>{this.state.error.stack}</pre>
+              )}
+            </div>
+          )}
           <button 
             onClick={() => window.location.reload()}
             style={{ marginTop: '30px', padding: '12px 24px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}

@@ -561,3 +561,85 @@ pub async fn delete_category(
         ),
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BulkCategoryPayload {
+    pub items: Vec<CreateCourseCategoryRequest>,
+}
+
+pub async fn bulk_create_categories(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<BulkCategoryPayload>,
+) -> (StatusCode, Json<CategoryResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CategoryResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+    let coll = db.collection::<CourseCategory>("course_categories");
+    let now = Utc::now();
+    let mut new_cats = Vec::new();
+
+    for item in payload.items {
+        let name = item.name.trim().to_string();
+        if name.is_empty() {
+            continue;
+        }
+        let code = if item.category_code.trim().is_empty() {
+            let slug = name
+                .to_uppercase()
+                .chars()
+                .filter(|c| c.is_alphanumeric())
+                .take(6)
+                .collect::<String>();
+            format!("CAT-{}-{}", if slug.is_empty() { "GEN" } else { &slug }, Utc::now().timestamp_subsec_millis())
+        } else {
+            item.category_code.trim().to_string()
+        };
+
+        new_cats.push(CourseCategory {
+            id: None,
+            name,
+            category_code: code,
+            description: item.description,
+            status: item.status.unwrap_or_else(|| "active".to_string()),
+            created_at: now,
+            image_url: normalize_image_url(item.image_url),
+            sort_order: item.sort_order.unwrap_or(0),
+        });
+    }
+
+    if new_cats.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(CategoryResponse {
+                success: false,
+                message: "No valid categories provided".to_string(),
+            }),
+        );
+    }
+
+    let count = new_cats.len();
+    match coll.insert_many(new_cats, None).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(CategoryResponse {
+                success: true,
+                message: format!("Successfully imported {} categories!", count),
+            }),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(CategoryResponse {
+                success: false,
+                message: format!("Bulk category creation failed: {}", e),
+            }),
+        ),
+    }
+}
+

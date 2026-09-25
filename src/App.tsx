@@ -24,6 +24,12 @@ const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
 // Management Pages
 const StaffListPage = lazy(() => import("./pages/StaffListPage"));
 const AddStaffPage = lazy(() => import("./pages/AddStaffPage"));
+const AdminStaffRolesPage = lazy(() => import("./pages/AdminStaffRolesPage"));
+const AdminStaffAttendancePage = lazy(() => import("./pages/AdminStaffAttendancePage"));
+const AdminStaffSubjectsPage = lazy(() => import("./pages/AdminStaffSubjectsPage"));
+const AdminStaffCentersPage = lazy(() => import("./pages/AdminStaffCentersPage"));
+const AdminStaffSalaryPage = lazy(() => import("./pages/AdminStaffSalaryPage"));
+const AdminExamAttendancePage = lazy(() => import("./pages/AdminExamAttendancePage"));
 const AddCenterPage = lazy(() => import("./pages/AddCenterPage"));
 const CenterListPage = lazy(() => import("./pages/CenterListPage"));
 const SubscriptionPage = lazy(() => import("./pages/SubscriptionPage"));
@@ -55,6 +61,7 @@ const TypingLessonsPage = lazy(() => import("./pages/TypingLessonsPage"));
 const AdminTypingTestsPage = lazy(() => import("./pages/AdminTypingTestsPage"));
 const AdminTypingAllotPage = lazy(() => import("./pages/AdminTypingAllotPage"));
 const AdminFinanceWalletPage = lazy(() => import("./pages/AdminFinanceWalletPage"));
+const AdminFinanceExpensesPage = lazy(() => import("./pages/AdminFinanceExpensesPage"));
 const AdminFinanceCommissionsPage = lazy(() => import("./pages/AdminFinanceCommissionsPage"));
 const AdminFinancePaymentsPage = lazy(() => import("./pages/AdminFinancePaymentsPage"));
 const AdminReferralsPage = lazy(() => import("./pages/AdminReferralsPage"));
@@ -247,15 +254,17 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     user = null;
   }
 
-  const role = user?.role?.toLowerCase().replace(" ", "") || "";
-
   if (!token || !user) {
     return <Navigate to="/" replace />;
   }
 
-  const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase().replace(" ", ""));
+  const rawRole = (user?.role || "").toLowerCase().replace(/[\s\-_]/g, "");
+  const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase().replace(/[\s\-_]/g, ""));
 
-  if (!normalizedAllowedRoles.includes(role)) {
+  const isSuperAdmin = rawRole === "superadmin";
+  const isAllowed = isSuperAdmin || normalizedAllowedRoles.includes(rawRole) || (rawRole === "admin" && normalizedAllowedRoles.includes("admin"));
+
+  if (!isAllowed) {
     return <Navigate to="/" replace />;
   }
 
@@ -268,21 +277,24 @@ const PortalRouteWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { data: settings } = useQuery({
+  const { data: settings, isLoading } = useQuery({
     queryKey: ["public-settings"],
     queryFn: async () => {
-      try {
-        const res = await apiFetch("/api/public/system-settings");
-        if (res.ok) return res.json();
-      } catch (e) {
-        // Ignore network error on initial load
-      }
-      return null;
+      const res = await apiFetch("/api/public/system-settings");
+      return res.json();
     },
-    staleTime: 1000 * 60 * 10,
   });
 
   const isBypassed = localStorage.getItem("maintenance_bypass") === "true";
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Initializing Portal...</p>
+      </div>
+    </div>
+  );
 
   if (settings?.maintenance_mode && !isBypassed) {
     return (
@@ -363,16 +375,18 @@ const AppRoutes = () => {
       <Route path="/dashboard/centers/wallets" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCenterWalletsPage /></ProtectedRoute>} />
       <Route path="/dashboard/admin/bin" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminRecycleBinPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/typing/languages" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><TypingLanguagesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/typing/lessons" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><TypingLessonsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/typing/analytics" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingAnalyticsPage /></ProtectedRoute>} />
-
-      <Route path="/dashboard/typing/history" element={<ProtectedRoute allowedRoles={["student"]}><TypingHistoryPage /></ProtectedRoute>} />
-      <Route path="/dashboard/typing/tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingTestsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/typing/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminTypingAllotPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/languages" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><TypingLanguagesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/lessons" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><TypingLessonsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/analytics" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><AdminTypingAnalyticsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/practice" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student", "staff"]}><TypingPracticePage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/reports" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><CenterTypingReportsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/history" element={<ProtectedRoute allowedRoles={["student", "admin", "superadmin", "center"]}><TypingHistoryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><AdminTypingTestsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/typing/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminTypingAllotPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/finance/wallet" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceWalletPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/transactions" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceTransactionsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/finance/expenses" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceExpensesPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/commissions" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceCommissionsPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/payments" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinancePaymentsPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/referrals" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminReferralsPage /></ProtectedRoute>} />
@@ -399,12 +413,12 @@ const AppRoutes = () => {
       <Route path="/dashboard/attachments/approvals" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCertificateApprovalPage /></ProtectedRoute>} />
       <Route path="/dashboard/exam-v2/hub" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamV2Hub /></ProtectedRoute>} />
       <Route path="/dashboard/exam-v2/marks-approval" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminMarksApprovalPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/blueprints" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamBlueprintsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/mock-tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminMockTestsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><BankListPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionListPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionFormPage /></ProtectedRoute>} />
-      <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><QuestionFormPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/blueprints" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminExamBlueprintsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/mock-tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminMockTestsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><BankListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/question-feedback" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminQuestionFeedbackPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamAllotPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/alloted" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
@@ -422,6 +436,12 @@ const AppRoutes = () => {
       <Route path="/dashboard/staff" element={<ProtectedRoute allowedRoles={["staff"]}><StaffDashboard /></ProtectedRoute>} />
       <Route path="/dashboard/staff/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AddStaffPage /></ProtectedRoute>} />
       <Route path="/dashboard/staff/list" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><StaffListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/staff/roles" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffRolesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/staff/attendance" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffAttendancePage /></ProtectedRoute>} />
+      <Route path="/dashboard/staff/subjects" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffSubjectsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/staff/centers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffCentersPage /></ProtectedRoute>} />
+      <Route path="/dashboard/staff/salary" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffSalaryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/attendance" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminExamAttendancePage /></ProtectedRoute>} />
 
       <Route path="/dashboard/system/settings" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSystemSettingsPage /></ProtectedRoute>} />
       <Route path="/dashboard/system/shop" element={<Navigate to="/dashboard/cms/shop" replace />} />
@@ -574,7 +594,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/exam-v2/marks-entry" element={<ProtectedRoute allowedRoles={["center"]}><CenterMarksEntryPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/marks-entry" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterExamMarksEntryPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/reappear" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterReappearManagementPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/download-paper" element={<ProtectedRoute allowedRoles={["center"]}><CenterDownloadPaperPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/download-paper" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterDownloadPaperPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterStudentsPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/add" element={<ProtectedRoute allowedRoles={["center"]}><AddStudentPage /></ProtectedRoute>} />

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Search, Filter, Loader2, Zap, CheckCircle2, TrendingUp, AlertCircle, ArrowUpRight, BarChart3 } from "lucide-react";
+import { FileText, Search, Filter, Loader2, Zap, CheckCircle2, TrendingUp, AlertCircle, ArrowUpRight, BarChart3, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import TypingAnalyticsDashboard from "@/components/TypingAnalyticsDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiFetch } from "@/lib/api";
 
 interface TypingReport {
   _id: string;
@@ -29,14 +30,19 @@ const CenterTypingReportsPage = () => {
   }, []);
 
   const fetchReports = async () => {
+    setLoading(true);
     try {
-      const response = await fetch("/api/typing/report", {
-        headers: { "Authorization": `Bearer ${sessionStorage.getItem("token")}` }
-      });
-      const data = await response.json();
-      if (response.ok) setReports(data);
-    } catch (error) {
-      console.error("Error fetching reports:", error);
+      const response = await apiFetch("/api/typing/report").catch(() => null);
+      if (response && response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setReports(data);
+          return;
+        }
+      }
+      setReports([]);
+    } catch {
+      setReports([]);
     } finally {
       setLoading(false);
     }
@@ -45,7 +51,7 @@ const CenterTypingReportsPage = () => {
   const filteredReports = reports.filter(r => {
     const matchesSearch = r.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           r.course_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMode = filterMode === "all" || r.mode === filterMode;
+    const matchesMode = filterMode === "all" || r.mode.toLowerCase() === filterMode.toLowerCase();
     return matchesSearch && matchesMode;
   });
 
@@ -72,19 +78,25 @@ const CenterTypingReportsPage = () => {
                 placeholder="Search student or course..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-card border border-border text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition-all w-64"
+                className="pl-10 pr-4 py-2 bg-card border border-border text-xs font-bold uppercase tracking-widest outline-none focus:border-primary transition-all w-64 rounded-xl"
               />
             </div>
             <select 
               value={filterMode}
               onChange={(e) => setFilterMode(e.target.value)}
-              className="px-4 py-2 bg-card border border-border text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all"
+              className="px-4 py-2 bg-card border border-border text-[10px] font-black uppercase tracking-widest outline-none focus:border-primary transition-all rounded-xl"
             >
               <option value="all">ALL MODES</option>
               <option value="practice">PRACTICE</option>
               <option value="test">TEST</option>
               <option value="exam">EXAM</option>
             </select>
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Export Report
+            </button>
           </div>
         </div>
 
@@ -97,16 +109,16 @@ const CenterTypingReportsPage = () => {
         </div>
 
         <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="w-full justify-start rounded-none border-b-2 bg-transparent p-0 mb-8">
+          <TabsList className="bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700/60 w-full flex justify-start gap-2 overflow-x-auto backdrop-blur-xl shadow-lg mb-6">
             <TabsTrigger 
               value="analytics" 
-              className="rounded-none border-b-2 border-transparent px-8 py-3 font-black text-[10px] uppercase tracking-[0.2em] data-[state=active]:border-primary data-[state=active]:bg-muted/50 transition-all"
+              className="rounded-xl font-black text-xs uppercase tracking-wider px-6 py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25 transition-all text-slate-400"
             >
               <BarChart3 className="w-4 h-4 mr-2" /> Center Analytics
             </TabsTrigger>
             <TabsTrigger 
               value="reports" 
-              className="rounded-none border-b-2 border-transparent px-8 py-3 font-black text-[10px] uppercase tracking-[0.2em] data-[state=active]:border-primary data-[state=active]:bg-muted/50 transition-all"
+              className="rounded-xl font-black text-xs uppercase tracking-wider px-6 py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-500/25 transition-all text-slate-400"
             >
               <FileText className="w-4 h-4 mr-2" /> Performance Reports
             </TabsTrigger>
@@ -117,70 +129,70 @@ const CenterTypingReportsPage = () => {
           </TabsContent>
 
           <TabsContent value="reports" className="mt-0">
-            <Card className="rounded-none border-border overflow-hidden shadow-xl">
-              <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between">
-                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
+            <Card className="rounded-3xl border border-slate-700/60 overflow-hidden shadow-2xl bg-slate-950/85 backdrop-blur-2xl">
+              <CardHeader className="bg-slate-900/90 border-b border-slate-800 flex flex-row items-center justify-between">
+                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-white">
+                  <FileText className="w-4 h-4 text-indigo-400" />
                   Student Performance Log
                 </CardTitle>
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
                   Showing {filteredReports.length} records
                 </span>
               </CardHeader>
               <CardContent className="p-0 overflow-x-auto">
                 {loading ? (
-                  <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+                  <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-400" /></div>
                 ) : filteredReports.length === 0 ? (
-                  <div className="py-20 text-center opacity-60">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <div className="py-20 text-center text-slate-400">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-indigo-400/50" />
                     <p className="text-xs font-black uppercase tracking-[0.2em]">No records found matching criteria</p>
                   </div>
                 ) : (
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-border bg-muted/10">
-                        <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Student Name</th>
-                        <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course</th>
-                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Speed</th>
-                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Accuracy</th>
-                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
-                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mode</th>
+                      <tr className="border-b border-slate-800 bg-slate-950/90 text-slate-300">
+                        <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Student Name</th>
+                        <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Course</th>
+                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest">Speed</th>
+                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest">Accuracy</th>
+                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest">Date</th>
+                        <th className="text-center px-6 py-4 text-[10px] font-black uppercase tracking-widest">Mode</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody className="divide-y divide-slate-800/80">
                       {filteredReports.map((report) => (
-                        <tr key={report._id} className="hover:bg-muted/20 transition-colors group">
+                        <tr key={report._id} className="hover:bg-slate-900/50 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-primary/10 flex items-center justify-center font-black text-primary text-xs border border-primary/20">
+                              <div className="w-8 h-8 bg-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-xs border border-indigo-500/30 rounded-full">
                                 {report.student_name[0].toUpperCase()}
                               </div>
-                              <span className="font-black uppercase text-xs tracking-tight">{report.student_name}</span>
+                              <span className="font-black uppercase text-xs tracking-tight text-white">{report.student_name}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{report.course_name || "N/A"}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{report.course_name || "N/A"}</span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className={cn(
-                              "px-3 py-1 font-black text-xs rounded-none border inline-flex items-center gap-1 shadow-sm group-hover:shadow-md transition-all",
-                              report.wpm > 40 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                              report.wpm > 25 ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                              "bg-destructive/10 text-destructive border-destructive/20"
+                              "px-3 py-1 font-black text-xs rounded-xl border inline-flex items-center gap-1 shadow-sm group-hover:shadow-md transition-all",
+                              report.wpm > 40 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" :
+                              report.wpm > 25 ? "bg-amber-500/20 text-amber-300 border-amber-500/40" :
+                              "bg-rose-500/20 text-rose-300 border-rose-500/40"
                             )}>
                               {Math.round(report.wpm)} <span className="text-[8px]">WPM</span>
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="font-black text-xs text-foreground">{Math.round(report.accuracy)}%</span>
+                            <span className="font-black text-xs text-white">{Math.round(report.accuracy)}%</span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tight">
+                            <span className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-tight">
                               {format(new Date(report.created_at), "dd MMM yyyy")}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-muted border border-border group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
+                            <span className="text-[8px] font-black uppercase tracking-widest px-3 py-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-full">
                               {report.mode}
                             </span>
                           </td>
@@ -198,15 +210,23 @@ const CenterTypingReportsPage = () => {
   );
 };
 
-const StatBox = ({ label, value, icon: Icon, color }: { label: string, value: string, icon: any, color: string }) => (
-  <Card className="rounded-none border-border shadow-md">
-    <CardContent className="p-6 flex items-center justify-between">
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{label}</p>
-        <p className="text-2xl font-black text-foreground">{value}</p>
+const StatBox = ({ label, value, icon: Icon, color, progress = 75 }: { label: string, value: string, icon: any, color: string, progress?: number }) => (
+  <Card className="rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl shadow-xl overflow-hidden group hover:border-slate-700 transition-all">
+    <CardContent className="p-6 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+        <div className={cn("w-10 h-10 bg-slate-800 flex items-center justify-center border border-slate-700 rounded-xl group-hover:scale-110 transition-transform", color)}>
+          <Icon className="w-5 h-5" />
+        </div>
       </div>
-      <div className={cn("w-10 h-10 bg-muted flex items-center justify-center border border-border", color)}>
-        <Icon className="w-5 h-5" />
+      <div>
+        <p className="text-2xl font-black text-white">{value}</p>
+        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2 p-0.5 border border-slate-700/50">
+          <div 
+            className={cn("h-full rounded-full transition-all duration-700", color.includes("emerald") ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : color.includes("amber") ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : color.includes("blue") ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-primary shadow-[0_0_8px_rgba(99,102,241,0.5)]")} 
+            style={{ width: `${Math.max(10, Math.min(100, progress))}%` }}
+          />
+        </div>
       </div>
     </CardContent>
   </Card>

@@ -1626,10 +1626,14 @@ pub async fn get_typing_analytics(
     let mut filter = params.clone();
     match claims.role {
         UserRole::Student => {
-            filter.insert("student_id", ObjectId::parse_str(&claims.sub).unwrap());
+            if let Ok(oid) = ObjectId::parse_str(&claims.sub) {
+                filter.insert("student_id", oid);
+            }
         },
         UserRole::Center => {
-            filter.insert("center_id", ObjectId::parse_str(&claims.sub).unwrap());
+            if let Ok(oid) = ObjectId::parse_str(&claims.sub) {
+                filter.insert("center_id", oid);
+            }
         },
         UserRole::Admin | UserRole::SuperAdmin => {},
         _ => return (StatusCode::FORBIDDEN, Json(vec![])),

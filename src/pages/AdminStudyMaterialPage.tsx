@@ -275,68 +275,86 @@ const AdminStudyMaterialPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6 pb-12">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl">
-                <Layers className="w-5 h-5" />
-              </span>
-              <h1 className="text-2xl font-bold text-foreground">Study Material Explorer</h1>
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16 relative">
+        {/* Ambient background glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+        {/* Page Header Banner */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+              <Layers className="w-7 h-7" />
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Organize curriculum resources by Class (e.g. 10th Class), Media Type, Subject, and Chapters.
-            </p>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading font-black text-2xl md:text-3xl text-white uppercase tracking-tight">
+                  Study Material Explorer
+                </h1>
+                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                  {materials.length} Resources
+                </span>
+              </div>
+              <p className="text-slate-400 mt-1 text-xs md:text-sm font-medium">
+                Organize curriculum resources by Class level, Media Type, Subject, and Chapters.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-muted p-1 rounded-xl border">
-              <Button
-                variant={viewMode === "tree" ? "default" : "ghost"}
-                size="sm"
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+              <button
                 onClick={() => setViewMode("tree")}
-                className="gap-1.5 h-8"
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all",
+                  viewMode === "tree"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/25"
+                    : "text-slate-400 hover:text-white"
+                )}
               >
                 <ListTree className="w-4 h-4" />
                 Folder Hierarchy
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setViewMode("grid")}
-                className="gap-1.5 h-8"
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all",
+                  viewMode === "grid"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/25"
+                    : "text-slate-400 hover:text-white"
+                )}
               >
                 <LayoutGrid className="w-4 h-4" />
                 Grid View
-              </Button>
+              </button>
             </div>
 
             <Dialog open={isAdding} onOpenChange={setIsAdding}>
               <DialogTrigger asChild>
-                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow">
+                <button className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all transform active:scale-95">
                   <Plus className="w-4 h-4" /> Add Material
-                </Button>
+                </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[550px]">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                    <Sparkles className="w-5 h-5 text-blue-600" />
+              <DialogContent className="rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8 sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="border-b border-slate-800/80 pb-4">
+                  <DialogTitle className="font-heading font-black text-xl text-white uppercase tracking-tight flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
                     Upload Study Material
                   </DialogTitle>
-                  <DialogDescription>
-                    Fill in the hierarchy details (Class ➡️ Media ➡️ Subject ➡️ Chapter) and upload your file.
+                  <DialogDescription className="text-xs text-slate-400">
+                    Fill in hierarchy details (Class ➡️ Media ➡️ Subject ➡️ Chapter) and upload resource files.
                   </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Class / Course Level *</Label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Class / Level *</label>
                       <select
                         value={form.class_level}
                         onChange={(e) => setForm({ ...form, class_level: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                       >
                         {DEFAULT_CLASSES.map((c) => (
                           <option key={c} value={c}>
@@ -346,12 +364,12 @@ const AdminStudyMaterialPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Media Type *</Label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Media Type *</label>
                       <select
                         value={form.media_type}
                         onChange={(e) => setForm({ ...form, media_type: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                       >
                         <option value="book">Book / PDF Notes 📖</option>
                         <option value="video">Video Lecture 🎥</option>
@@ -360,13 +378,13 @@ const AdminStudyMaterialPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Subject *</Label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Subject *</label>
                       <select
                         required
                         value={form.subject_id}
                         onChange={(e) => setForm({ ...form, subject_id: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                       >
                         <option value="">Select Subject</option>
                         {subjects.map((s) => (
@@ -377,40 +395,40 @@ const AdminStudyMaterialPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold">Chapter / Unit Name</Label>
-                      <Input
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Chapter / Unit</label>
+                      <input
                         value={form.chapter_name}
                         onChange={(e) => setForm({ ...form, chapter_name: e.target.value })}
                         placeholder="e.g. Chapter 1: Introduction"
-                        className="h-9"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Material Title *</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Material Title *</label>
+                    <input
                       required
                       value={form.title}
                       onChange={(e) => setForm({ ...form, title: e.target.value })}
                       placeholder="e.g. Class 10th Mathematics Formulas & Notes"
-                      className="h-9"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Description / Notes</Label>
-                    <Textarea
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Description / Summary</label>
+                    <textarea
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      placeholder="Brief details about topics covered in this material..."
-                      rows={2}
+                      placeholder="Brief details about topics covered in this resource..."
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all min-h-[80px]"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">File / Video Resource *</Label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">File / Video Resource *</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="file"
@@ -420,37 +438,37 @@ const AdminStudyMaterialPage: React.FC = () => {
                       />
                       <label
                         htmlFor="material-upload"
-                        className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-input rounded-xl p-3 cursor-pointer hover:border-blue-500 hover:bg-blue-50/20 transition-all text-xs text-muted-foreground font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 border-2 border-dashed border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-indigo-500 hover:bg-slate-900/60 transition-all text-xs text-slate-400 font-bold uppercase tracking-wider"
                       >
                         {uploading ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                          <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
                         ) : (
-                          <Upload className="w-4 h-4 text-blue-600" />
+                          <Upload className="w-4 h-4 text-indigo-400" />
                         )}
-                        <span>{form.file_url ? `Uploaded: ${form.file_url.split("/").pop()}` : "Upload File (PDF/Docs)"}</span>
+                        <span>{form.file_url ? `Uploaded: ${form.file_url.split("/").pop()}` : "Upload PDF/Docs File"}</span>
                       </label>
                     </div>
 
-                    <div className="pt-1">
-                      <Label className="text-[11px] text-muted-foreground">Or direct URL (YouTube, Vimeo, Cloud Storage):</Label>
-                      <Input
+                    <div className="pt-2">
+                      <label className="text-[11px] text-slate-400 block mb-1">Or Direct Resource URL (YouTube, Cloud Storage):</label>
+                      <input
                         value={form.file_url}
                         onChange={(e) => setForm({ ...form, file_url: e.target.value })}
                         placeholder="https://..."
-                        className="h-8 text-xs mt-1"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                       />
                     </div>
                   </div>
 
-                  <DialogFooter className="pt-3">
-                    <Button
+                  <DialogFooter className="pt-4 border-t border-slate-800/80">
+                    <button
                       type="submit"
                       disabled={saving || uploading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all"
                     >
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileText className="w-4 h-4 mr-2" />}
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                       Save Study Material
-                    </Button>
+                    </button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -458,62 +476,65 @@ const AdminStudyMaterialPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <Card className="shadow-sm border">
-          <CardContent className="p-4 flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Input
-                placeholder="Search by title, subject, chapter..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9"
-              />
-            </div>
-            <div className="w-48">
-              <select
-                value={filterClass}
-                onChange={(e) => setFilterClass(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm"
-              >
-                <option value="all">All Classes / Levels</option>
-                {DEFAULT_CLASSES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-40">
-              <select
-                value={filterMedia}
-                onChange={(e) => setFilterMedia(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm"
-              >
-                <option value="all">All Media Types</option>
-                <option value="book">Books / PDFs 📖</option>
-                <option value="video">Videos 🎥</option>
-              </select>
-            </div>
-            <Badge variant="outline" className="px-3 py-1 text-xs">
-              {filteredMaterials.length} Resources
-            </Badge>
-          </CardContent>
-        </Card>
+        {/* Filter Bar Card */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-5 shadow-2xl flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <input
+              placeholder="Search by title, subject, chapter..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+            />
+          </div>
+          <div className="w-56">
+            <select
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs font-bold text-slate-200 uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+            >
+              <option value="all">All Classes / Levels</option>
+              {DEFAULT_CLASSES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="w-44">
+            <select
+              value={filterMedia}
+              onChange={(e) => setFilterMedia(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs font-bold text-slate-200 uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+            >
+              <option value="all">All Media Types</option>
+              <option value="book">Books / PDFs 📖</option>
+              <option value="video">Videos 🎥</option>
+            </select>
+          </div>
+          <span className="px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-bold text-xs">
+            {filteredMaterials.length} Resources
+          </span>
+        </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Study Materials...</p>
           </div>
         ) : filteredMaterials.length === 0 ? (
-          <Card className="border-dashed border-2 py-16 text-center">
-            <CardContent className="flex flex-col items-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground/30 mb-3" />
-              <h3 className="text-lg font-bold text-foreground">No Materials Found</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                No study resources match the selected filters. Click "Add Material" to upload the first file.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center text-center">
+            <BookOpen className="w-12 h-12 text-slate-600 mb-4 opacity-40" />
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">No Materials Found</h3>
+            <p className="text-slate-400 text-xs max-w-sm mt-1 mb-6">
+              No study resources match the selected filters. Click "Add Material" to upload the first file.
+            </p>
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Material
+            </button>
+          </div>
         ) : viewMode === "tree" ? (
           /* Tree / Folder Hierarchy View */
           <div className="space-y-4">
@@ -533,64 +554,64 @@ const AdminStudyMaterialPage: React.FC = () => {
               return (
                 <div
                   key={className}
-                  className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all"
+                  className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl overflow-hidden shadow-2xl transition-all"
                 >
                   {/* Level 1: Class Header */}
                   <div
                     onClick={() => toggleExpand(setExpandedClasses, className)}
-                    className="flex items-center justify-between p-4 cursor-pointer bg-slate-50/80 dark:bg-slate-900/50 hover:bg-slate-100/80 transition-all select-none border-b"
+                    className="flex items-center justify-between p-5 cursor-pointer bg-slate-950/60 hover:bg-slate-950/80 transition-all select-none border-b border-slate-800/80"
                   >
                     <div className="flex items-center gap-3">
                       {isClassExpanded ? (
-                        <FolderOpen className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950" />
+                        <FolderOpen className="w-6 h-6 text-amber-400 fill-amber-400/20" />
                       ) : (
-                        <Folder className="w-5 h-5 text-amber-500 fill-amber-100 dark:fill-amber-950" />
+                        <Folder className="w-6 h-6 text-amber-400 fill-amber-400/20" />
                       )}
-                      <span className="font-bold text-base text-foreground">{className}</span>
+                      <span className="font-heading font-black text-lg text-white uppercase tracking-tight">{className}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs font-semibold">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                         {totalInClass} {totalInClass === 1 ? "Item" : "Items"}
-                      </Badge>
+                      </span>
                       <ChevronRight
                         className={cn(
-                          "w-4 h-4 text-muted-foreground transition-transform duration-200",
-                          isClassExpanded && "rotate-90"
+                          "w-5 h-5 text-slate-400 transition-transform duration-200",
+                          isClassExpanded && "rotate-90 text-indigo-400"
                         )}
                       />
                     </div>
                   </div>
 
-                  {/* Level 2: Media Type (Books vs Videos) */}
+                  {/* Level 2: Media Type */}
                   {isClassExpanded && (
-                    <div className="p-4 space-y-3 pl-6">
+                    <div className="p-6 space-y-4 pl-8">
                       {Object.entries(mediaMap).map(([mediaType, subjectMap]) => {
                         const mediaKey = `${className}-${mediaType}`;
                         const isMediaExpanded = expandedMedia[mediaKey] ?? true;
 
                         return (
-                          <div key={mediaKey} className="border-l-2 border-blue-200 dark:border-blue-900 pl-4 space-y-3">
+                          <div key={mediaKey} className="border-l-2 border-indigo-500/30 pl-5 space-y-4">
                             <div
                               onClick={() => toggleExpand(setExpandedMedia, mediaKey)}
-                              className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-foreground hover:text-blue-600 transition-colors select-none"
+                              className="flex items-center gap-2.5 cursor-pointer text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors select-none"
                             >
                               <ChevronRight
                                 className={cn(
-                                  "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                                  isMediaExpanded && "rotate-90"
+                                  "w-4 h-4 text-slate-500 transition-transform",
+                                  isMediaExpanded && "rotate-90 text-indigo-400"
                                 )}
                               />
                               {mediaType.includes("Video") ? (
-                                <Video className="w-4 h-4 text-purple-600" />
+                                <Video className="w-4 h-4 text-purple-400" />
                               ) : (
-                                <Book className="w-4 h-4 text-emerald-600" />
+                                <Book className="w-4 h-4 text-emerald-400" />
                               )}
-                              <span>{mediaType}</span>
+                              <span className="uppercase tracking-wider text-xs">{mediaType}</span>
                             </div>
 
                             {/* Level 3: Subject */}
                             {isMediaExpanded && (
-                              <div className="pl-4 space-y-3">
+                              <div className="pl-5 space-y-4">
                                 {Object.entries(subjectMap).map(([subjectName, chapterMap]) => {
                                   const subjKey = `${mediaKey}-${subjectName}`;
                                   const isSubjExpanded = expandedSubjects[subjKey] ?? true;
@@ -598,60 +619,62 @@ const AdminStudyMaterialPage: React.FC = () => {
                                   return (
                                     <div
                                       key={subjKey}
-                                      className="border rounded-xl p-3 bg-muted/20 space-y-2"
+                                      className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-3"
                                     >
                                       <div
                                         onClick={() => toggleExpand(setExpandedSubjects, subjKey)}
                                         className="flex items-center justify-between cursor-pointer select-none"
                                       >
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2.5">
                                           <ChevronRight
                                             className={cn(
-                                              "w-3.5 h-3.5 text-muted-foreground transition-transform",
-                                              isSubjExpanded && "rotate-90"
+                                              "w-4 h-4 text-slate-500 transition-transform",
+                                              isSubjExpanded && "rotate-90 text-indigo-400"
                                             )}
                                           />
-                                          <BookOpen className="w-4 h-4 text-blue-500" />
-                                          <span className="font-semibold text-sm text-foreground">
+                                          <BookOpen className="w-4 h-4 text-indigo-400" />
+                                          <span className="font-bold text-sm text-white uppercase tracking-tight">
                                             {subjectName}
                                           </span>
                                         </div>
                                       </div>
 
-                                      {/* Level 4: Chapter & Level 5: Material Items */}
+                                      {/* Level 4: Chapter */}
                                       {isSubjExpanded && (
-                                        <div className="pl-5 pt-2 space-y-3">
+                                        <div className="pl-6 pt-2 space-y-4">
                                           {Object.entries(chapterMap).map(([chapterName, items]) => (
-                                            <div key={chapterName} className="space-y-1.5">
-                                              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                            <div key={chapterName} className="space-y-2">
+                                              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                                                 {chapterName} ({items.length})
                                               </div>
 
-                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                                                 {items.map((item) => (
                                                   <div
                                                     key={item.id}
-                                                    className="flex items-center justify-between p-3 rounded-lg border bg-background hover:border-blue-400 dark:hover:border-blue-700 transition-all text-xs"
+                                                    className="flex items-center justify-between p-4 rounded-xl border border-slate-800/80 bg-slate-900/90 hover:border-indigo-500/50 transition-all"
                                                   >
-                                                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                                      <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                                                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                                                      <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                                                        <FileText className="w-4 h-4" />
+                                                      </div>
                                                       <div className="truncate">
-                                                        <div className="font-semibold text-foreground truncate">
+                                                        <div className="font-bold text-white text-xs truncate uppercase tracking-tight">
                                                           {item.title}
                                                         </div>
-                                                        <div className="text-[10px] text-muted-foreground truncate">
-                                                          {item.description || "Resource file"}
+                                                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                                          {item.description || "Resource document file"}
                                                         </div>
                                                       </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                    <div className="flex items-center gap-2 shrink-0">
                                                       <a
                                                         href={item.file_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="p-1.5 rounded-md hover:bg-muted text-blue-600 transition-colors"
+                                                        className="p-2 rounded-xl bg-slate-800 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-slate-300 transition-all"
                                                         title="Download / View Resource"
                                                       >
                                                         {item.media_type === "video" ? (
@@ -663,7 +686,7 @@ const AdminStudyMaterialPage: React.FC = () => {
                                                       <button
                                                         onClick={() => handleDelete(item.id)}
                                                         disabled={deletingId === item.id}
-                                                        className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+                                                        className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 border border-slate-700/60 text-slate-300 transition-all disabled:opacity-50"
                                                         title="Delete"
                                                       >
                                                         <Trash2 className="w-3.5 h-3.5" />
@@ -692,65 +715,71 @@ const AdminStudyMaterialPage: React.FC = () => {
           </div>
         ) : (
           /* Grid View */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMaterials.map((m) => (
-              <Card key={m.id} className="hover:border-blue-500 transition-all flex flex-col">
-                <CardHeader className="pb-3 border-b flex flex-row items-start justify-between space-y-0">
-                  <div>
-                    <Badge variant="outline" className="mb-2 text-[10px] font-semibold">
+              <div
+                key={m.id}
+                className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl p-6 shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group flex flex-col justify-between space-y-4"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
                       {m.class_level || "General"}
-                    </Badge>
-                    <CardTitle className="text-base font-bold leading-snug">{m.title}</CardTitle>
-                  </div>
-                  {m.media_type === "video" ? (
-                    <span className="p-2 bg-purple-50 text-purple-600 rounded-lg shrink-0">
-                      <Video className="w-4 h-4" />
                     </span>
-                  ) : (
-                    <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
-                      <Book className="w-4 h-4" />
-                    </span>
-                  )}
-                </CardHeader>
-                <CardContent className="p-4 flex-1 flex flex-col justify-between text-xs space-y-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Subject:</span>
-                      <span className="font-semibold text-foreground">{getSubjectName(m.subject_id)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Chapter:</span>
-                      <span className="font-semibold text-foreground">{m.chapter_name || "General"}</span>
-                    </div>
-                    {m.description && (
-                      <p className="text-muted-foreground line-clamp-2 pt-1 border-t">{m.description}</p>
+                    {m.media_type === "video" ? (
+                      <span className="p-2 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-xl">
+                        <Video className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <span className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl">
+                        <Book className="w-4 h-4" />
+                      </span>
                     )}
                   </div>
+                  <h3 className="font-heading font-black text-base text-white group-hover:text-indigo-300 transition-colors uppercase tracking-tight">
+                    {m.title}
+                  </h3>
+                </div>
 
-                  <div className="pt-3 border-t flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">
-                      {format(new Date(m.created_at), "dd MMM yyyy")}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <a
-                        href={m.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg border hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                      <button
-                        onClick={() => handleDelete(m.id)}
-                        disabled={deletingId === m.id}
-                        className="p-1.5 rounded-lg border hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 text-xs space-y-2">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Subject:</span>
+                    <span className="font-bold text-white uppercase">{getSubjectName(m.subject_id)}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Chapter:</span>
+                    <span className="font-bold text-white uppercase">{m.chapter_name || "General"}</span>
+                  </div>
+                  {m.description && (
+                    <p className="text-slate-400 text-xs line-clamp-2 pt-2 border-t border-slate-800">
+                      {m.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-slate-400">
+                    {format(new Date(m.created_at), "dd MMM yyyy")}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={m.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-slate-300 transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      disabled={deletingId === m.id}
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 border border-slate-700/60 text-slate-300 transition-all disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}

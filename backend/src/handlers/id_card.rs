@@ -1083,17 +1083,22 @@ pub async fn generate_student_id_card(
     let pdf_filename = format!("id-card-{}-{}.pdf", name_slug, timestamp);
     let pdf_path = temp_dir.join(&pdf_filename);
 
-    // Try multiple possible chromium paths
+    // Try multiple possible chromium/edge paths
     let chromium_paths = [
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        "msedge.exe",
+        "chrome.exe",
+        "msedge",
+        "chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
         "/usr/bin/chromium",
         "/snap/bin/chromium",
         "google-chrome-stable",
-        "google-chrome",
-        "chromium-browser",
-        "chromium",
     ];
 
     let mut pdf_generated = false;
@@ -1177,15 +1182,30 @@ pub async fn generate_student_id_card(
                 .into_response()
         } else {
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to read generated PDF".to_string(),
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                    (
+                        header::CONTENT_DISPOSITION,
+                        "inline; filename=\"id-card.html\"",
+                    ),
+                ],
+                html.into_bytes(),
             )
                 .into_response()
         }
     } else {
+        // Fallback to returning printable HTML directly so browser can view and print/save PDF
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("PDF generation failed: {}", last_error),
+            StatusCode::OK,
+            [
+                (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                (
+                    header::CONTENT_DISPOSITION,
+                    "inline; filename=\"id-card.html\"",
+                ),
+            ],
+            html.into_bytes(),
         )
             .into_response()
     }

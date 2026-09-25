@@ -20,7 +20,44 @@ pub struct QbMsg {
 }
 
 fn admin_ok(role: &UserRole) -> bool {
-    matches!(role, UserRole::Admin | UserRole::SuperAdmin)
+    matches!(
+        role,
+        UserRole::Admin | UserRole::SuperAdmin | UserRole::Center | UserRole::Staff
+    )
+}
+
+fn clean_bson_doc_to_json(doc: &mongodb::bson::Document) -> serde_json::Value {
+    let mut json_val = serde_json::to_value(doc).unwrap_or_default();
+    if let Some(obj) = json_val.as_object_mut() {
+        let keys: Vec<String> = obj.keys().cloned().collect();
+        for key in keys {
+            if let Some(val) = obj.get(&key) {
+                if let Some(oid_str) = val.get("$oid").and_then(|v| v.as_str()) {
+                    obj.insert(key, serde_json::Value::String(oid_str.to_string()));
+                }
+            }
+        }
+    }
+    json_val
+}
+
+fn extract_oid(doc: &mongodb::bson::Document, key: &str) -> Option<ObjectId> {
+    if let Ok(oid) = doc.get_object_id(key) {
+        return Some(oid);
+    }
+    if let Ok(s) = doc.get_str(key) {
+        if let Ok(oid) = ObjectId::parse_str(s.trim()) {
+            return Some(oid);
+        }
+    }
+    if let Ok(sub_doc) = doc.get_document(key) {
+        if let Ok(s) = sub_doc.get_str("$oid") {
+            if let Ok(oid) = ObjectId::parse_str(s.trim()) {
+                return Some(oid);
+            }
+        }
+    }
+    None
 }
 
 // --- Bank Handlers ---
@@ -42,10 +79,19 @@ pub async fn list_banks(
         if let Ok(mut doc) = res {
             // Get the bank's _id
             if let Some(bank_oid) = doc.get_object_id("_id").ok() {
-                // Count the number of questions for this bank
+                let bank_hex = bank_oid.to_hex();
+                // Count the number of questions for this bank (handling ObjectId or String)
                 let q_coll = db.collection::<mongodb::bson::Document>("qb_questions");
                 let count = match q_coll
-                    .count_documents(doc! { "bank_id": bank_oid }, None)
+                    .count_documents(
+                        doc! {
+                            "$or": [
+                                { "bank_id": bank_oid },
+                                { "bank_id": &bank_hex }
+                            ]
+                        },
+                        None,
+                    )
                     .await
                 {
                     Ok(c) => c as i64,
@@ -299,33 +345,30 @@ pub async fn list_bank_questions(
     _claims: Claims,
     Path(bank_id): Path<String>,
 ) -> (StatusCode, Json<Vec<serde_json::Value>>) {
-    let bid = match ObjectId::parse_str(&bank_id) {
-        Ok(o) => o,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(vec![])),
+    let bank_str = bank_id.trim().to_string();
+    let filter = if let Ok(bid) = ObjectId::parse_str(&bank_str) {
+        doc! {
+            "$or": [
+                { "bank_id": bid },
+                { "bank_id": &bank_str }
+            ]
+        }
+    } else {
+        doc! { "bank_id": &bank_str }
     };
+
     let coll = db.collection::<mongodb::bson::Document>("qb_questions");
     let find_opts = FindOptions::builder()
         .sort(doc! { "created_at": 1 })
         .build();
-    let mut cur = match coll.find(doc! { "bank_id": bid }, find_opts).await {
+    let mut cur = match coll.find(filter, find_opts).await {
         Ok(c) => c,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
     };
     let mut v = Vec::new();
     while let Some(res) = cur.next().await {
         if let Ok(doc) = res {
-            let mut json_val = serde_json::to_value(&doc).unwrap();
-            if let Some(obj) = json_val.as_object_mut() {
-                if let Some(id_val) = obj.get("_id") {
-                    if let Some(oid_str) = id_val.get("$oid").and_then(|v| v.as_str()) {
-                        obj.insert(
-                            "_id".to_string(),
-                            serde_json::Value::String(oid_str.to_string()),
-                        );
-                    }
-                }
-            }
-            v.push(json_val);
+            v.push(clean_bson_doc_to_json(&doc));
         }
     }
     (StatusCode::OK, Json(v))
@@ -347,20 +390,7 @@ pub async fn get_question(
     };
     let coll = db.collection::<mongodb::bson::Document>("qb_questions");
     match coll.find_one(doc! { "_id": oid }, None).await {
-        Ok(Some(doc)) => {
-            let mut json_val = serde_json::to_value(&doc).unwrap();
-            if let Some(obj) = json_val.as_object_mut() {
-                if let Some(id_val) = obj.get("_id") {
-                    if let Some(oid_str) = id_val.get("$oid").and_then(|v| v.as_str()) {
-                        obj.insert(
-                            "_id".to_string(),
-                            serde_json::Value::String(oid_str.to_string()),
-                        );
-                    }
-                }
-            }
-            (StatusCode::OK, Json(json_val))
-        }
+        Ok(Some(doc)) => (StatusCode::OK, Json(clean_bson_doc_to_json(&doc))),
         _ => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "message": "Not found" })),
@@ -396,26 +426,21 @@ pub async fn create_question(
         }
     };
 
-    if let Some(bid_str) = doc.get_str("bank_id").ok() {
-        if let Ok(bid) = ObjectId::parse_str(bid_str) {
-            doc.insert("bank_id", bid);
+    if let Some(bid) = extract_oid(&doc, "bank_id") {
+        doc.insert("bank_id", bid);
+    } else if let Ok(s) = doc.get_str("bank_id") {
+        let trimmed = s.trim().to_string();
+        if !trimmed.is_empty() {
+            doc.insert("bank_id", trimmed);
         } else {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(QbMsg {
                     success: false,
-                    message: "Invalid bank_id format".into(),
+                    message: "Missing bank_id".into(),
                 }),
             );
         }
-    } else {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(QbMsg {
-                success: false,
-                message: "Missing bank_id".into(),
-            }),
-        );
     }
 
     doc.remove("_id");
@@ -436,7 +461,7 @@ pub async fn create_question(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(QbMsg {
                     success: false,
-                    message: "Failed to create question".into(),
+                    message: format!("Failed to create question: {}", e),
                 }),
             )
         }
@@ -484,10 +509,8 @@ pub async fn update_question(
         }
     };
 
-    if let Some(bid_str) = doc.get_str("bank_id").ok() {
-        if let Ok(bid) = ObjectId::parse_str(bid_str) {
-            doc.insert("bank_id", bid);
-        }
+    if let Some(bid) = extract_oid(&doc, "bank_id") {
+        doc.insert("bank_id", bid);
     }
 
     doc.remove("_id");
@@ -557,3 +580,227 @@ pub async fn delete_question(
         ),
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BulkItemsPayload {
+    pub bank_id: Option<String>,
+    pub items: Vec<serde_json::Value>,
+}
+
+pub async fn bulk_create_questions(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<BulkItemsPayload>,
+) -> (StatusCode, Json<QbMsg>) {
+    if claims.role != UserRole::Admin
+        && claims.role != UserRole::SuperAdmin
+        && claims.role != UserRole::Center
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(QbMsg {
+                success: false,
+                message: "Unauthorized".into(),
+            }),
+        );
+    }
+
+    let coll = db.collection::<mongodb::bson::Document>("qb_questions");
+    let bank_coll = db.collection::<mongodb::bson::Document>("qb_banks");
+    let mut docs = Vec::new();
+    let now = DateTime::now();
+
+    let global_bank_oid = payload
+        .bank_id
+        .as_ref()
+        .and_then(|s| ObjectId::parse_str(s.trim()).ok());
+
+    for mut item in payload.items {
+        if let Some(obj) = item.as_object_mut() {
+            let q_text = obj
+                .get("question_text")
+                .or_else(|| obj.get("question"))
+                .or_else(|| obj.get("question_name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+
+            if q_text.is_empty() {
+                continue;
+            }
+
+            let opt_a = obj
+                .get("option_a")
+                .or_else(|| obj.get("option1"))
+                .or_else(|| obj.get("option_1"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let opt_b = obj
+                .get("option_b")
+                .or_else(|| obj.get("option2"))
+                .or_else(|| obj.get("option_2"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let opt_c = obj
+                .get("option_c")
+                .or_else(|| obj.get("option3"))
+                .or_else(|| obj.get("option_3"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let opt_d = obj
+                .get("option_d")
+                .or_else(|| obj.get("option4"))
+                .or_else(|| obj.get("option_4"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim()
+                .to_string();
+
+            let raw_correct = obj
+                .get("correct_option")
+                .or_else(|| obj.get("correct_answer"))
+                .or_else(|| obj.get("answer"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("a")
+                .trim()
+                .to_lowercase();
+
+            let correct = match raw_correct.as_str() {
+                "a" | "option a" | "option_a" | "1" => "a".to_string(),
+                "b" | "option b" | "option_b" | "2" => "b".to_string(),
+                "c" | "option c" | "option_c" | "3" => "c".to_string(),
+                "d" | "option d" | "option_d" | "4" => "d".to_string(),
+                _ => "a".to_string(),
+            };
+
+            let diff = obj
+                .get("difficulty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium")
+                .trim()
+                .to_string();
+
+            let marks_num: i32 = obj
+                .get("marks")
+                .and_then(|v| {
+                    v.as_str()
+                        .and_then(|s| s.parse().ok())
+                        .or_else(|| v.as_i64().map(|n| n as i32))
+                })
+                .unwrap_or(1);
+
+            let explanation = obj
+                .get("explanation")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let correct_idx = match correct.as_str() {
+                "a" => 0,
+                "b" => 1,
+                "c" => 2,
+                "d" => 3,
+                _ => 0,
+            };
+
+            let mut options_strings = vec![];
+            let mut options_formatted = vec![];
+            if !opt_a.is_empty() {
+                options_strings.push(opt_a.clone());
+                options_formatted.push(doc! { "key": "a", "text": opt_a });
+            }
+            if !opt_b.is_empty() {
+                options_strings.push(opt_b.clone());
+                options_formatted.push(doc! { "key": "b", "text": opt_b });
+            }
+            if !opt_c.is_empty() {
+                options_strings.push(opt_c.clone());
+                options_formatted.push(doc! { "key": "c", "text": opt_c });
+            }
+            if !opt_d.is_empty() {
+                options_strings.push(opt_d.clone());
+                options_formatted.push(doc! { "key": "d", "text": opt_d });
+            }
+
+            let bank_id_str = obj
+                .get("bank_id")
+                .or_else(|| obj.get("bank"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            let mut bank_oid = ObjectId::parse_str(bank_id_str).ok().or(global_bank_oid);
+
+            if bank_oid.is_none() && !bank_id_str.is_empty() {
+                if let Ok(Some(b)) = bank_coll
+                    .find_one(
+                        doc! { "name": { "$regex": bank_id_str, "$options": "i" } },
+                        None,
+                    )
+                    .await
+                {
+                    bank_oid = b.get_object_id("_id").ok();
+                }
+            }
+
+            if bank_oid.is_none() {
+                if let Ok(Some(b)) = bank_coll.find_one(doc! {}, None).await {
+                    bank_oid = b.get_object_id("_id").ok();
+                }
+            }
+
+            let mut d = doc! {
+                "question_text": q_text,
+                "options": options_strings,
+                "formatted_options": options_formatted,
+                "correct_option": correct,
+                "correct_option_index": correct_idx,
+                "difficulty": diff.to_lowercase(),
+                "marks": marks_num,
+                "explanation": explanation,
+                "created_at": now,
+            };
+            if let Some(boid) = bank_oid {
+                d.insert("bank_id", boid);
+            } else if !bank_id_str.is_empty() {
+                d.insert("bank_id", bank_id_str);
+            }
+            docs.push(d);
+        }
+    }
+
+    if docs.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(QbMsg {
+                success: false,
+                message: "No valid questions provided".into(),
+            }),
+        );
+    }
+
+    let count = docs.len();
+    match coll.insert_many(docs, None).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(QbMsg {
+                success: true,
+                message: format!("Successfully imported {} questions!", count),
+            }),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(QbMsg {
+                success: false,
+                message: format!("Failed bulk insert: {}", e),
+            }),
+        ),
+    }
+}
+

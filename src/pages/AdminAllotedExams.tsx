@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Calendar, Clock, BookOpen, FileText, CalendarClock, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, Plus, Calendar, Clock, BookOpen, FileText, CalendarClock, AlertCircle, Ticket } from 'lucide-react';
 import { formatISTDate, formatISTTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -153,8 +153,28 @@ const AdminAllotedExams: React.FC = () => {
   const [postponeCustomDate, setPostponeCustomDate] = useState<string>('');
   const [postponeReason, setPostponeReason] = useState<string>('');
   const [postponing, setPostponing] = useState(false);
+  const [purging, setPurging] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handlePurgeFakeData = async () => {
+    if (!window.confirm("Are you sure you want to purge all test/fake exam papers and allotment batches? This cannot be undone.")) return;
+    setPurging(true);
+    try {
+      const res = await apiFetch('/api/exam/purge-test-data', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Test exam data purged successfully!");
+        fetchData();
+      } else {
+        toast.error(data.message || "Failed to purge test exam data");
+      }
+    } catch {
+      toast.error("Error purging test exam data");
+    } finally {
+      setPurging(false);
+    }
+  };
 
   const handlePostponeSubmit = async () => {
     if (!postponeBatch) return;
@@ -508,25 +528,45 @@ const AdminAllotedExams: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Alloted Exams</h1>
-          <button
-            onClick={() => navigate('/dashboard/exams/allot')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Allot New Exam
-          </button>
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-xl">
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white flex items-center gap-3">
+              <CalendarClock className="w-7 h-7 text-blue-400" />
+              Alloted Examinations
+            </h1>
+            <p className="text-xs font-semibold text-slate-400 mt-1">
+              Active and past course exam allotments assigned across student batches
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePurgeFakeData}
+              disabled={purging}
+              className="flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-400 rounded-xl font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+              title="Purge all test exam papers and batches"
+            >
+              <Trash2 className="w-4 h-4" />
+              {purging ? "Purging..." : "Purge Test Data"}
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/exams/allot')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Allot New Exam
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Filter Bar */}
+        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-lg grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 backdrop-blur-md">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Category Filter</label>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-semibold focus:border-blue-500 outline-none"
             >
               <option value="all">All Categories</option>
               {categories.map((cat) => (
@@ -536,11 +576,11 @@ const AdminAllotedExams: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Course Filter</label>
             <select
               value={filterCourse}
               onChange={(e) => setFilterCourse(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-semibold focus:border-blue-500 outline-none"
             >
               <option value="all">All Courses</option>
               {courses.map((course) => (
@@ -550,33 +590,40 @@ const AdminAllotedExams: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Allotment Date</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Allotment Date</label>
             <input
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-semibold focus:border-blue-500 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Status Filter</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-semibold focus:border-blue-500 outline-none"
             >
-              <option value="all">All</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value="all">All Statuses</option>
+              <option value="Active">Active Window</option>
+              <option value="Inactive">Completed / Closed</option>
             </select>
           </div>
         </div>
 
-        {loading && <div className="text-center py-8 text-gray-500">Loading...</div>}
+        {loading && (
+          <div className="flex justify-center py-20">
+            <div className="flex flex-col items-center gap-3">
+              <Clock className="w-8 h-8 text-blue-500 animate-spin" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading exam allotments...</p>
+            </div>
+          </div>
+        )}
 
         {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBatches.map((batch) => {
               const course = getCourseById(batch.courseId);
               const categoryName = getCategoryNameFromCourse(batch.courseId);
@@ -584,141 +631,141 @@ const AdminAllotedExams: React.FC = () => {
               return (
                 <div
                   key={batch.id}
-                  className="bg-white rounded-lg shadow border border-gray-100 flex flex-col"
+                  className="bg-slate-900/90 rounded-2xl shadow-xl border border-slate-800 hover:border-blue-500/40 transition-all flex flex-col overflow-hidden group"
                 >
-                  <div className="p-4 flex-1">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="font-semibold text-lg text-gray-900 leading-tight">
-                        {course?.course_name || 'Unknown Course'}
-                      </h3>
+                  <div className="p-5 flex-1 space-y-4">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-extrabold text-base text-white leading-snug">
+                          {course?.course_name || 'Unknown Course'}
+                        </h3>
+                        {categoryName && (
+                          <span className="inline-block mt-1 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-md">
+                            {categoryName}
+                          </span>
+                        )}
+                      </div>
                       <span
-                        className={`shrink-0 ml-2 px-2 py-1 text-xs rounded-full font-medium ${
+                        className={`shrink-0 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full border ${
                           batch.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-600'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
                         }`}
                       >
-                        {batch.isActive ? 'Active' : 'Inactive'}
+                        {batch.isActive ? 'Active Window' : 'Closed'}
                       </span>
                     </div>
 
-                    {categoryName && (
-                      <span className="inline-block mb-3 px-2 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full">
-                        {categoryName}
-                      </span>
-                    )}
-
-                    <div className="space-y-2.5 text-sm">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <BookOpen className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-gray-500">Subjects:</span>
-                        <span className="font-medium ml-auto">{batch.subjectCount}</span>
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Subjects</p>
+                        <p className="font-black text-white text-sm mt-0.5">{batch.subjectCount} Modules</p>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-gray-500">Earliest Exam:</span>
-                        <span className="font-medium ml-auto">{batch.examDate}</span>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Total Papers</p>
+                        <p className="font-black text-blue-400 text-sm mt-0.5">{batch.papers.length} Enrolled</p>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Clock className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-gray-500">Earliest Start:</span>
-                        <span className="font-medium ml-auto">{batch.examTime}</span>
+                      <div className="col-span-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-slate-400">
+                        <span className="flex items-center gap-1.5 font-medium text-[11px]">
+                          <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                          {batch.examDate}
+                        </span>
+                        <span className="flex items-center gap-1.5 font-medium text-[11px]">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          {batch.examTime}
+                        </span>
                       </div>
                     </div>
 
                     {batch.subjects.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-400 border-t pt-3">
-                          <FileText className="w-3.5 h-3.5" />
-                          {batch.subjects.length > 1 ? 'Subject Exams' : 'Subject Exam'}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 border-t border-slate-800 pt-3">
+                          <span className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-blue-400" />
+                            {batch.subjects.length > 1 ? 'Subject Breakdown' : 'Subject Schedule'}
+                          </span>
+                          <span className="text-slate-500">{batch.subjects.length} Subjects</span>
                         </div>
-                        {batch.subjects.map((sb, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-md border border-blue-100 bg-blue-50/40 p-2.5 space-y-1.5"
-                          >
-                            <div className="font-semibold text-sm text-gray-800 leading-tight">
-                              {sb.subjectName}
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {batch.subjects.map((sb, idx) => (
+                            <div
+                              key={idx}
+                              className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-1.5 hover:border-slate-700 transition"
+                            >
+                              <div className="font-bold text-xs text-slate-200 truncate">
+                                {sb.subjectName}
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-900">
+                                <span>{sb.examDate} • {sb.examTime}</span>
+                                <span className="font-bold text-blue-400">{sb.durationMinutes ? `${sb.durationMinutes}m` : '60m'} ({sb.totalMarks || 100} Marks)</span>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-gray-400" />
-                                <span className="text-gray-500">Date:</span>
-                                <span className="font-semibold text-gray-700">{sb.examDate}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-gray-400" />
-                                <span className="text-gray-500">Time:</span>
-                                <span className="font-semibold text-gray-700">{sb.examTime}</span>
-                              </div>
-                              <div className="flex items-center gap-1 col-span-2">
-                                <Clock className="w-3 h-3 text-gray-400" />
-                                <span className="text-gray-500">Duration:</span>
-                                <span className={cn(
-                                  "font-semibold",
-                                  sb.durationMinutes ? "text-blue-700" : "text-amber-600"
-                                )}>
-                                  {sb.durationMinutes ?? "—"} min
-                                  {sb.durationMinutes === 60 && (
-                                    <span className="ml-1.5 text-[9px] text-amber-600 uppercase tracking-wide">
-                                      (check bp)
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                              {sb.totalMarks != null && (
-                                <div className="flex items-center gap-1 col-span-2">
-                                  <BookOpen className="w-3 h-3 text-gray-400" />
-                                  <span className="text-gray-500">Marks:</span>
-                                  <span className="font-semibold text-gray-700">{sb.totalMarks}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {batch.isActive && (
-                    <div className="border-t px-4 py-3 flex gap-2">
-                      <button
-                        onClick={() => {
-                          setPostponeBatch(batch);
-                          setPostponeDays(2);
-                          setPostponeMode('days');
-                          setPostponeCustomDate('');
-                          setPostponeReason('');
-                        }}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 font-medium"
-                      >
-                        <CalendarClock className="w-3.5 h-3.5" />
-                        Postpone
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(batch)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(batch)}
-                        disabled={deletingId === batch.id}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        {deletingId === batch.id ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </div>
-                  )}
+                  <div className="border-t border-slate-800 p-3 bg-slate-950/40 flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => window.open('/dashboard/exams/papers', '_blank')}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl font-bold transition"
+                    >
+                      <Ticket className="w-3.5 h-3.5" />
+                      Hall Tickets
+                    </button>
+                    <button
+                      onClick={() => window.open('/dashboard/exams/papers', '_blank')}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 rounded-xl font-bold transition"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                      Live CBT Monitor
+                    </button>
+                    <button
+                      onClick={() => window.open('/dashboard/exams/download-paper', '_blank')}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-xl font-bold transition"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Paper Sets
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPostponeBatch(batch);
+                        setPostponeDays(2);
+                        setPostponeMode('days');
+                        setPostponeCustomDate('');
+                        setPostponeReason('');
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl font-bold transition"
+                    >
+                      <CalendarClock className="w-3.5 h-3.5" />
+                      Postpone
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(batch)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl font-bold transition"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(batch)}
+                      disabled={deletingId === batch.id}
+                      className="p-2 text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold transition disabled:opacity-50"
+                      title="Delete Exam Allotment"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
 
             {filteredBatches.length === 0 && (
-              <div className="col-span-full text-center py-12 text-gray-500">
-                No alloted exams found
+              <div className="col-span-full bg-slate-900/80 border border-slate-800 rounded-2xl p-12 text-center space-y-3">
+                <AlertCircle className="w-10 h-10 text-slate-500 mx-auto" />
+                <p className="text-slate-300 font-bold text-sm">No Alloted Exams Found</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">No exam allotments match your selected filters. Click "Allot New Exam" to generate papers for students.</p>
               </div>
             )}
           </div>

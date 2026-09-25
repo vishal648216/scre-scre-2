@@ -48,7 +48,7 @@ const INDIAN_STATES: &[&str] = &[
 ];
 
 fn admin_ok(claims: &Claims) -> bool {
-    matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin)
+    matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin | UserRole::Center)
 }
 
 fn oid(s: &str) -> Result<ObjectId, ()> {

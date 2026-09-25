@@ -22,7 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, flattenBson } from "@/lib/api";
 
 interface Book {
   _id?: string;
@@ -41,8 +41,22 @@ interface ReadingStats {
   books_count: number;
 }
 
+interface MyIssue {
+  _id?: string;
+  id?: string;
+  book_title: string;
+  center_name?: string;
+  document_number?: string;
+  issue_date: string;
+  due_date: string;
+  status: string;
+  fine_amount?: number;
+  fine_paid?: boolean;
+}
+
 export default function StudentLibraryPage() {
   const [books, setBooks] = useState<Book[]>([]);
+  const [myIssues, setMyIssues] = useState<MyIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -68,8 +82,9 @@ export default function StudentLibraryPage() {
     try {
       setLoading(true);
       const res = await apiFetch("/api/library/books");
-      if (res && res.success) {
-        setBooks(res.data || []);
+      const data = await res.json();
+      if (data && (data.success || Array.isArray(data.data))) {
+        setBooks(flattenBson(data.data || []));
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to load library catalog");
@@ -81,10 +96,11 @@ export default function StudentLibraryPage() {
   const fetchStats = async () => {
     try {
       const res = await apiFetch("/api/library/reading/my-stats");
-      if (res && res.success && res.data) {
+      const data = await res.json();
+      if (data && data.success && data.data) {
         setStats({
-          total_minutes: res.data.total_minutes || 0,
-          books_count: res.data.books_count || 0,
+          total_minutes: data.data.total_minutes || 0,
+          books_count: data.data.books_count || 0,
         });
       }
     } catch (err) {
@@ -92,9 +108,22 @@ export default function StudentLibraryPage() {
     }
   };
 
+  const fetchMyIssues = async () => {
+    try {
+      const res = await apiFetch("/api/library/student/my-issues");
+      const data = await res.json();
+      if (data && (data.success || Array.isArray(data.data))) {
+        setMyIssues(flattenBson(data.data || []));
+      }
+    } catch (err) {
+      console.warn("Could not fetch my issued books:", err);
+    }
+  };
+
   useEffect(() => {
     fetchBooks();
     fetchStats();
+    fetchMyIssues();
   }, []);
 
   // Heartbeat sender
@@ -190,11 +219,11 @@ export default function StudentLibraryPage() {
                 SCRE Digital Knowledge Hub
               </div>
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-foreground">
-                Digital E-Library
+                Digital E-Library & Physical Book Slip
               </h1>
               <p className="text-xs text-muted-foreground font-medium mt-1 max-w-xl">
                 Access curated IT textbooks, study modules, and official reference material.
-                Your study hours and reading progress are tracked directly onto your learning profile!
+                Track your physical library borrowed books, due dates, and study hours!
               </p>
             </div>
 
@@ -252,6 +281,45 @@ export default function StudentLibraryPage() {
             </p>
           </div>
         </div>
+
+        {/* Physical Borrowed Books Section */}
+        {myIssues.length > 0 && (
+          <div className="p-4 bg-amber-500/10 border-2 border-amber-500/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-black text-amber-600 uppercase text-xs tracking-wider flex items-center gap-1.5">
+                <BookMarked className="w-4 h-4" /> My Issued Physical Center Books ({myIssues.length})
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase font-bold">
+                Return before Due Date to Avoid Late Fines
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {myIssues.map((issue) => {
+                const isOverdue = issue.status?.toUpperCase() === "OVERDUE";
+                const isReturned = issue.status?.toUpperCase() === "RETURNED";
+                return (
+                  <div key={issue._id || issue.id} className="p-3 bg-card border border-border shadow-sm space-y-1">
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="font-black uppercase text-xs line-clamp-1">{issue.book_title}</h4>
+                      <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shrink-0 ${
+                        isReturned ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
+                        isOverdue ? "bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse" :
+                        "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      }`}>
+                        {issue.status}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-bold">{issue.center_name || "Central Library"}</p>
+                    <div className="flex justify-between text-[10px] text-muted-foreground font-mono pt-1 border-t border-border mt-2">
+                      <span>Slip: {issue.document_number || "N/A"}</span>
+                      <span className={isOverdue ? "text-rose-600 font-bold" : "text-emerald-600"}>Due: {issue.due_date?.split("T")[0]}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="relative">

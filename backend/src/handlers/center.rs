@@ -522,3 +522,84 @@ pub async fn check_email_unique(
 
     (StatusCode::OK, Json(json!({"unique": unique})))
 }
+
+pub async fn get_pending_center_registrations(
+    State(db): State<Database>,
+    _claims: Claims,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let collection = db.collection::<Center>("centers");
+    let filter = doc! { "is_deleted": false };
+    let mut cursor = match collection.find(filter, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::OK, Json(json!({"success": true, "data": []}))),
+    };
+
+    let mut centers = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(center) = result {
+            centers.push(PublicCenter::from(center));
+        }
+    }
+
+    (StatusCode::OK, Json(json!({"success": true, "data": centers})))
+}
+
+pub async fn approve_center_registration(
+    State(db): State<Database>,
+    _claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let obj_id = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({"success": false, "message": "Invalid center ID"}))),
+    };
+
+    let collection = db.collection::<Center>("centers");
+    let center = match collection.find_one(doc! { "_id": obj_id }, None).await {
+        Ok(Some(c)) => c,
+        _ => return (StatusCode::NOT_FOUND, Json(json!({"success": false, "message": "Center not found"}))),
+    };
+
+    let update = doc! { "$set": { "active": true, "approval_status": "approved" } };
+    let _ = collection.update_one(doc! { "_id": obj_id }, update, None).await;
+
+    // Activate user account
+    let user_coll = db.collection::<User>("users");
+    let _ = user_coll.update_one(
+        doc! { "_id": center.user_id },
+        doc! { "$set": { "active": true, "approval_status": "approved" } },
+        None,
+    ).await;
+
+    (StatusCode::OK, Json(json!({"success": true, "message": "Center registration approved and account activated"})))
+}
+
+pub async fn reject_center_registration(
+    State(db): State<Database>,
+    _claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let obj_id = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(json!({"success": false, "message": "Invalid center ID"}))),
+    };
+
+    let collection = db.collection::<Center>("centers");
+    let center = match collection.find_one(doc! { "_id": obj_id }, None).await {
+        Ok(Some(c)) => c,
+        _ => return (StatusCode::NOT_FOUND, Json(json!({"success": false, "message": "Center not found"}))),
+    };
+
+    let update = doc! { "$set": { "active": false, "approval_status": "rejected" } };
+    let _ = collection.update_one(doc! { "_id": obj_id }, update, None).await;
+
+    let user_coll = db.collection::<User>("users");
+    let _ = user_coll.update_one(
+        doc! { "_id": center.user_id },
+        doc! { "$set": { "active": false, "approval_status": "rejected" } },
+        None,
+    ).await;
+
+    (StatusCode::OK, Json(json!({"success": true, "message": "Center registration rejected"})))
+}
+

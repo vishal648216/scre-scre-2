@@ -174,16 +174,31 @@ async fn translate_with_google(text: &str, target_lang: &str) -> Result<String, 
 }
 
 async fn translate_with_provider(text: &str, target_lang: &str) -> Result<String, String> {
-    let config = TranslationConfig::from_env();
-    
-    match config.provider.as_str() { 
-        "google" => translate_with_google(text, target_lang).await,
-        "libre" => translate_with_libre(text, target_lang).await,
-        _ => {
-            eprintln!("Unknown translation provider: {}, falling back to LibreTranslate", config.provider);
-            translate_with_libre(text, target_lang).await
+    // 1. Try Google Free Translate endpoint first (supports 70+ languages & Indian scripts out-of-the-box)
+    if let Ok(res) = translate_with_google(text, target_lang).await {
+        if !res.trim().is_empty() {
+            return Ok(res);
         }
     }
+
+    // 2. Fallback to MyMemory Free Translation API
+    let mymemory_url = format!(
+        "https://api.mymemory.translated.net/get?q={}&langpair=en|{}",
+        urlencoding::encode(text),
+        target_lang
+    );
+    if let Ok(res) = reqwest::Client::new().get(&mymemory_url).send().await {
+        if let Ok(json) = res.json::<serde_json::Value>().await {
+            if let Some(str_val) = json["responseData"]["translatedText"].as_str() {
+                if !str_val.trim().is_empty() && !str_val.contains("MYMEMORY WARNING") {
+                    return Ok(str_val.to_string());
+                }
+            }
+        }
+    }
+
+    // 3. Fallback to LibreTranslate if configured
+    translate_with_libre(text, target_lang).await
 }
 
 pub struct IpRateLimit {

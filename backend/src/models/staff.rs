@@ -48,6 +48,30 @@ pub struct Staff {
     pub email: Option<String>,
     pub status: String, // "active", "inactive"
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub assigned_subjects: Option<Vec<String>>,
+    #[serde(default)]
+    pub assigned_centers: Option<Vec<String>>,
+    #[serde(default)]
+    pub basic_salary: Option<f64>,
+    #[serde(default)]
+    pub allowances: Option<f64>,
+    #[serde(default)]
+    pub deductions: Option<f64>,
+    #[serde(default)]
+    pub pf_deduction: Option<f64>,
+    #[serde(default)]
+    pub overtime_hours: Option<f64>,
+    #[serde(default)]
+    pub overtime_rate: Option<f64>,
+    #[serde(default)]
+    pub unpaid_leaves: Option<f64>,
+    #[serde(default)]
+    pub salary_status: Option<String>,
+    #[serde(default)]
+    pub last_payment_date: Option<String>,
+    #[serde(default)]
+    pub bank_details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]

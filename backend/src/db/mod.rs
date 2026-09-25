@@ -659,8 +659,11 @@ pub async fn ensure_indexes(db: &Database) {
         )
         .await;
 
-    // Users: unique serial number and enrollment number
+    // Users: unique serial number and enrollment number (must be sparse so null/missing fields don't collide)
     let users = db.collection::<mongodb::bson::Document>("users");
+    let _ = users.drop_index("user_serial_number_unique", None).await;
+    let _ = users.drop_index("user_enrollment_number_unique", None).await;
+
     let _ = users
         .create_index(
             IndexModel::builder()
@@ -669,6 +672,7 @@ pub async fn ensure_indexes(db: &Database) {
                     IndexOptions::builder()
                         .name("user_serial_number_unique".to_string())
                         .unique(true)
+                        .sparse(true)
                         .build(),
                 )
                 .build(),
@@ -683,6 +687,7 @@ pub async fn ensure_indexes(db: &Database) {
                     IndexOptions::builder()
                         .name("user_enrollment_number_unique".to_string())
                         .unique(true)
+                        .sparse(true)
                         .build(),
                 )
                 .build(),

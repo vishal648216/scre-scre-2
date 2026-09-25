@@ -40,6 +40,7 @@ interface ModulePermissions {
   staff: ActionPermissions;
   leads: ActionPermissions;
   cms: ActionPermissions;
+  library: ActionPermissions;
   settings: ActionPermissions;
 }
 
@@ -72,6 +73,7 @@ const MODULES: { key: keyof ModulePermissions; label: string; description: strin
   { key: "staff", label: "Staff Management", description: "Onboard and manage branch staff, teachers, and operators" },
   { key: "leads", label: "Leads & Enquiries", description: "Manage CRM pipeline, student enquiries, and followups" },
   { key: "cms", label: "CMS & Website Content", description: "Update sliders, gallery, notices, news, and blogs" },
+  { key: "library", label: "Library Management", description: "Manage e-books, physical book catalog, student book issues & returns" },
   { key: "settings", label: "System Settings", description: "General settings, referral payout rules, and configurations" },
 ];
 
@@ -86,6 +88,7 @@ const DEFAULT_MODULE_PERMS: ModulePermissions = {
   staff: { ...DEFAULT_ACTION_PERMS },
   leads: { ...DEFAULT_ACTION_PERMS },
   cms: { ...DEFAULT_ACTION_PERMS },
+  library: { ...DEFAULT_ACTION_PERMS },
   settings: { ...DEFAULT_ACTION_PERMS },
 };
 

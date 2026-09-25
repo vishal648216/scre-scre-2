@@ -556,3 +556,51 @@ pub async fn list_study_materials(
     }
     (StatusCode::OK, Json(items))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BulkSessionPayload {
+    pub items: Vec<CreateSessionRequest>,
+}
+
+pub async fn bulk_create_sessions(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<BulkSessionPayload>,
+) -> (StatusCode, Json<AcademicResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
+    }
+
+    let coll = db.collection::<Session>("sessions");
+    let now = Utc::now();
+    let mut count = 0;
+
+    for item in payload.items {
+        if item.session_name.trim().is_empty() {
+            continue;
+        }
+        let course_oid = match ObjectId::parse_str(&item.course_id) {
+            Ok(oid) => oid,
+            Err(_) => continue,
+        };
+
+        let session = Session {
+            id: None,
+            course_id: course_oid,
+            session_name: item.session_name.trim().to_string(),
+            start_date: item.start_date.unwrap_or(now),
+            end_date: item.end_date.unwrap_or(now + chrono::Duration::days(365)),
+            status: item.status.unwrap_or_else(|| "active".to_string()),
+        };
+
+        if let Ok(_) = coll.insert_one(session, None).await {
+            count += 1;
+        }
+    }
+
+    (StatusCode::CREATED, Json(AcademicResponse {
+        success: true,
+        message: format!("Successfully imported {} sessions!", count),
+    }))
+}
+

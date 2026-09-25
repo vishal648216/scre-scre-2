@@ -1463,6 +1463,12 @@ pub async fn insert_generated_student_paper(
         blueprint_duration_minutes: blueprint.duration_minutes,
     };
 
+    let unique_paper_code = format!(
+        "SCRE-{}-{:05}",
+        chrono::Utc::now().format("%Y%m%d"),
+        rand::random::<u16>()
+    );
+
     let new_paper = StudentPaper {
         id: None,
         blueprint_id,
@@ -1483,6 +1489,7 @@ pub async fn insert_generated_student_paper(
         exam_passed: None,
         section_wise_marks: std::collections::HashMap::new(),
         questions: paper_questions,
+        paper_code: Some(unique_paper_code),
         subject_id,
         subject_config_snapshot: subject_config.cloned(),
         blueprint_snapshot: Some(bp_snapshot),
@@ -3250,3 +3257,39 @@ pub async fn postpone_allotted_exams(
         "updated_count": updated_count
     })))
 }
+
+pub async fn purge_fake_exam_data(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+    let paper_coll = db.collection::<Document>("student_papers");
+    let batch_coll = db.collection::<Document>("allotment_batches");
+    let v2_paper_coll = db.collection::<Document>("exam_v2_papers");
+
+    let p_res = paper_coll.delete_many(doc! {}, None).await;
+    let b_res = batch_coll.delete_many(doc! {}, None).await;
+    let v2_res = v2_paper_coll.delete_many(doc! {}, None).await;
+
+    let deleted_papers = p_res.map(|r| r.deleted_count).unwrap_or(0);
+    let deleted_batches = b_res.map(|r| r.deleted_count).unwrap_or(0);
+    let deleted_v2 = v2_res.map(|r| r.deleted_count).unwrap_or(0);
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": format!("Purged test exam data: {} papers, {} batches, {} v2 papers removed", deleted_papers, deleted_batches, deleted_v2),
+            "deleted_papers": deleted_papers,
+            "deleted_batches": deleted_batches,
+            "deleted_v2": deleted_v2
+        })),
+    )
+}
+
+

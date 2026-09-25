@@ -25,7 +25,7 @@ pub struct CreateContactRequest {
     pub phone: String,
     pub email: Option<String>,
     pub category_id: Option<String>,
-    pub course: String,
+    pub course: Option<String>,
     pub message: Option<String>,
     pub country_id: Option<String>,
     pub state_id: Option<String>,
@@ -39,6 +39,8 @@ pub struct CreateContactRequest {
     pub notes: Option<String>,
     pub next_follow_up_at: Option<chrono::DateTime<chrono::Utc>>,
     pub source: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -88,13 +90,14 @@ pub async fn handle_create_enquiry(
         .and_then(|id| ObjectId::parse_str(&id).ok());
 
     let now = Utc::now();
+    let course_name = payload.course.clone().unwrap_or_else(|| "Franchise Application".to_string());
     let new_enquiry = ContactEnquiry {
         id: None,
-        name: payload.name,
-        phone: payload.phone,
-        email: payload.email,
-        course: payload.course,
-        message: payload.message,
+        name: payload.name.clone(),
+        phone: payload.phone.clone(),
+        email: payload.email.clone(),
+        course: course_name,
+        message: payload.message.clone(),
         country_id: country_oid,
         state_id: state_oid,
         district_id: district_oid,
@@ -102,8 +105,8 @@ pub async fn handle_create_enquiry(
         center_id: center_oid,
         college: payload.college.clone(),
         status: "new".to_string(),
-        subject: payload.subject,
-        priority: payload.priority,
+        subject: payload.subject.clone(),
+        priority: payload.priority.clone(),
         notes: payload.notes.clone(),
         assigned_to: None,
         next_follow_up_at: payload.next_follow_up_at,
@@ -126,7 +129,8 @@ pub async fn handle_create_enquiry(
         }
     };
 
-    if let Some(et) = payload.enquiry_type {
+    let is_franchise = payload.enquiry_type.as_deref() == Some("franchise");
+    if let Some(ref et) = payload.enquiry_type {
         doc_bson.insert("enquiry_type", et);
     } else {
         doc_bson.insert("enquiry_type", "student"); // Default
@@ -141,32 +145,113 @@ pub async fn handle_create_enquiry(
         doc_bson.insert("source", src);
     }
 
-    match db
+    // Insert enquiry document
+    let insert_res = db
         .collection::<mongodb::bson::Document>("enquiries")
         .insert_one(doc_bson, None)
-        .await
-    {
-        Ok(_) => {
-            invalidate_admin_dashboard_cache();
-            (
-                StatusCode::CREATED,
-                Json(CreateContactResponse {
-                    success: true,
-                    message: "Enquiry submitted successfully".to_string(),
-                }),
-            )
-        }
-        Err(e) => {
-            eprintln!("Failed to insert enquiry: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(CreateContactResponse {
-                    success: false,
-                    message: "Failed to submit enquiry".to_string(),
-                }),
-            )
+        .await;
+
+    if insert_res.is_err() {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(CreateContactResponse {
+                success: false,
+                message: "Failed to submit enquiry".to_string(),
+            }),
+        );
+    }
+
+    // If this is a Franchise Application, ALSO create a pending Center Registration Request
+    if is_franchise {
+        let city_str = payload.city.unwrap_or_else(|| "Location".to_string());
+        let state_str = payload.state.unwrap_or_else(|| "State".to_string());
+        let center_name = format!("SCRE Center - {}", city_str);
+        let center_code = format!("C-{}", rand::random::<u32>() % 9000 + 1000);
+        let user_id = ObjectId::new();
+
+        // Create pending user account for center
+        let default_email = payload.email.clone().unwrap_or_else(|| format!("center_{}@screduc.com", center_code.to_lowercase()));
+        let hashed_password = bcrypt::hash("Center@123", bcrypt::DEFAULT_COST).unwrap_or_default();
+        let user_doc = doc! {
+            "_id": user_id,
+            "username": default_email.clone(),
+            "email": default_email.clone(),
+            "password_hash": hashed_password,
+            "raw_password": "Center@123",
+            "role": "center",
+            "full_name": payload.name.clone(),
+            "phone": payload.phone.clone(),
+            "address": payload.message.clone(),
+            "city": city_str.clone(),
+            "state": state_str.clone(),
+            "country": "India",
+            "active": false,
+            "approval_status": "pending",
+            "status": "pending",
+            "created_at": now,
+            "is_deleted": false,
+            "is_email_verified": true,
+        };
+
+        let user_coll = db.collection::<mongodb::bson::Document>("users");
+        if let Ok(_) = user_coll.insert_one(user_doc, None).await {
+            // Find SuperAdmin user_id for admin_id field
+            let super_admin_id = user_coll
+                .find_one(doc! { "role": "superadmin" }, None)
+                .await
+                .ok()
+                .flatten()
+                .and_then(|u| u.get_object_id("_id").ok())
+                .unwrap_or_else(ObjectId::new);
+
+            let center_doc = crate::models::center::Center {
+                id: None,
+                name: center_name,
+                code: center_code,
+                owner_name: payload.name.clone(),
+                about_center: payload.message.clone(),
+                phone: payload.phone.clone(),
+                email: default_email,
+                address: payload.message.unwrap_or_else(|| city_str.clone()),
+                city: city_str,
+                district: None,
+                state: state_str,
+                center_code: None,
+                discount_coupon: None,
+                referral_code: None,
+                location: None,
+                infrastructure: None,
+                course_allotment: Vec::new(),
+                bank_details: None,
+                documents: Vec::new(),
+                key_documents: None,
+                branding_media: None,
+                working_hours: None,
+                config_validity: None,
+                admin_id: super_admin_id,
+                user_id,
+                active: false,
+                is_deleted: false,
+                deleted_at: None,
+                permanent_delete_at: None,
+                is_email_verified: true,
+                email_verified_at: Some(now),
+                created_at: now,
+            };
+
+            let center_coll = db.collection::<crate::models::center::Center>("centers");
+            let _ = center_coll.insert_one(center_doc, None).await;
         }
     }
+
+    invalidate_admin_dashboard_cache();
+    (
+        StatusCode::CREATED,
+        Json(CreateContactResponse {
+            success: true,
+            message: "Application submitted successfully! Our team will contact you within 24 hours.".to_string(),
+        }),
+    )
 }
 
 #[derive(Debug, Deserialize)]

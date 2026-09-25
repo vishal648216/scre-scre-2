@@ -86,8 +86,12 @@ const AdmissionPage = () => {
     nationalId: "",
     qualification: "",
     center: "",
+    centerPriority1: "",
+    centerPriority2: "",
+    centerPriority3: "",
+    modeOfStudy: "offline",
     batch: "",
-    mode: "",
+    mode: "offline",
     photo: null,
     idProof: null,
     otherDocName: "",
@@ -240,6 +244,8 @@ const AdmissionPage = () => {
               .map((c: any) => ({
                 id: String(c.id ?? c._id ?? c.code ?? "").trim(),
                 name: String(c.name ?? "").trim(),
+                city: String(c.city ?? "").trim(),
+                state: String(c.state ?? "").trim(),
               }))
               .filter((x: any) => x.id && x.name),
           );
@@ -286,11 +292,12 @@ const AdmissionPage = () => {
     fetchCountryFees();
   }, []);
 
+  const targetCenterId = formData.centerPriority1 || formData.center;
   useEffect(() => {
-    if (formData.center) {
+    if (targetCenterId) {
       const fetchBatches = async () => {
         try {
-          const res = await apiFetch(`/api/public/batches?center_id=${formData.center}`);
+          const res = await apiFetch(`/api/public/batches?center_id=${targetCenterId}`);
           if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data) && data.length > 0) {
@@ -311,7 +318,7 @@ const AdmissionPage = () => {
       };
       fetchBatches();
     }
-  }, [formData.center, formData.courseId]);
+  }, [formData.center, formData.centerPriority1, formData.courseId]);
 
   const coursesByCategory = useMemo(() => {
     const grouped: Record<string, any[]> = {};
@@ -332,6 +339,7 @@ const AdmissionPage = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   const sendOTP = async () => {
     if (!formData.email) {
@@ -345,11 +353,15 @@ const AdmissionPage = () => {
         method: "POST",
         body: JSON.stringify({ email: formData.email })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setOtpSent(true);
-        toast.success(t("OTP sent to {{email}}", { email: formData.email }));
+        if (data.otp) {
+          setDemoOtp(data.otp);
+        }
+        toast.success(data.message || t("OTP sent to {{email}}", { email: formData.email }), { duration: 8000 });
       } else {
-        toast.error(t("Failed to send OTP"));
+        toast.error(data.message || t("Failed to send OTP"));
       }
     } catch (err) {
       toast.error(t("Error sending OTP"));
@@ -364,8 +376,8 @@ const AdmissionPage = () => {
       return;
     }
 
-    if (currentStep === 4 && !formData.center) {
-      toast.error(t("Please select a training center before continuing"));
+    if (currentStep === 4 && (!formData.center && !formData.centerPriority1)) {
+      toast.error(t("Please select your primary training center (Priority 1) before continuing"));
       return;
     }
 
@@ -409,20 +421,26 @@ const AdmissionPage = () => {
       return;
     }
 
-    if (!formData.center) {
-      toast.error(t("Please select a training center"));
+    const primaryCenter = formData.centerPriority1 || formData.center;
+    if (!primaryCenter) {
+      toast.error(t("Please select your primary training center (Priority 1)"));
       setCurrentStep(4);
       return;
     }
 
     if (!formData.batch) {
       toast.error(t("Please select a batch"));
-      setCurrentStep(5);
+      setCurrentStep(4);
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const p1 = primaryCenter;
+      const p2 = formData.centerPriority2 || undefined;
+      const p3 = formData.centerPriority3 || undefined;
+      const priorityCenters = [p1, p2, p3].filter((c): c is string => Boolean(c && c.trim()));
+
       const studentData = {
         username: formData.mobile,
         password: "password",    // Backend will handle generation or user will reset
@@ -432,14 +450,22 @@ const AdmissionPage = () => {
         email: formData.email,
         phone: formData.mobile,
         course: formData.course,
-        centerId: formData.center,
+        centerId: p1,
+        priorityCenter1: p1,
+        priorityCenter2: p2,
+        priorityCenter3: p3,
+        priorityCenters: priorityCenters,
+        modeOfStudy: formData.modeOfStudy || formData.mode || "offline",
+        admissionMode: formData.modeOfStudy || formData.mode || "offline",
+        batchId: formData.batch,
         batch: formData.batch,
-        mode: formData.mode,
+        mode: formData.modeOfStudy || formData.mode || "offline",
         dob: formData.dob,
         gender: formData.gender,
         category: formData.category === "Other" ? formData.otherCategory : formData.category,
         nationalIdType: formData.nationalIdType === "Other" ? formData.otherNationalIdType : formData.nationalIdType,
         nationalId: formData.nationalId,
+        highestQualification: formData.qualification,
         address: formData.address,
         city: formData.city,
         state: formData.state,
@@ -451,6 +477,8 @@ const AdmissionPage = () => {
           qualification: formData.qualification,
           other_doc_name: formData.otherDocName,
           other_doc_url: formData.otherDocUrl,
+          priority_centers: priorityCenters,
+          mode_of_study: formData.modeOfStudy || formData.mode || "offline",
         }),
       };
 
@@ -804,6 +832,21 @@ const AdmissionPage = () => {
                           {otpSent && !otpVerified && (
                             <div className="space-y-3 p-4 bg-muted/50 rounded-xl border border-border animate-in fade-in duration-300">
                               <Label className="text-xs font-bold uppercase tracking-wider">{t("Enter OTP")}</Label>
+                              {demoOtp && (
+                                <div className="p-3 bg-primary/10 border border-primary/20 text-primary rounded-lg text-xs font-semibold flex items-center justify-between">
+                                  <span>{t("Verification Code:")} <strong className="text-base tracking-widest font-black ml-1 text-primary">{demoOtp}</strong></span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleInputChange('otp', demoOtp);
+                                      verifyOTP(demoOtp);
+                                    }}
+                                    className="px-3 py-1 bg-primary text-white rounded-md text-[11px] font-bold hover:bg-primary/90 transition-all shadow-sm"
+                                  >
+                                    {t("Auto-Fill & Verify")}
+                                  </button>
+                                </div>
+                              )}
                               <InputOTP maxLength={6} value={formData.otp} onChange={(val) => {
                                 handleInputChange('otp', val);
                                 if (val.length === 6) verifyOTP(val);
@@ -1015,11 +1058,57 @@ const AdmissionPage = () => {
                     {currentStep === 4 && (
                       <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
                         <div className="space-y-2">
-                          <h3 className="text-2xl font-bold">{t("Academic & Center")}</h3>
-                          <p className="text-muted-foreground text-sm">{t("Select your center and available batch")}</p>
+                          <h3 className="text-2xl font-bold">{t("Academic & Center Preferences")}</h3>
+                          <p className="text-muted-foreground text-sm">{t("Select mode of study, 3 center choices in priority order, and preferred batch")}</p>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                          {/* Mode of Study */}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase tracking-wider text-foreground">{t("Mode of Learning / Study Format")}</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div
+                                onClick={() => {
+                                  handleInputChange('modeOfStudy', 'offline');
+                                  handleInputChange('mode', 'offline');
+                                }}
+                                className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${
+                                  (formData.modeOfStudy || formData.mode || 'offline') === 'offline'
+                                    ? 'border-primary ring-2 ring-primary/20 bg-primary/5 font-bold'
+                                    : 'hover:border-primary/40'
+                                }`}
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                  <GraduationCap className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-foreground">{t("Offline (In-Person Training)")}</p>
+                                  <p className="text-[11px] text-muted-foreground">{t("Attend live practical sessions at center")}</p>
+                                </div>
+                              </div>
+
+                              <div
+                                onClick={() => {
+                                  handleInputChange('modeOfStudy', 'online');
+                                  handleInputChange('mode', 'online');
+                                }}
+                                className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center gap-3 ${
+                                  (formData.modeOfStudy || formData.mode) === 'online'
+                                    ? 'border-primary ring-2 ring-primary/20 bg-primary/5 font-bold'
+                                    : 'hover:border-primary/40'
+                                }`}
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                                  <Monitor className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-foreground">{t("Online (Remote Distance)")}</p>
+                                  <p className="text-[11px] text-muted-foreground">{t("Live online classes & digital portal")}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="space-y-2">
                             <Label htmlFor="qualification">{t("Highest Qualification")}</Label>
                             <Select value={formData.qualification} onValueChange={(val) => handleInputChange('qualification', val)}>
@@ -1036,29 +1125,113 @@ const AdmissionPage = () => {
                             </Select>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="center">{t("Training Center")}</Label>
-                            <Select value={formData.center} onValueChange={(val) => {
-                              handleInputChange('center', val);
-                              handleInputChange('batch', ''); // Reset batch on center change
-                            }}>
-                              <SelectTrigger className="h-12 rounded-lg">
-                                <SelectValue placeholder={t("Choose nearest center")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {centers.map(center => (
-                                  <SelectItem key={center.id} value={center.id}>{t(center.name)}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          {/* Priority Centers Selection Card */}
+                          <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-primary" />
+                                {t("Center Priority Selection (3 Choices)")}
+                              </h4>
+                              <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                {t("Auto-Fallback System")}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {t("Selected centers will review your admission in priority order. If Priority 1 center rejects or is full, your request automatically routes to Priority 2, then Priority 3.")}
+                            </p>
+
+                            {/* Priority 1 */}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-foreground flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">1</span>
+                                {t("Priority 1 Center (First Choice / Required)")}
+                              </Label>
+                              <Select
+                                value={formData.centerPriority1 || formData.center}
+                                onValueChange={(val) => {
+                                  handleInputChange('centerPriority1', val);
+                                  handleInputChange('center', val);
+                                  handleInputChange('batch', '');
+                                }}
+                              >
+                                <SelectTrigger className="h-12 rounded-lg border-primary/40 bg-background font-medium">
+                                  <SelectValue placeholder={t("Choose primary center")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {centers.map(center => {
+                                    const isNearby = formData.city && center.city?.toLowerCase().includes(formData.city.toLowerCase());
+                                    return (
+                                      <SelectItem key={center.id} value={center.id} className="font-medium">
+                                        {center.name} {isNearby ? `📍 (${t("Nearby - Recommended")})` : ''}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Priority 2 */}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-foreground flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-slate-400 text-white text-[10px] font-black flex items-center justify-center">2</span>
+                                {t("Priority 2 Center (Second Choice / Fallback)")}
+                              </Label>
+                              <Select
+                                value={formData.centerPriority2}
+                                onValueChange={(val) => handleInputChange('centerPriority2', val)}
+                              >
+                                <SelectTrigger className="h-12 rounded-lg bg-background font-medium">
+                                  <SelectValue placeholder={t("Select fallback 2nd choice center")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {centers.map(center => {
+                                    const isP1 = center.id === (formData.centerPriority1 || formData.center);
+                                    return (
+                                      <SelectItem key={center.id} value={center.id} disabled={isP1} className="font-medium">
+                                        {center.name} {isP1 ? `(${t("Selected as Choice 1")})` : ''}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Priority 3 */}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-foreground flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-slate-400 text-white text-[10px] font-black flex items-center justify-center">3</span>
+                                {t("Priority 3 Center (Third Choice / Fallback)")}
+                              </Label>
+                              <Select
+                                value={formData.centerPriority3}
+                                onValueChange={(val) => handleInputChange('centerPriority3', val)}
+                              >
+                                <SelectTrigger className="h-12 rounded-lg bg-background font-medium">
+                                  <SelectValue placeholder={t("Select fallback 3rd choice center")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {centers.map(center => {
+                                    const isP1 = center.id === (formData.centerPriority1 || formData.center);
+                                    const isP2 = center.id === formData.centerPriority2;
+                                    return (
+                                      <SelectItem key={center.id} value={center.id} disabled={isP1 || isP2} className="font-medium">
+                                        {center.name} {isP1 || isP2 ? `(${t("Already Selected")})` : ''}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
 
-                          {formData.center && (
+                          {/* Batch Selection for Selected Center */}
+                          {(formData.centerPriority1 || formData.center) && (
                             <div className="space-y-3 animate-in fade-in duration-500">
                               <div className="flex items-center justify-between">
                                 <Label className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
                                   <Clock className="w-4 h-4 text-primary" />
-                                  {t("Available Batches for This Program")}
+                                  {t("Available Batches for Choice 1 Center")}
                                 </Label>
                                 {formData.course && (
                                   <button
@@ -1087,7 +1260,7 @@ const AdmissionPage = () => {
                                       <div
                                         key={batchId}
                                         onClick={() => !isFull && handleInputChange('batch', batchId)}
-                                        className={`flex items-start space-x-3 border p-4 transition-all rounded-none cursor-pointer ${
+                                        className={`flex items-start space-x-3 border p-4 transition-all rounded-xl cursor-pointer ${
                                           isFull
                                             ? 'opacity-50 bg-muted/60 cursor-not-allowed border-dashed'
                                             : isSelected
@@ -1101,7 +1274,7 @@ const AdmissionPage = () => {
                                             <span className="font-bold text-sm text-foreground">{t(batch.name || batch.batch_name)}</span>
                                             <Badge
                                               variant="outline"
-                                              className={`text-[9px] font-black px-1.5 py-0.5 rounded-none uppercase tracking-wider ${
+                                              className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
                                                 isFull
                                                   ? 'bg-red-500/10 text-red-600 border-red-500/20'
                                                   : availableSeats < 10
@@ -1127,7 +1300,7 @@ const AdmissionPage = () => {
                                   })}
                                 </RadioGroup>
                               ) : (
-                                <div className="p-6 border-2 border-dashed rounded-none text-center bg-muted/20">
+                                <div className="p-6 border-2 border-dashed rounded-xl text-center bg-muted/20">
                                   <p className="text-sm text-muted-foreground">{t("No active batches found for this center.")}</p>
                                 </div>
                               )}

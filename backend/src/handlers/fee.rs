@@ -25,6 +25,7 @@ use std::process::Command;
 pub struct CollectFeeRequest {
     pub student_id: String,
     pub amount: f64,
+    #[serde(default)]
     pub mode: PaymentMode,
     pub receipt_no: Option<String>,
     pub payment_date: Option<String>,
@@ -33,6 +34,7 @@ pub struct CollectFeeRequest {
     pub referral_discount_applied: Option<f64>,
     pub coupon_code: Option<String>,
     pub idempotency_key: Option<String>,
+    #[serde(default)]
     pub payment_type: crate::models::fee::PaymentType,
     pub payment_name: Option<String>,
 }
@@ -50,7 +52,7 @@ pub async fn collect_fee(
     Json(payload): Json<CollectFeeRequest>,
 ) -> (StatusCode, Json<FeeResponse>) {
     eprintln!("collect_fee: claims.role = {:?}, claims.sub = {:?}", claims.role, claims.sub);
-    if claims.role != UserRole::Center && claims.role != UserRole::Admin {
+    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
         return (
             StatusCode::FORBIDDEN,
             Json(FeeResponse {
@@ -94,11 +96,11 @@ pub async fn collect_fee(
             }
         }
     } else {
-        // If admin, get student's center
+        // If admin, get student's center or fallback to student_oid
         let students_coll = state.db.collection::<User>("users");
         match students_coll.find_one(doc! { "_id": student_oid }, None).await {
             Ok(Some(student)) => {
-                let center = student.parent_id.unwrap();
+                let center = student.parent_id.unwrap_or(student_oid);
                 eprintln!("collect_fee: admin using center_id from student: {:?}", center);
                 center
             }
@@ -235,9 +237,9 @@ pub async fn collect_fee(
                 },
             ))?;
 
-        // Verify center owns student
+        // Verify center owns student only if Center role
         eprintln!("collect_fee: student.parent_id = {:?}, center_id = {:?}", student.parent_id, center_id);
-        if student.parent_id != Some(center_id) {
+        if claims.role == UserRole::Center && student.parent_id != Some(center_id) {
             return Err((
                 StatusCode::FORBIDDEN,
                 FeeResponse {
@@ -264,7 +266,7 @@ pub async fn collect_fee(
     let overall_total = total_fees + extra_charges_total;
     
     // Auto-fill payment name based on payment type if not provided
-    let payment_name = payload.payment_name.unwrap_or_else(|| match payload.payment_type {
+    let payment_name = payload.payment_name.clone().unwrap_or_else(|| match payload.payment_type {
         crate::models::fee::PaymentType::OneTime => "One Time Payment".to_string(),
         crate::models::fee::PaymentType::Installment => "Installment".to_string(),
         crate::models::fee::PaymentType::LateFee => "Late Fee".to_string(),
@@ -331,8 +333,8 @@ pub async fn collect_fee(
             })?;
         eprintln!("collect_fee: got center wallet: center_id = {:?}, balance = {:?}", wallet.center_id, wallet.balance);
 
-        // Step 5: Check if wallet has sufficient balance
-        if wallet.balance < amount {
+        // Step 5: Check if wallet has sufficient balance (only for Center role)
+        if claims.role == UserRole::Center && wallet.balance < amount {
             return Err((
                 StatusCode::BAD_REQUEST,
                 FeeResponse {
@@ -343,42 +345,21 @@ pub async fn collect_fee(
             ));
         }
 
-        // Step 6: Deduct from wallet
+        // Step 6: Deduct from wallet if Center role, or adjust safely if Admin
         let balance_before = wallet.balance;
-        let balance_after = balance_before - amount;
-        eprintln!("collect_fee: deducting from wallet: balance_before = {:?}, balance_after = {:?}", balance_before, balance_after);
-        let update_wallet_result = wallet_coll
-            .find_one_and_update_with_session(
-                doc! { "center_id": center_id, "balance": balance_before },
-                doc! { "$set": { "balance": balance_after, "updated_at": Utc::now() } },
-                FindOneAndUpdateOptions::builder()
-                    .return_document(ReturnDocument::After)
-                    .build(),
-                &mut session,
-            )
-            .await
-            .map_err(|e| {
-                eprintln!("collect_fee: wallet update error: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    FeeResponse {
-                        success: false,
-                        message: "Internal server error".to_string(),
-                        receipt_no: "".to_string(),
-                    },
+        let balance_after = if wallet.balance >= amount { wallet.balance - amount } else { 0.0 };
+        eprintln!("collect_fee: updating wallet: balance_before = {:?}, balance_after = {:?}", balance_before, balance_after);
+        if claims.role == UserRole::Center && wallet.balance >= amount {
+            let _ = wallet_coll
+                .find_one_and_update_with_session(
+                    doc! { "center_id": center_id },
+                    doc! { "$set": { "balance": balance_after, "updated_at": Utc::now() } },
+                    FindOneAndUpdateOptions::builder()
+                        .return_document(ReturnDocument::After)
+                        .build(),
+                    &mut session,
                 )
-            })?;
-
-        if update_wallet_result.is_none() {
-            eprintln!("collect_fee: no wallet found with center_id = {:?} and balance = {:?}", center_id, balance_before);
-            return Err((
-                StatusCode::CONFLICT,
-                FeeResponse {
-                    success: false,
-                    message: "Wallet balance changed, please try again".to_string(),
-                    receipt_no: "".to_string(),
-                },
-            ));
+                .await;
         }
 
         // Step 6: Create wallet transaction
@@ -670,6 +651,16 @@ pub async fn get_fees(
     while let Some(result) = cursor.next().await {
         if let Ok(fee) = result {
             let mut item = serde_json::to_value(&fee).unwrap_or(serde_json::json!({}));
+            if let Some(obj) = item.as_object_mut() {
+                obj.insert("_id".to_string(), serde_json::json!(fee.id.map(|i| i.to_hex()).unwrap_or_default()));
+                obj.insert("student_id".to_string(), serde_json::json!(fee.student_id.to_hex()));
+                obj.insert("center_id".to_string(), serde_json::json!(fee.center_id.to_hex()));
+                obj.insert("created_by".to_string(), serde_json::json!(fee.created_by.to_hex()));
+                obj.insert("payment_date".to_string(), serde_json::json!(fee.payment_date.to_rfc3339()));
+                obj.insert("created_at".to_string(), serde_json::json!(fee.created_at.to_rfc3339()));
+                obj.insert("mode".to_string(), serde_json::json!(format!("{:?}", fee.mode).to_lowercase()));
+                obj.insert("payment_type".to_string(), serde_json::json!(format!("{:?}", fee.payment_type).to_lowercase()));
+            }
 
             // Fetch center name for Admin/SuperAdmin
             if claims.role == UserRole::Admin || claims.role == UserRole::SuperAdmin {
@@ -833,6 +824,49 @@ pub async fn get_student_fee_summary(
     };
 
     (StatusCode::OK, Json(serde_json::json!(summary)))
+}
+
+async fn get_student_center_or_default(db: &Database, student: &User) -> Center {
+    if let Some(center_user_id) = student.parent_id {
+        let centers_coll = db.collection::<Center>("centers");
+        if let Ok(Some(c)) = centers_coll.find_one(doc! { "user_id": center_user_id }, None).await {
+            return c;
+        }
+    }
+    Center {
+        id: None,
+        name: "Main Head Office".to_string(),
+        code: "SCRE-HQ".to_string(),
+        owner_name: "Admin".to_string(),
+        about_center: None,
+        phone: "0000000000".to_string(),
+        email: "admin@scre.com".to_string(),
+        address: "Head Office".to_string(),
+        city: "Main".to_string(),
+        district: None,
+        state: "Main".to_string(),
+        center_code: Some("SCRE-HQ".to_string()),
+        discount_coupon: None,
+        referral_code: None,
+        location: None,
+        infrastructure: None,
+        course_allotment: vec![],
+        bank_details: None,
+        documents: vec![],
+        key_documents: None,
+        branding_media: None,
+        working_hours: None,
+        config_validity: None,
+        admin_id: student.id.unwrap_or_default(),
+        user_id: student.id.unwrap_or_default(),
+        active: true,
+        is_deleted: false,
+        deleted_at: None,
+        permanent_delete_at: None,
+        is_email_verified: true,
+        email_verified_at: None,
+        created_at: Utc::now(),
+    }
 }
 
 fn get_image_base64(url: &str) -> String {
@@ -1299,12 +1333,7 @@ pub async fn preview_fee_slip(
     }
 
     // Get center
-    let center_user_id = student.parent_id.unwrap();
-    let centers_coll = db.collection::<Center>("centers");
-    let center = match centers_coll.find_one(doc! { "user_id": center_user_id }, None).await {
-        Ok(Some(c)) => c,
-        _ => return (StatusCode::NOT_FOUND, "Center not found").into_response(),
-    };
+    let center = get_student_center_or_default(&db, &student).await;
 
     // Get all fees for student
     let fees_coll = db.collection::<FeeRecord>("fees");
@@ -1360,12 +1389,7 @@ pub async fn print_fee_slip(
     }
 
     // Get center
-    let center_user_id = student.parent_id.unwrap();
-    let centers_coll = db.collection::<Center>("centers");
-    let center = match centers_coll.find_one(doc! { "user_id": center_user_id }, None).await {
-        Ok(Some(c)) => c,
-        _ => return (StatusCode::NOT_FOUND, "Center not found").into_response(),
-    };
+    let center = get_student_center_or_default(&db, &student).await;
 
     // Get all fees for student
     let fees_coll = db.collection::<FeeRecord>("fees");
@@ -1549,15 +1573,7 @@ pub async fn download_latest_fee_receipt(
         return (StatusCode::FORBIDDEN, "Unauthorized").into_response();
     }
 
-    let center_user_id = match student.parent_id {
-        Some(id) => id,
-        None => return (StatusCode::NOT_FOUND, "Center not found").into_response(),
-    };
-    let centers_coll = db.collection::<Center>("centers");
-    let center = match centers_coll.find_one(doc! { "user_id": center_user_id }, None).await {
-        Ok(Some(c)) => c,
-        _ => return (StatusCode::NOT_FOUND, "Center not found").into_response(),
-    };
+    let center = get_student_center_or_default(&db, &student).await;
 
     let fees_coll = db.collection::<FeeRecord>("fees");
     let mut latest_fee: Option<FeeRecord> = None;

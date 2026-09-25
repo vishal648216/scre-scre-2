@@ -164,12 +164,33 @@ const AdminSubjectsPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Subjects</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Manage individual subjects that can be mapped to multiple courses.</p>
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16 relative">
+        {/* Ambient background glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+        {/* Page Header */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+              <BookOpen className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading font-black text-2xl md:text-3xl text-white uppercase tracking-tight">
+                  Academic Subjects
+                </h1>
+                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                  {subjects.length} Subjects
+                </span>
+              </div>
+              <p className="text-slate-400 mt-1 text-xs md:text-sm font-medium">
+                Manage individual modules & subjects mapped to diploma courses.
+              </p>
+            </div>
           </div>
+
           <Dialog open={isAdding || isEditing} onOpenChange={(open) => {
             if (!open) {
               setIsAdding(false);
@@ -180,68 +201,69 @@ const AdminSubjectsPage = () => {
             <DialogTrigger asChild>
               <button
                 onClick={() => setIsAdding(true)}
-                className="bg-primary text-primary-foreground px-6 py-3 rounded-none font-heading font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:opacity-90 flex items-center gap-2"
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all transform active:scale-95 shrink-0"
               >
-                <Plus className="w-4 h-4" /> Add New Subject
+                <Plus className="w-4 h-4" /> Add Subject
               </button>
             </DialogTrigger>
-            <DialogContent className="rounded-none border-border">
-              <DialogHeader>
-                <DialogTitle className="font-heading font-bold uppercase tracking-tight">
-                  {isEditing ? "Edit Subject" : "Add New Subject"}
+            <DialogContent className="rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8">
+              <DialogHeader className="border-b border-slate-800/80 pb-4">
+                <DialogTitle className="font-heading font-black text-xl text-white uppercase tracking-tight flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-indigo-400" />
+                  {isEditing ? "Edit Subject" : "Create New Subject"}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Provide the name and description for the {isEditing ? "subject update" : "new subject"}.
+                <DialogDescription className="text-xs text-slate-400">
+                  Provide details for {isEditing ? "updating this subject" : "creating a new subject"}.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject Name</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Subject Name *</label>
                   <input
                     required
                     value={form.subject_name}
                     onChange={(e) => setForm({ ...form, subject_name: e.target.value })}
-                    className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                    placeholder="e.g. MS Word"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                    placeholder="e.g. MS Word & Office Automation"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject Code</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Subject Code</label>
                   <input
                     value={form.subject_code}
                     onChange={(e) => setForm({ ...form, subject_code: e.target.value })}
-                    className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
                     placeholder="e.g. MSW-101"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Description</label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary min-h-[100px]"
-                    placeholder="Enter subject description..."
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all min-h-[90px]"
+                    placeholder="Enter syllabus details or subject scope..."
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Status</label>
                   <select
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-                <DialogFooter className="pt-4">
+                <DialogFooter className="pt-4 border-t border-slate-800/80">
                   <button
                     type="submit"
                     disabled={saving}
-                    className="w-full bg-primary text-primary-foreground py-4 font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {isEditing ? "Update Subject" : "Create Subject"}
+                    {isEditing ? "Update Subject" : "Save Subject"}
                   </button>
                 </DialogFooter>
               </form>
@@ -249,24 +271,26 @@ const AdminSubjectsPage = () => {
           </Dialog>
         </div>
 
-        <Card className="rounded-none border-border shadow-sm">
-          <CardContent className="p-4 flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="SEARCH SUBJECTS..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-muted/30 text-[10px] font-black uppercase tracking-widest focus:border-primary focus:outline-none transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 lg:w-[280px]">
-              <ArrowUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        {/* Filter Bar */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-4 shadow-xl flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="SEARCH SUBJECTS BY NAME OR CODE..."
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 placeholder-slate-500 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 lg:w-[500px]">
+            <div className="flex-1 flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "name_asc" | "name_desc" | "created_newest" | "created_oldest")}
-                className="w-full border border-border bg-muted/10 dark:bg-neutral-900 text-foreground [&_option]:text-foreground [&_option]:bg-white dark:[&_option]:bg-neutral-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary"
+                className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 px-4 py-3 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
               >
                 <option value="name_asc">Name (A-Z)</option>
                 <option value="name_desc">Name (Z-A)</option>
@@ -274,19 +298,12 @@ const AdminSubjectsPage = () => {
                 <option value="created_oldest">Oldest First</option>
               </select>
             </div>
-            <div className="flex items-center gap-2 lg:w-[280px]">
-              <div className="w-4 h-4 flex items-center justify-center text-muted-foreground shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                </svg>
-              </div>
+
+            <div className="flex-1 flex items-center gap-2">
               <select
                 value={selectedCategoryId}
                 onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="w-full border border-border bg-muted/10 dark:bg-neutral-900 text-foreground [&_option]:text-foreground [&_option]:bg-white dark:[&_option]:bg-neutral-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary"
+                className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 px-4 py-3 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
@@ -294,78 +311,100 @@ const AdminSubjectsPage = () => {
                 ))}
               </select>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
+        {/* Table / List */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Subjects...</p>
           </div>
         ) : filteredSubjects.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 border-border">
-            <CardContent className="py-20 flex flex-col items-center text-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-              <h3 className="text-lg font-bold uppercase tracking-tight">No Subjects Found</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-                {searchQuery
-                  ? "No subjects match your search."
-                  : "Create subjects that can be shared across multiple courses."}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center text-center">
+            <BookOpen className="w-12 h-12 text-slate-600 mb-4 opacity-40" />
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">No Subjects Found</h3>
+            <p className="text-slate-400 text-xs max-w-sm mt-1 mb-6">
+              {searchQuery
+                ? "No subjects match your current search criteria."
+                : "Create subjects to map into your course structures."}
+            </p>
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Subject
+            </button>
+          </div>
         ) : (
-          <div className="overflow-x-auto border border-border">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-muted/50 border-b border-border">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject Name</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Code</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Created</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredSubjects.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-muted/30 transition-all group">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-sm uppercase tracking-tight">{sub.subject_name}</div>
-                      <div className="text-[10px] text-muted-foreground line-clamp-1">{sub.description || "No description"}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="text-[10px] bg-muted px-2 py-1 font-mono">{sub.subject_code}</code>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className={cn(
-                        "inline-flex items-center px-2 py-1 text-[8px] font-black uppercase tracking-widest",
-                        sub.status === "active" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                      )}>
-                        {sub.status}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-[10px] text-muted-foreground font-medium">
-                      {format(new Date(sub.created_at), "dd MMM yyyy")}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(sub)}
-                          className="p-2 border border-border hover:border-primary hover:text-primary transition-all"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sub.id)}
-                          className="p-2 border border-border hover:border-red-500 hover:text-red-500 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400">
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Subject Title</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Code</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Created</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80 text-xs text-slate-300">
+                  {filteredSubjects.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-slate-800/40 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-sm text-white uppercase tracking-tight group-hover:text-indigo-300 transition-colors">
+                          {sub.subject_name}
+                        </div>
+                        <div className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
+                          {sub.description || "No description provided."}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="text-[11px] font-mono font-bold bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-indigo-300">
+                          {sub.subject_code || "N/A"}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 border",
+                          sub.status === "active"
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                            : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                        )}>
+                          <span className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            sub.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
+                          )} />
+                          {sub.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-slate-400">
+                        {format(new Date(sub.created_at), "dd MMM yyyy")}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(sub)}
+                            className="p-2 rounded-xl bg-slate-800/80 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 hover:border-indigo-500/40 text-slate-300 transition-all"
+                            title="Edit Subject"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(sub.id)}
+                            className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 hover:text-rose-400 border border-slate-700/60 hover:border-rose-500/40 text-slate-300 transition-all"
+                            title="Delete Subject"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -374,3 +413,4 @@ const AdminSubjectsPage = () => {
 };
 
 export default AdminSubjectsPage;
+

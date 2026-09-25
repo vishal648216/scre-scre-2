@@ -13,7 +13,9 @@ import {
   HelpCircle,
   Hash,
   Search,
+  FileSpreadsheet,
 } from "lucide-react";
+import { BulkCsvUploadModal } from "@/components/BulkCsvUploadModal";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -50,13 +52,14 @@ const QuestionListPage = () => {
   const [bank, setBank] = useState<QuestionBank | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [search, setSearch] = useState("");
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const fetchBankDetails = async () => {
     try {
       const banksRes = await apiFetch("/api/qb/banks");
       const banksData = await banksRes.json();
-      const foundBank = banksData.find(
-        (b: any) => b._id === bankId || b._id === bankId
+      const foundBank = (Array.isArray(banksData) ? banksData : []).find(
+        (b: any) => b._id === bankId || b.id === bankId
       );
       if (foundBank) {
         setBank(foundBank);
@@ -64,20 +67,53 @@ const QuestionListPage = () => {
 
       const qRes = await apiFetch(`/api/qb/banks/${bankId}/questions`);
       const qData = await qRes.json();
-      let allQuestions = qData.map((q: any) => ({
-        ...q,
-        isNew: false,
-      }));
 
-      if (foundBank?.target_question_count && foundBank.target_question_count > allQuestions.length) {
-        const numToAdd = foundBank.target_question_count - allQuestions.length;
-        const newQs = Array.from({ length: numToAdd }, () => ({
+      const normalizeQuestion = (q: any): Question => {
+        let opts: string[] = [];
+        if (Array.isArray(q.options)) {
+          opts = q.options.map((opt: any) => {
+            if (typeof opt === "string") return opt;
+            if (typeof opt === "object" && opt !== null) {
+              return opt.text || opt.label || opt.value || opt.option || "";
+            }
+            return String(opt || "");
+          });
+        }
+        while (opts.length < 4) {
+          opts.push("");
+        }
+
+        let correctIdx = 0;
+        if (typeof q.correct_option_index === "number") {
+          correctIdx = q.correct_option_index;
+        } else if (typeof q.correct_option === "string") {
+          const norm = q.correct_option.trim().toLowerCase();
+          if (norm === "a" || norm === "1" || norm === "option a" || norm === "option_a") correctIdx = 0;
+          else if (norm === "b" || norm === "2" || norm === "option b" || norm === "option_b") correctIdx = 1;
+          else if (norm === "c" || norm === "3" || norm === "option c" || norm === "option_c") correctIdx = 2;
+          else if (norm === "d" || norm === "4" || norm === "option d" || norm === "option_d") correctIdx = 3;
+        }
+
+        return {
+          _id: q._id || q.id,
+          question_text: q.question_text || q.question || "",
+          options: opts,
+          correct_option_index: correctIdx,
+          bank_id: q.bank_id,
+          created_at: q.created_at,
+          isNew: false,
+        };
+      };
+
+      let allQuestions = (Array.isArray(qData) ? qData : []).map(normalizeQuestion);
+
+      if (allQuestions.length === 0) {
+        allQuestions = [{
           question_text: "",
           options: ["", "", "", ""],
           correct_option_index: 0,
           isNew: true,
-        }));
-        allQuestions = [...allQuestions, ...newQs];
+        }];
       }
 
       setQuestions(allQuestions);
@@ -149,10 +185,18 @@ const QuestionListPage = () => {
         const q = questions[i];
         if (!q.question_text.trim()) continue;
 
+        const correctKey = String.fromCharCode(97 + (q.correct_option_index || 0));
+        const formattedOptions = q.options.map((text, idx) => ({
+          key: String.fromCharCode(97 + idx),
+          text,
+        }));
+
         const payload = {
           bank_id: bankId,
           question_text: q.question_text,
           options: q.options,
+          formatted_options: formattedOptions,
+          correct_option: correctKey,
           correct_option_index: q.correct_option_index,
         };
         let res;
@@ -250,6 +294,14 @@ const QuestionListPage = () => {
           </div>
           <div className="flex items-center gap-3">
             <Button
+              onClick={() => setIsBulkModalOpen(true)}
+              variant="outline"
+              className="rounded-none border-2 border-primary text-primary hover:bg-primary/10 font-black uppercase tracking-widest text-[10px] px-6 h-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {t("Bulk Upload CSV")}
+            </Button>
+            <Button
               onClick={addQuestion}
               className="rounded-none bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest text-[10px] px-6 h-12 border-2 border-primary shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
             >
@@ -270,6 +322,60 @@ const QuestionListPage = () => {
             </Button>
           </div>
         </div>
+
+        <BulkCsvUploadModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          title="Bulk Upload Questions"
+          description="Upload multiple multiple-choice questions directly to this question bank using a pre-formatted CSV file."
+          uploadEndpoint="/api/qb/questions/bulk"
+          sampleFilename="questions_bulk_template.csv"
+          onSuccess={fetchBankDetails}
+          transformRows={(rows) =>
+            rows.map((r) => ({
+              ...r,
+              bank_id: r.bank_id && r.bank_id.trim() ? r.bank_id.trim() : bankId || "",
+            }))
+          }
+          columns={[
+            { key: "question_text", label: "Question Text", required: true },
+            { key: "option_a", label: "Option A", required: true },
+            { key: "option_b", label: "Option B", required: true },
+            { key: "option_c", label: "Option C", required: true },
+            { key: "option_d", label: "Option D", required: true },
+            { key: "correct_option", label: "Correct Option (a/b/c/d)", required: true },
+            { key: "difficulty", label: "Difficulty (easy/medium/hard)" },
+            { key: "marks", label: "Marks" },
+            { key: "explanation", label: "Explanation" },
+            { key: "bank_id", label: "Bank ID" },
+          ]}
+          sampleData={[
+            {
+              bank_id: bankId || "",
+              question_text: "What is the capital of India?",
+              option_a: "Mumbai",
+              option_b: "New Delhi",
+              option_c: "Kolkata",
+              option_d: "Chennai",
+              correct_option: "b",
+              difficulty: "easy",
+              marks: "1",
+              explanation: "New Delhi is the official capital of India.",
+            },
+            {
+              bank_id: bankId || "",
+              question_text: "Which programming language is used for web frontend?",
+              option_a: "JavaScript",
+              option_b: "C++",
+              option_c: "Assembly",
+              option_d: "COBOL",
+              correct_option: "a",
+              difficulty: "medium",
+              marks: "1",
+              explanation: "JavaScript is the primary standard programming language for modern web browsers.",
+            },
+          ]}
+        />
 
         {/* Question Cards */}
         <div className="grid grid-cols-1 gap-6">
@@ -391,6 +497,50 @@ const QuestionListPage = () => {
           ))}
         </div>
       </div>
+
+      <BulkCsvUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        title="Bulk Upload Questions"
+        description="Upload multiple multiple-choice questions directly to this question bank using a pre-formatted CSV file."
+        uploadEndpoint="/api/qb/questions/bulk"
+        sampleFilename="question_bank_template.csv"
+        onSuccess={() => {
+          fetchBankDetails();
+        }}
+        columns={[
+          { key: "question_text", label: "Question Text", required: true },
+          { key: "option_a", label: "Option A", required: true },
+          { key: "option_b", label: "Option B", required: true },
+          { key: "option_c", label: "Option C" },
+          { key: "option_d", label: "Option D" },
+          { key: "correct_option", label: "Correct Option (a/b/c/d)", required: true },
+          { key: "difficulty", label: "Difficulty (easy/medium/hard)" },
+          { key: "marks", label: "Marks" },
+          { key: "explanation", label: "Explanation" },
+          { key: "bank_id", label: "Bank ID" },
+        ]}
+        sampleData={[
+          {
+            question_text: "What is the shortcut key to copy text in Windows?",
+            option_a: "Ctrl + C",
+            option_b: "Ctrl + V",
+            option_c: "Ctrl + X",
+            option_d: "Ctrl + Z",
+            correct_option: "a",
+            difficulty: "easy",
+            marks: "1",
+            explanation: "Ctrl+C is used to copy selected text or items.",
+            bank_id: bankId || "",
+          },
+        ]}
+        transformRows={(rows) =>
+          rows.map((r) => ({
+            ...r,
+            bank_id: r.bank_id || bankId || "",
+          }))
+        }
+      />
     </DashboardLayout>
   );
 };

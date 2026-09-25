@@ -56,14 +56,24 @@ const CenterStudentsPage = () => {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `enrollment_${studentId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/pdf")) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `enrollment_${studentId}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          const htmlText = await res.text();
+          const win = window.open("", "_blank");
+          if (win) {
+            win.document.write(htmlText);
+            win.document.close();
+          }
+        }
       } else {
         toast.error(t("Failed to download PDF"));
       }
@@ -96,14 +106,24 @@ const CenterStudentsPage = () => {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `id_card_${studentId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/pdf")) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `id_card_${studentId}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          const htmlText = await res.text();
+          const win = window.open("", "_blank");
+          if (win) {
+            win.document.write(htmlText);
+            win.document.close();
+          }
+        }
       } else {
         toast.error(t("Failed to download ID Card PDF"));
       }

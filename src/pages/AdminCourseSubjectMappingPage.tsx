@@ -230,19 +230,41 @@ const AdminCourseSubjectMappingPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Subject Mapping</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Link subjects and courses together efficiently.</p>
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16 relative">
+        {/* Ambient background glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
+        {/* Page Header */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+              <ArrowRightLeft className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading font-black text-2xl md:text-3xl text-white uppercase tracking-tight">
+                  Course Subject Mapping
+                </h1>
+                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                  {mappings.length} Active Links
+                </span>
+              </div>
+              <p className="text-slate-400 mt-1 text-xs md:text-sm font-medium">
+                Establish curriculum mappings between courses and academic subjects.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-muted p-1 rounded-none border border-border">
+          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 shadow-lg">
             <button
               onClick={() => { setMode('course-to-subject'); setSelectedItems([]); }}
               className={cn(
-                "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                mode === 'course-to-subject' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all",
+                mode === 'course-to-subject'
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
               Course Mode
@@ -250,8 +272,10 @@ const AdminCourseSubjectMappingPage = () => {
             <button
               onClick={() => { setMode('subject-to-course'); setSelectedItems([]); }}
               className={cn(
-                "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                mode === 'subject-to-course' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all",
+                mode === 'subject-to-course'
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
               Subject Mode
@@ -259,8 +283,10 @@ const AdminCourseSubjectMappingPage = () => {
             <button
               onClick={() => { setMode('overview'); setSelectedItems([]); }}
               className={cn(
-                "px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                mode === 'overview' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all",
+                mode === 'overview'
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                  : "text-slate-400 hover:text-slate-200"
               )}
             >
               Overview
@@ -271,26 +297,32 @@ const AdminCourseSubjectMappingPage = () => {
         {mode !== 'overview' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* LEFT COLUMN: Selection & Bulk Mapping */}
-            <Card className="rounded-none border-border lg:col-span-1 h-fit sticky top-24">
-              <CardHeader className="bg-muted/30 border-b">
-                <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
-                  {mode === 'course-to-subject' ? <Layers className="w-4 h-4 text-primary" /> : <BookOpen className="w-4 h-4 text-primary" />}
-                  {mode === 'course-to-subject' ? "Select Course" : "Select Subject"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
+            <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 shadow-2xl lg:col-span-1 h-fit sticky top-24 space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  {mode === 'course-to-subject' ? <Layers className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    {mode === 'course-to-subject' ? "Select Course" : "Select Subject"}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">Choose primary anchor for linkage</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 {mode === 'course-to-subject' && (
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
                       Course Category
                     </label>
                     <select
                       value={selectedCategoryId}
                       onChange={(e) => {
                         setSelectedCategoryId(e.target.value);
-                        setSelectedCourseId(""); // Reset selected course when category changes
+                        setSelectedCourseId("");
                       }}
-                      className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                     >
                       <option value="">Select Category</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -298,14 +330,14 @@ const AdminCourseSubjectMappingPage = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
                     {mode === 'course-to-subject' ? "Primary Course" : "Primary Subject"}
                   </label>
                   {mode === 'course-to-subject' ? (
                     <select
                       value={selectedCourseId}
                       onChange={(e) => setSelectedCourseId(e.target.value)}
-                      className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                       disabled={!selectedCategoryId}
                     >
                       <option value="">Select Course</option>
@@ -315,18 +347,18 @@ const AdminCourseSubjectMappingPage = () => {
                     <select
                       value={selectedSubjectId}
                       onChange={(e) => setSelectedSubjectId(e.target.value)}
-                      className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                     >
                       {subjects.map(s => <option key={s.id || (s as any)._id} value={s.id || (s as any)._id}>{s.subject_name}</option>)}
                     </select>
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-border">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 block">
+                <div className="pt-4 border-t border-slate-800">
+                  <label className="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-3 block">
                     {mode === 'course-to-subject' ? "Add Multiple Subjects" : "Add Multiple Courses"}
                   </label>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                     {mode === 'course-to-subject' ? (
                       subjects.map(s => (
                         <button
@@ -334,14 +366,22 @@ const AdminCourseSubjectMappingPage = () => {
                           type="button"
                           onClick={() => toggleItemSelection(s.id || (s as any)._id)}
                           className={cn(
-                            "w-full flex items-center justify-between p-3 text-left text-xs font-bold uppercase tracking-tight border transition-all",
-                            isAlreadyMapped(s.id || (s as any)._id) ? "bg-muted border-border/50 text-muted-foreground opacity-50 cursor-not-allowed" :
-                              selectedItems.includes(s.id || (s as any)._id) ? "bg-primary/10 border-primary text-primary" : "border-border hover:bg-muted"
+                            "w-full flex items-center justify-between p-3 rounded-xl text-left text-xs font-bold uppercase tracking-wider border transition-all",
+                            isAlreadyMapped(s.id || (s as any)._id)
+                              ? "bg-slate-950/40 border-slate-800/50 text-slate-500 opacity-50 cursor-not-allowed"
+                              : selectedItems.includes(s.id || (s as any)._id)
+                                ? "bg-indigo-600/20 border-indigo-500 text-indigo-300"
+                                : "bg-slate-950/80 border-slate-800/80 text-slate-300 hover:border-slate-700"
                           )}
                         >
-                          {s.subject_name}
-                          {isAlreadyMapped(s.id || (s as any)._id) ? <CheckCircle2 className="w-4 h-4 text-muted-foreground" /> :
-                            selectedItems.includes(s.id || (s as any)._id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4 opacity-30" />}
+                          <span>{s.subject_name}</span>
+                          {isAlreadyMapped(s.id || (s as any)._id) ? (
+                            <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                          ) : selectedItems.includes(s.id || (s as any)._id) ? (
+                            <Check className="w-4 h-4 text-indigo-400" />
+                          ) : (
+                            <Plus className="w-4 h-4 opacity-40" />
+                          )}
                         </button>
                       ))
                     ) : (
@@ -351,14 +391,22 @@ const AdminCourseSubjectMappingPage = () => {
                           type="button"
                           onClick={() => toggleItemSelection(c.id || (c as any)._id)}
                           className={cn(
-                            "w-full flex items-center justify-between p-3 text-left text-xs font-bold uppercase tracking-tight border transition-all",
-                            isAlreadyMapped(c.id || (c as any)._id) ? "bg-muted border-border/50 text-muted-foreground opacity-50 cursor-not-allowed" :
-                              selectedItems.includes(c.id || (c as any)._id) ? "bg-primary/10 border-primary text-primary" : "border-border hover:bg-muted"
+                            "w-full flex items-center justify-between p-3 rounded-xl text-left text-xs font-bold uppercase tracking-wider border transition-all",
+                            isAlreadyMapped(c.id || (c as any)._id)
+                              ? "bg-slate-950/40 border-slate-800/50 text-slate-500 opacity-50 cursor-not-allowed"
+                              : selectedItems.includes(c.id || (c as any)._id)
+                                ? "bg-indigo-600/20 border-indigo-500 text-indigo-300"
+                                : "bg-slate-950/80 border-slate-800/80 text-slate-300 hover:border-slate-700"
                           )}
                         >
-                          {c.course_name}
-                          {isAlreadyMapped(c.id || (c as any)._id) ? <CheckCircle2 className="w-4 h-4 text-muted-foreground" /> :
-                            selectedItems.includes(c.id || (c as any)._id) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4 opacity-30" />}
+                          <span>{c.course_name}</span>
+                          {isAlreadyMapped(c.id || (c as any)._id) ? (
+                            <CheckCircle2 className="w-4 h-4 text-slate-500" />
+                          ) : selectedItems.includes(c.id || (c as any)._id) ? (
+                            <Check className="w-4 h-4 text-indigo-400" />
+                          ) : (
+                            <Plus className="w-4 h-4 opacity-40" />
+                          )}
                         </button>
                       ))
                     )}
@@ -368,83 +416,86 @@ const AdminCourseSubjectMappingPage = () => {
                 <button
                   disabled={saving || selectedItems.length === 0}
                   onClick={handleBulkSave}
-                  className="w-full bg-primary text-primary-foreground py-4 font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
                   {mode === 'course-to-subject' ? `Link ${selectedItems.length} Subjects` : `Link ${selectedItems.length} Courses`}
                 </button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* RIGHT COLUMN: Current Mappings */}
             <div className="lg:col-span-2 space-y-6">
-              <h2 className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                {mode === 'course-to-subject' ? <Layers className="w-5 h-5 text-primary" /> : <BookOpen className="w-5 h-5 text-primary" />}
-                {mode === 'course-to-subject' ? `Subjects in ${getCourseName(selectedCourseId)}` : `Courses with ${getSubjectName(selectedSubjectId)}`}
+              <h2 className="text-lg font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                {mode === 'course-to-subject' ? <Layers className="w-5 h-5 text-indigo-400" /> : <BookOpen className="w-5 h-5 text-indigo-400" />}
+                {mode === 'course-to-subject' ? `Subjects Mapped in ${getCourseName(selectedCourseId)}` : `Courses Mapped with ${getSubjectName(selectedSubjectId)}`}
               </h2>
 
               {loading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Mappings...</p>
+                </div>
+              ) : mappings.length === 0 ? (
+                <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center text-center">
+                  <X className="w-12 h-12 text-slate-600 mb-4 opacity-40" />
+                  <h3 className="text-lg font-bold text-white uppercase tracking-tight">No Mappings Found</h3>
+                  <p className="text-slate-400 text-xs max-w-sm mt-1">
+                    Select items from the panel on the left to establish links.
+                  </p>
                 </div>
               ) : (
-                mappings.length === 0 ? (
-                  <Card className="rounded-none border-dashed border-2 border-border">
-                    <CardContent className="py-20 flex flex-col items-center text-center">
-                      <X className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-                      <h3 className="text-lg font-bold uppercase tracking-tight">No Mappings Found</h3>
-                      <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-                        Use the panel on the left to create linkages.
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mappings.map((m) => (
-                      <Card key={m.id || (m as any)._id} className="rounded-none border-border group hover:border-primary transition-all">
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-muted text-muted-foreground flex items-center justify-center font-black text-[10px] border border-border group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                              {m.subject_order}
-                            </div>
-                            <div className="font-bold text-xs uppercase tracking-tight">
-                              {mode === 'course-to-subject' ? getSubjectName(m.subject_id) : getCourseName(m.course_id)}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleDelete(m.id || (m as any)._id)}
-                            className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {mappings.map((m) => (
+                    <div
+                      key={m.id || (m as any)._id}
+                      className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-2xl p-4 flex items-center justify-between shadow-xl transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                          {m.subject_order}
+                        </div>
+                        <div className="font-bold text-xs text-white uppercase tracking-tight group-hover:text-indigo-300 transition-colors">
+                          {mode === 'course-to-subject' ? getSubjectName(m.subject_id) : getCourseName(m.course_id)}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(m.id || (m as any)._id)}
+                        className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 hover:text-rose-400 border border-slate-700/60 hover:border-rose-500/40 text-slate-400 transition-all"
+                        title="Remove link"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center justify-center gap-3 mb-8">
               <button
                 onClick={() => setOverviewMode('by-course')}
                 className={cn(
-                  "px-6 py-2 text-[10px] font-black uppercase tracking-widest transition-all border",
-                  overviewMode === 'by-course' ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:text-foreground"
+                  "px-6 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border",
+                  overviewMode === 'by-course'
+                    ? "bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25"
+                    : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white"
                 )}
               >
-                By Course
+                Group By Course
               </button>
               <button
                 onClick={() => setOverviewMode('by-subject')}
                 className={cn(
-                  "px-6 py-2 text-[10px] font-black uppercase tracking-widest transition-all border",
-                  overviewMode === 'by-subject' ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:text-foreground"
+                  "px-6 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border",
+                  overviewMode === 'by-subject'
+                    ? "bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25"
+                    : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white"
                 )}
               >
-                By Subject
+                Group By Subject
               </button>
             </div>
 
@@ -455,169 +506,121 @@ const AdminCourseSubjectMappingPage = () => {
                   if (catCourses.length === 0) return null;
                   return (
                     <div key={cat.id} className="space-y-6">
-                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-4">{cat.name}</h3>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-indigo-400 border-l-4 border-indigo-500 pl-4">
+                        {cat.name}
+                      </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {catCourses.map(course => {
                           const courseMappings = mappings.filter(m => m.course_id === (course.id || (course as any)._id));
                           return (
-                            <Card key={course.id || (course as any)._id} className="rounded-none border-border overflow-hidden group hover:border-primary transition-all">
-                              <CardHeader className="bg-muted/50 border-b py-3 group-hover:bg-primary/5 transition-all">
-                                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between">
+                            <div
+                              key={course.id || (course as any)._id}
+                              className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl overflow-hidden shadow-2xl transition-all group flex flex-col justify-between"
+                            >
+                              <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+                                <h4 className="text-xs font-bold text-white uppercase tracking-tight group-hover:text-indigo-300 transition-colors">
                                   {course.course_name}
-                                  <span className="bg-primary text-primary-foreground px-2 py-0.5 text-[8px]">{courseMappings.length}</span>
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
+                                </h4>
+                                <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                                  {courseMappings.length} Subjects
+                                </span>
+                              </div>
+                              <div className="p-4 space-y-2 flex-1">
                                 {courseMappings.length === 0 ? (
-                                  <p className="text-[10px] text-muted-foreground italic">No subjects mapped</p>
+                                  <p className="text-xs text-slate-500 italic py-2">No subjects mapped yet</p>
                                 ) : (
                                   <div className="space-y-2">
                                     {courseMappings.sort((a, b) => a.subject_order - b.subject_order).map(m => (
-                                      <div key={m.id || (m as any)._id} className="flex items-center justify-between group/item">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-foreground/80">
-                                          <div className="w-4 h-4 bg-muted flex items-center justify-center text-[7px] border border-border group-hover:border-primary/30 transition-all">{m.subject_order}</div>
+                                      <div key={m.id || (m as any)._id} className="flex items-center justify-between group/item text-xs text-slate-300 p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                                        <div className="flex items-center gap-2 font-semibold uppercase tracking-tight">
+                                          <span className="w-5 h-5 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-[10px] font-bold">{m.subject_order}</span>
                                           {getSubjectName(m.subject_id)}
                                         </div>
                                         <button
                                           onClick={() => handleDelete(m.id || (m as any)._id)}
-                                          className="p-1 text-muted-foreground hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-all"
+                                          className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
                                           title="Remove link"
                                         >
-                                          <X className="w-3 h-3" />
+                                          <X className="w-3.5 h-3.5" />
                                         </button>
                                       </div>
                                     ))}
                                   </div>
                                 )}
-                                <div className="mt-4 pt-3 border-t border-dashed border-border">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedCourseId(course.id || (course as any)._id);
-                                      setMode('course-to-subject');
-                                      toast.info(`Redirected to manage ${course.course_name}`);
-                                    }}
-                                    className="w-full py-2 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1"
-                                  >
-                                    <Plus className="w-3 h-3" /> Add Subjects
-                                  </button>
-                                </div>
-                              </CardContent>
-                            </Card>
+                              </div>
+                              <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+                                <button
+                                  onClick={() => {
+                                    setSelectedCourseId(course.id || (course as any)._id);
+                                    setMode('course-to-subject');
+                                    toast.info(`Redirected to manage ${course.course_name}`);
+                                  }}
+                                  className="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-all flex items-center justify-center gap-1.5"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Manage Subjects
+                                </button>
+                              </div>
+                            </div>
                           )
                         })}
                       </div>
                     </div>
                   )
                 })}
-                {/* Courses without category if any */}
-                {(() => {
-                  const uncategorizedCourses = courses.filter(c => !categories.some(cat => cat.id === (c as any).category_id));
-                  if (uncategorizedCourses.length === 0) return null;
-                  return (
-                    <div className="space-y-6">
-                      <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground border-l-4 border-muted-foreground pl-4">Uncategorized Courses</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {uncategorizedCourses.map(course => {
-                          const courseMappings = mappings.filter(m => m.course_id === (course.id || (course as any)._id));
-                          return (
-                            <Card key={course.id || (course as any)._id} className="rounded-none border-border overflow-hidden">
-                              <CardHeader className="bg-muted/50 border-b py-3">
-                                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between">
-                                  {course.course_name}
-                                  <span className="bg-primary text-primary-foreground px-2 py-0.5 text-[8px]">{courseMappings.length}</span>
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                {courseMappings.length === 0 ? (
-                                  <p className="text-[10px] text-muted-foreground italic">No subjects mapped</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {courseMappings.sort((a, b) => a.subject_order - b.subject_order).map(m => (
-                                      <div key={m.id || (m as any)._id} className="flex items-center justify-between group/item">
-                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-foreground/80">
-                                          <div className="w-4 h-4 bg-muted flex items-center justify-center text-[7px] border border-border">{m.subject_order}</div>
-                                          {getSubjectName(m.subject_id)}
-                                        </div>
-                                        <button
-                                          onClick={() => handleDelete(m.id || (m as any)._id)}
-                                          className="p-1 text-muted-foreground hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-all"
-                                          title="Remove link"
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                <div className="mt-4 pt-3 border-t border-dashed border-border">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedCourseId(course.id || (course as any)._id);
-                                      setMode('course-to-subject');
-                                      toast.info(`Redirected to manage ${course.course_name}`);
-                                    }}
-                                    className="w-full py-2 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1"
-                                  >
-                                    <Plus className="w-3 h-3" /> Add Subjects
-                                  </button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {subjects.map(subject => {
                   const subjectMappings = mappings.filter(m => m.subject_id === (subject.id || (subject as any)._id));
                   return (
-                    <Card key={subject.id || (subject as any)._id} className="rounded-none border-border overflow-hidden group hover:border-primary transition-all">
-                      <CardHeader className="bg-muted/50 border-b py-3 group-hover:bg-primary/5 transition-all">
-                        <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between">
+                    <div
+                      key={subject.id || (subject as any)._id}
+                      className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl overflow-hidden shadow-2xl transition-all group flex flex-col justify-between"
+                    >
+                      <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-tight group-hover:text-indigo-300 transition-colors">
                           {subject.subject_name}
-                          <span className="bg-primary text-primary-foreground px-2 py-0.5 text-[8px]">{subjectMappings.length}</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4">
+                        </h4>
+                        <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                          {subjectMappings.length} Courses
+                        </span>
+                      </div>
+                      <div className="p-4 space-y-2 flex-1">
                         {subjectMappings.length === 0 ? (
-                          <p className="text-[10px] text-muted-foreground italic">Not linked to any course</p>
+                          <p className="text-xs text-slate-500 italic py-2">Not linked to any course</p>
                         ) : (
                           <div className="space-y-2">
                             {subjectMappings.map(m => (
-                              <div key={m.id || (m as any)._id} className="flex items-center justify-between group/item">
-                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-foreground/80">
-                                  <Layers className="w-3 h-3 text-primary opacity-50" />
+                              <div key={m.id || (m as any)._id} className="flex items-center justify-between text-xs text-slate-300 p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
+                                <div className="flex items-center gap-2 font-semibold uppercase tracking-tight">
+                                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
                                   {getCourseName(m.course_id)}
                                 </div>
                                 <button
                                   onClick={() => handleDelete(m.id || (m as any)._id)}
-                                  className="p-1 text-muted-foreground hover:text-red-500 opacity-0 group-hover/item:opacity-100 transition-all"
+                                  className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
                                   title="Remove link"
                                 >
-                                  <X className="w-3 h-3" />
+                                  <X className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div className="mt-4 pt-3 border-t border-dashed border-border">
-                          <button
-                            onClick={() => {
-                              setSelectedSubjectId(subject.id || (subject as any)._id);
-                              setMode('subject-to-course');
-                              toast.info(`Redirected to manage ${subject.subject_name}`);
-                            }}
-                            className="w-full py-2 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" /> Add Courses
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+                        <button
+                          onClick={() => {
+                            setSelectedSubjectId(subject.id || (subject as any)._id);
+                            setMode('subject-to-course');
+                            toast.info(`Redirected to manage ${subject.subject_name}`);
+                          }}
+                          className="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Manage Courses
+                        </button>
+                      </div>
+                    </div>
                   )
                 })}
               </div>

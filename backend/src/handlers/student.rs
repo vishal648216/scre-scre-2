@@ -37,6 +37,11 @@ pub struct CreateStudentRequest {
     pub phone: String,
     pub course: String,
     pub center_id: Option<String>,
+    pub priority_center_1: Option<String>,
+    pub priority_center_2: Option<String>,
+    pub priority_center_3: Option<String>,
+    pub priority_centers: Option<Vec<String>>,
+    pub mode_of_study: Option<String>,
     pub father_name: Option<String>,
     pub mother_name: Option<String>,
     pub dob: Option<String>,
@@ -1123,6 +1128,10 @@ pub async fn handle_create_student(
         session_start_date: payload.session_start_date,
         session_end_date: payload.session_end_date,
         approval_status: Some("approved".to_string()),
+        status: Some("active".to_string()),
+        admin_instructions: None,
+        priority_centers: None,
+        current_priority: None,
         marks: None,
         active: true,
         is_deleted: false,
@@ -1356,8 +1365,29 @@ pub async fn public_register_student(
         }
     };
 
-    let parent_oid = payload
-        .center_id
+    let mut prio_list = Vec::new();
+    if let Some(ref list) = payload.priority_centers {
+        for cid in list {
+            let clean = cid.trim().to_string();
+            if !clean.is_empty() && !prio_list.contains(&clean) {
+                prio_list.push(clean);
+            }
+        }
+    }
+    if prio_list.is_empty() {
+        if let Some(ref c1) = payload.priority_center_1.clone().or_else(|| payload.center_id.clone()) {
+            if !c1.trim().is_empty() { prio_list.push(c1.trim().to_string()); }
+        }
+        if let Some(ref c2) = payload.priority_center_2 {
+            if !c2.trim().is_empty() && !prio_list.contains(c2) { prio_list.push(c2.trim().to_string()); }
+        }
+        if let Some(ref c3) = payload.priority_center_3 {
+            if !c3.trim().is_empty() && !prio_list.contains(c3) { prio_list.push(c3.trim().to_string()); }
+        }
+    }
+
+    let primary_center_str = prio_list.first().cloned().or_else(|| payload.center_id.clone());
+    let parent_oid = primary_center_str
         .clone()
         .and_then(|id| ObjectId::parse_str(&id).ok());
     let course_oid = payload
@@ -1433,6 +1463,13 @@ pub async fn public_register_student(
         format!("{}-{}", center_code, Utc::now().timestamp_millis())
     };
 
+    let final_admission_mode = payload.mode_of_study.clone().or(payload.admission_mode.clone());
+    let final_priority_centers = if !prio_list.is_empty() {
+        Some(prio_list)
+    } else {
+        primary_center_str.map(|cid| vec![cid])
+    };
+
     let new_user = User {
         id: None,
         username: username.clone(),
@@ -1471,12 +1508,16 @@ pub async fn public_register_student(
         national_id_url: payload.national_id_url,
         highest_qualification: payload.highest_qualification,
         college: None,
-        admission_mode: payload.admission_mode,
+        admission_mode: final_admission_mode,
         exam_mode: payload.exam_mode.clone(),
         session_id: session_oid,
         session_start_date: payload.session_start_date,
         session_end_date: payload.session_end_date,
         approval_status: Some("pending".to_string()),
+        status: Some("pending".to_string()),
+        admin_instructions: None,
+        priority_centers: final_priority_centers,
+        current_priority: Some(1),
         marks: None,
         active: true,
         is_deleted: false,
@@ -1614,6 +1655,17 @@ pub struct PublicStudent {
     pub extra_charges_list: Option<Vec<crate::models::user::ExtraCharge>>,
     pub due_date: Option<String>,
     pub remarks: Option<String>,
+    #[serde(rename = "approval_status", alias = "approvalStatus")]
+    pub approval_status: Option<String>,
+    #[serde(rename = "status")]
+    pub status: Option<String>,
+    #[serde(rename = "admin_instructions", alias = "adminInstructions")]
+    pub admin_instructions: Option<String>,
+    #[serde(rename = "priority_centers", alias = "priorityCenters")]
+    pub priority_centers: Option<Vec<String>>,
+    #[serde(rename = "current_priority", alias = "currentPriority")]
+    pub current_priority: Option<i32>,
+    #[serde(rename = "center_name", alias = "centerName")]
     pub center_name: Option<String>,
     pub course_name: Option<String>,
 }
@@ -1692,6 +1744,11 @@ impl From<User> for PublicStudent {
             extra_charges_list: u.extra_charges_list,
             due_date: u.due_date,
             remarks: u.remarks,
+            approval_status: u.approval_status,
+            status: u.status,
+            admin_instructions: u.admin_instructions,
+            priority_centers: u.priority_centers,
+            current_priority: u.current_priority,
             center_name: None,
             course_name: None,
         }
@@ -1941,6 +1998,11 @@ pub async fn list_students(
                     extra_charges_list: student.extra_charges_list,
                     due_date: student.due_date,
                     remarks: student.remarks,
+                    approval_status: student.approval_status,
+                    status: student.status,
+                    admin_instructions: student.admin_instructions,
+                    priority_centers: student.priority_centers,
+                    current_priority: student.current_priority,
                     center_name,
                     course_name,
                 };
@@ -2422,7 +2484,7 @@ pub async fn generate_student_enrollment_pdf(
 
     let user_collection = db.collection::<User>("users");
     let student = match user_collection
-        .find_one(doc! { "_id": oid, "role": "student" }, None)
+        .find_one(doc! { "_id": oid }, None)
         .await
     {
         Ok(Some(s)) => s,
@@ -2462,7 +2524,7 @@ pub async fn generate_student_enrollment_pdf(
     let abs_pdf_path = temp_dir.join(&pdf_filename);
     let abs_html_path = temp_dir.join(format!("enrollment_{}_{}.html", name_slug, timestamp));
 
-    if let Err(e) = std::fs::write(&abs_html_path, html) {
+    if let Err(e) = std::fs::write(&abs_html_path, &html) {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to write HTML: {}", e),
@@ -2470,17 +2532,22 @@ pub async fn generate_student_enrollment_pdf(
             .into_response();
     }
 
-    // Try multiple possible chromium paths, prioritizing non-snap versions
+    // Try multiple possible chromium/edge paths
     let chromium_paths = [
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        "msedge.exe",
+        "chrome.exe",
+        "msedge",
+        "chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
         "/usr/bin/chromium",
         "/snap/bin/chromium",
         "google-chrome-stable",
-        "google-chrome",
-        "chromium-browser",
-        "chromium",
     ];
 
     let mut pdf_generated = false;
@@ -2556,15 +2623,29 @@ pub async fn generate_student_enrollment_pdf(
                 .into_response()
         } else {
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to read generated PDF",
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        "inline; filename=\"enrollment.html\"",
+                    ),
+                ],
+                html.into_bytes(),
             )
                 .into_response()
         }
     } else {
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("PDF generation failed: {}", last_error),
+            StatusCode::OK,
+            [
+                (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                (
+                    axum::http::header::CONTENT_DISPOSITION,
+                    "inline; filename=\"enrollment.html\"",
+                ),
+            ],
+            html.into_bytes(),
         )
             .into_response()
     }
@@ -3054,7 +3135,7 @@ pub async fn generate_student_id_card_pdf(
 
     let user_collection = db.collection::<User>("users");
     let student = match user_collection
-        .find_one(doc! { "_id": oid, "role": "student" }, None)
+        .find_one(doc! { "_id": oid }, None)
         .await
     {
         Ok(Some(s)) => s,
@@ -3097,7 +3178,7 @@ pub async fn generate_student_id_card_pdf(
     let abs_pdf_path = temp_dir.join(&pdf_filename);
     let abs_html_path = temp_dir.join(format!("id_card_{}_{}.html", name_slug, timestamp));
 
-    if let Err(e) = std::fs::write(&abs_html_path, html) {
+    if let Err(e) = std::fs::write(&abs_html_path, &html) {
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to write HTML: {}", e),
@@ -3106,15 +3187,20 @@ pub async fn generate_student_id_card_pdf(
     }
 
     let chromium_paths = [
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        "msedge.exe",
+        "chrome.exe",
+        "msedge",
+        "chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
         "/usr/bin/chromium",
         "/snap/bin/chromium",
         "google-chrome-stable",
-        "google-chrome",
-        "chromium-browser",
-        "chromium",
     ];
 
     let mut pdf_generated = false;
@@ -3190,15 +3276,29 @@ pub async fn generate_student_id_card_pdf(
                 .into_response()
         } else {
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to read generated PDF",
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        "inline; filename=\"id-card.html\"",
+                    ),
+                ],
+                html.into_bytes(),
             )
                 .into_response()
         }
     } else {
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("PDF generation failed: {}", last_error),
+            StatusCode::OK,
+            [
+                (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                (
+                    axum::http::header::CONTENT_DISPOSITION,
+                    "inline; filename=\"id-card.html\"",
+                ),
+            ],
+            html.into_bytes(),
         )
             .into_response()
     }

@@ -80,6 +80,9 @@ import {
   PanelLeftOpen,
   Briefcase,
   Building2,
+  Building,
+  DollarSign,
+  CalendarCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -377,6 +380,16 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Library Management",
+      icon: BookMarked,
+      roles: ["admin", "superadmin", "center", "student"],
+      subItems: [
+        { icon: BookOpen, label: "Digital Catalog", href: "/dashboard/library" },
+        { icon: ClipboardList, label: "Book Issues & Returns", href: "/dashboard/library?tab=issues" },
+        { icon: BookMarked, label: "My Borrowed Books", href: "/dashboard/student/library", roles: ["student"] },
+      ]
+    },
+    {
       label: "Internships",
       icon: Briefcase,
       roles: ["admin", "superadmin", "center"],
@@ -387,18 +400,15 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     {
       label: "Exams",
       icon: FlaskConical,
-      roles: ["admin", "superadmin", "center", "staff"],
+      roles: ["center"],
       subItems: [
-        { icon: PlusCircle, label: "Allot Exam", href: "/dashboard/exams/allot", roles: ["admin", "superadmin", "staff"] },
-        { icon: List, label: "Allotted Exams", href: "/dashboard/exams/allotted", roles: ["admin", "superadmin", "staff"] },
-        { icon: FileText, label: "Exam Papers", href: "/dashboard/exams/papers", roles: ["admin", "superadmin", "staff"] },
-        { icon: Award, label: "Exam Results", href: "/dashboard/exams/results", roles: ["admin", "superadmin", "staff"] },
-        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
-        { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/center", roles: ["center"] },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
+        { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/center" },
         { icon: ClipboardCheck, label: "Marks Entry", href: "/dashboard/exams/marks-entry" },
         { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
-        { icon: ClipboardCheck, label: "Internal Marks Entry", href: "/dashboard/exam-v2/marks-entry", roles: ["center"] },
-        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper", roles: ["center"] },
+        { icon: ClipboardCheck, label: "Internal Marks Entry", href: "/dashboard/exam-v2/marks-entry" },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
       ]
     },
     // --- CENTER SPECIFIC COURSES ---
@@ -449,6 +459,23 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Exams",
+      icon: FileText,
+      roles: ["admin", "superadmin", "staff"],
+      subItems: [
+        { icon: PlusCircle, label: "Allot Exam", href: "/dashboard/exams/allot" },
+        { icon: List, label: "Alloted Exams", href: "/dashboard/exams/alloted" },
+        { icon: List, label: "Exam Papers", href: "/dashboard/exams/papers" },
+        { icon: CalendarCheck, label: "Exam Attendance", href: "/dashboard/exams/attendance" },
+        { icon: ClipboardCheck, label: "Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
+        { icon: Award, label: "Exam Results", href: "/dashboard/exams/results" },
+        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+        ...(USE_EXAM_V2_VAL ? [{ icon: Upload, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" } as const] : []),
+      ]
+    },
+    {
       label: "Practicals",
       icon: FlaskConical,
       roles: ["center"],
@@ -465,6 +492,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       subItems: [
         { icon: Wallet, label: "Wallet Management", href: "/dashboard/finance/wallet" },
         { icon: History, label: "Transactions", href: "/dashboard/finance/transactions" },
+        { icon: FileSpreadsheet, label: "Expense Ledger", href: "/dashboard/finance/expenses", roles: ["admin", "superadmin"] },
         { icon: Trophy, label: "Referral Tracking", href: "/dashboard/finance/referrals", roles: ["admin", "superadmin"] },
         { icon: FileSpreadsheet, label: "Commission Reports", href: "/dashboard/finance/commissions", roles: ["admin", "superadmin"] },
         { icon: CreditCard, label: "Franchise Payments", href: "/dashboard/finance/payments", roles: ["admin", "superadmin"] },
@@ -615,6 +643,11 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       subItems: [
         { icon: PlusCircle, label: "Add New Staff", href: "/dashboard/staff/add" },
         { icon: List, label: "Staff List", href: "/dashboard/staff/list" },
+        { icon: ShieldCheck, label: "Roles & Permissions", href: "/dashboard/staff/roles" },
+        { icon: CalendarCheck, label: "Staff Attendance", href: "/dashboard/staff/attendance" },
+        { icon: BookOpen, label: "Subject Allotment", href: "/dashboard/staff/subjects" },
+        { icon: Building, label: "Center Allotment", href: "/dashboard/staff/centers" },
+        { icon: DollarSign, label: "Salary & Payroll", href: "/dashboard/staff/salary" },
       ]
     },
     {
@@ -674,6 +707,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         if ((item.label === "Staff Management" || item.label === "Interns") && p.staff && !p.staff.view) return false;
         if (item.label === "CRM" && p.leads && !p.leads.view) return false;
         if (item.label === "CMS" && p.cms && !p.cms.view) return false;
+        if (item.label === "Library Management" && p.library && !p.library.view) return false;
         if (item.label === "System" && p.settings && !p.settings.view) return false;
       }
     }
@@ -1596,8 +1630,8 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
               collapsible
               className={cn("bg-transparent relative", isActuallyFull && "hidden")}
             >
-              <div className="absolute inset-0 overflow-y-auto p-5 sm:p-7 md:p-9 lg:p-11">
-                <div className="dashboard-workspace-shell p-6 sm:p-8 md:p-10 lg:p-11">
+              <div className="absolute inset-0 overflow-y-auto p-4 sm:p-6 md:p-8">
+                <div className="w-full min-h-full">
                   {USE_EXAM_V2 ? <ExamLockRoot>{children}</ExamLockRoot> : children}
                 </div>
               </div>

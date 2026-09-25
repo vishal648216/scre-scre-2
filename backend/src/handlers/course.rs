@@ -1512,3 +1512,90 @@ pub async fn get_allotted_courses(
     }
     (StatusCode::OK, Json(serde_json::json!(items)))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BulkCoursePayload {
+    pub items: Vec<CreateCourseRequest>,
+}
+
+pub async fn bulk_create_courses(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<BulkCoursePayload>,
+) -> (StatusCode, Json<CourseResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CourseResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+
+    let cat_coll = db.collection::<crate::models::course_category::CourseCategory>("course_categories");
+    let mut count = 0;
+
+    for mut item in payload.items {
+        if item.course_name.trim().is_empty() {
+            continue;
+        }
+
+        let cat_str = item.category_id.trim();
+        let valid_cat_oid = ObjectId::parse_str(cat_str).ok();
+
+        if valid_cat_oid.is_none() {
+            // Find category by name or category_code
+            let filter = doc! {
+                "$or": [
+                    { "name": { "$regex": cat_str, "$options": "i" } },
+                    { "category_code": cat_str },
+                ]
+            };
+            if let Ok(Some(cat)) = cat_coll.find_one(filter, None).await {
+                if let Some(oid) = cat.id {
+                    item.category_id = oid.to_hex();
+                }
+            } else if let Ok(Some(cat)) = cat_coll.find_one(doc! {}, None).await {
+                if let Some(oid) = cat.id {
+                    item.category_id = oid.to_hex();
+                }
+            } else {
+                // Auto-create a default category if none exist
+                let new_cat = crate::models::course_category::CourseCategory {
+                    id: None,
+                    name: "General Courses".to_string(),
+                    category_code: "CAT-GEN-01".to_string(),
+                    description: Some("Auto-created general category for bulk courses".to_string()),
+                    status: "active".to_string(),
+                    created_at: Utc::now(),
+                    image_url: None,
+                    sort_order: 0,
+                };
+                if let Ok(res) = cat_coll.insert_one(new_cat, None).await {
+                    if let Some(oid) = res.inserted_id.as_object_id() {
+                        item.category_id = oid.to_hex();
+                    }
+                }
+            }
+        }
+
+        if item.category_id.trim().is_empty() {
+            continue;
+        }
+
+        let res = create_course(State(db.clone()), claims.clone(), Json(item)).await;
+        if res.0 == StatusCode::CREATED {
+            count += 1;
+        }
+    }
+
+    (
+        StatusCode::CREATED,
+        Json(CourseResponse {
+            success: true,
+            message: format!("Successfully imported {} courses!", count),
+        }),
+    )
+}
+

@@ -252,7 +252,9 @@ pub struct StudentPaper {
     pub exam_passed: Option<bool>,
     pub section_wise_marks: std::collections::HashMap<String, f64>,
     pub questions: Vec<PaperQuestionMapping>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paper_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subject_id: Option<ObjectId>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subject_config_snapshot: Option<SubjectBlueprintConfig>,

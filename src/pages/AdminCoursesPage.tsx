@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Pencil, Trash2, BookOpen, CheckCircle2, Clock, Code, AlertTriangle, ArrowRight, Upload, Image as ImageIcon, Star, Filter, Search, X } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, BookOpen, CheckCircle2, Clock, Code, AlertTriangle, ArrowRight, Upload, Image as ImageIcon, Star, Filter, Search, X, FileSpreadsheet } from "lucide-react";
+import { BulkCsvUploadModal } from "@/components/BulkCsvUploadModal";
 import { toast } from "sonner";
 import { cn, normalizeAssetUrl } from "@/lib/utils";
 import { apiFetch, parseJsonArrayResponse } from "@/lib/api";
@@ -73,6 +74,7 @@ const AdminCoursesPage = () => {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const [form, setForm] = useState({
     category_id: "",
@@ -392,30 +394,34 @@ const AdminCoursesPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16 relative">
+        {/* Ambient background glows */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+
         {/* No Categories Warning Dialog */}
         <Dialog open={showCategoryWarning} onOpenChange={setShowCategoryWarning}>
-          <DialogContent className="rounded-none border-border max-w-md">
+          <DialogContent className="rounded-3xl border border-amber-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 max-w-md shadow-2xl p-6">
             <DialogHeader>
-              <DialogTitle className="font-heading font-bold uppercase tracking-tight flex items-center gap-2 text-amber-500">
-                <AlertTriangle className="w-5 h-5" /> Action Required
+              <DialogTitle className="font-heading font-black text-xl text-amber-400 uppercase tracking-tight flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> Category Required
               </DialogTitle>
-              <DialogDescription className="text-sm font-medium text-foreground py-2">
-                You need to create a <strong>Course Category</strong> before you can create any courses. Categories help organize your programs (e.g., Computer Application, Vocational Training).
+              <DialogDescription className="text-xs text-slate-400 py-2">
+                You need to create a <strong>Course Category</strong> before creating courses. Categories organize programs by stream.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-muted/30 p-4 border border-border">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Why is this needed?</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  A course cannot exist without a category. For example, a "DCA" course would belong to the "Computer Application" category.
+            <div className="space-y-4 py-2">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-1">Why is this required?</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Every course (e.g. ADCA, DCA, Tally) belongs under an academic stream for student roll numbers and center allotment.
                 </p>
               </div>
             </div>
             <DialogFooter className="flex-col sm:flex-col gap-2">
               <button
                 onClick={() => navigate("/dashboard/academics/categories?from=courses")}
-                className="w-full bg-primary text-primary-foreground py-4 font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all"
               >
                 Go to Categories <ArrowRight className="w-4 h-4" />
               </button>
@@ -424,639 +430,716 @@ const AdminCoursesPage = () => {
                   setShowCategoryWarning(false);
                   setWarningSkipped(true);
                 }}
-                className="w-full bg-background border border-border py-4 font-heading font-black text-[10px] uppercase tracking-widest hover:bg-muted/30 transition-all"
+                className="w-full py-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-all"
               >
-                Skip (Manual Entry)
+                Skip Warning
               </button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Courses</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Manage your academic courses and programs.</p>
+        {/* Header */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+              <BookOpen className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading font-black text-2xl md:text-3xl text-white uppercase tracking-tight">
+                  Academic Courses
+                </h1>
+                <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                  {courses.length} Active Courses
+                </span>
+              </div>
+              <p className="text-slate-400 mt-1 text-xs md:text-sm font-medium">
+                Manage diplomas, certifications, fees, and typing/mock-test allotments.
+              </p>
+            </div>
           </div>
-          <Dialog open={isAdding || isEditing} onOpenChange={(open) => {
-            if (!open) {
-              setIsAdding(false);
-              setIsEditing(false);
-              resetForm();
-            }
-          }}>
-            <DialogTrigger asChild>
-              <button
-                onClick={() => setIsAdding(true)}
-                className="bg-primary text-primary-foreground px-6 py-3 rounded-none font-heading font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:opacity-90 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> Add New Course
-              </button>
-            </DialogTrigger>
-            <DialogContent className="rounded-none border-border max-w-4xl max-h-[90vh] flex flex-col z-[100]">
-              <DialogHeader>
-                <DialogTitle className="font-heading font-bold uppercase tracking-tight">
-                  {isEditing ? "Edit Course" : "Add New Course"}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Data is stored in the database and shown on the public site and in center/student dashboards via the same APIs.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="pt-2 flex flex-col flex-1 min-h-0">
-                <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-                  <div className="grid lg:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-border pb-2">1. Basic information</h3>
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course category *</Label>
-                          <select
-                            required
-                            value={form.category_id}
-                            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                          >
-                            <option value="">Select category</option>
-                            {categories.map((c) => (
-                              <option key={c._id || c.id} value={c._id || c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course type *</Label>
-                          <select
-                            required
-                            value={form.course_type}
-                            onChange={(e) => setForm({ ...form, course_type: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                          >
-                            {COURSE_TYPE_OPTIONS.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course name *</Label>
-                          <input
-                            required
-                            value={form.course_name}
-                            onChange={(e) => setForm({ ...form, course_name: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="e.g. Advanced Diploma in Computer Applications"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course Code</Label>
-                          <input
-                            value={form.course_code}
-                            onChange={(e) => setForm({ ...form, course_code: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="e.g. CRSE-001"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Short Code (for Roll No generation)</Label>
-                          <input
-                            value={form.short_code}
-                            onChange={(e) => setForm({ ...form, short_code: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="e.g. ADCA"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Duration value *</Label>
-                          <input
-                            type="number"
-                            required
-                            min={1}
-                            value={form.duration_value}
-                            onChange={(e) => setForm({ ...form, duration_value: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="0"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Duration unit</Label>
-                          <select
-                            value={form.duration_unit}
-                            onChange={(e) => setForm({ ...form, duration_unit: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                          >
-                            <option value="years">Years</option>
-                            <option value="months">Months</option>
-                            <option value="weeks">Weeks</option>
-                            <option value="days">Days</option>
-                            <option value="hours">Hours</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course description (HTML)</Label>
-                          <CourseRichTextEditor
-                            value={form.description}
-                            onChange={(html) => setForm((f) => ({ ...f, description: html }))}
-                            placeholder="Overview for website & dashboards. Use toolbar for bold, lists, links…"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Syllabus (Markdown)</Label>
-                          <textarea
-                            value={form.syllabus}
-                            onChange={(e) => setForm({ ...form, syllabus: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary min-h-[100px]"
-                            placeholder="Syllabus / modules in Markdown…"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Eligibility</Label>
-                          <input
-                            value={form.eligibility}
-                            onChange={(e) => setForm({ ...form, eligibility: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="e.g. 10+2 or equivalent"
-                          />
-                        </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</Label>
-                          <select
-                            value={form.status}
-                            onChange={(e) => setForm({ ...form, status: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                          >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-border pb-2">2. Media</h3>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course image</Label>
-                        <div className="w-full h-36 border-2 border-dashed border-border flex items-center justify-center bg-muted/20 relative group overflow-hidden rounded-md">
-                          {form.image_url ? (
-                            <img src={form.image_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="text-center p-4">
-                              <ImageIcon className="w-7 h-7 text-muted-foreground mx-auto mb-1" />
-                              <p className="text-[9px] font-bold text-muted-foreground uppercase">No image</p>
-                            </div>
-                          )}
-                          <label className="absolute inset-0 bg-primary/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <Upload className="w-5 h-5 text-white mb-1" />
-                            <span className="text-[10px] font-black text-white uppercase">Upload</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              className="px-5 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg hover:border-indigo-500/40"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Bulk Import
+            </button>
+            <Dialog open={isAdding || isEditing} onOpenChange={(open) => {
+              if (!open) {
+                setIsAdding(false);
+                setIsEditing(false);
+                resetForm();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <button
+                  onClick={() => setIsAdding(true)}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all transform active:scale-95"
+                >
+                  <Plus className="w-4 h-4" /> Add Course
+                </button>
+              </DialogTrigger>
+              <DialogContent className="rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 max-w-4xl max-h-[90vh] flex flex-col shadow-2xl p-6 sm:p-8 z-[100]">
+                <DialogHeader className="border-b border-slate-800/80 pb-4">
+                  <DialogTitle className="font-heading font-black text-xl text-white uppercase tracking-tight flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-indigo-400" />
+                    {isEditing ? "Edit Course Details" : "Add New Course"}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-400">
+                    Configurations propagate immediately across student portals, certificates, and exam engine.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="pt-2 flex flex-col flex-1 min-h-0">
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                    <div className="grid lg:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2">1. Basic Information</h3>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Category *</Label>
+                            <select
+                              required
+                              value={form.category_id}
+                              onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                            >
+                              <option value="">Select category</option>
+                              {categories.map((c) => (
+                                <option key={c._id || c.id} value={c._id || c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Type *</Label>
+                            <select
+                              required
+                              value={form.course_type}
+                              onChange={(e) => setForm({ ...form, course_type: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                            >
+                              {COURSE_TYPE_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Name *</Label>
                             <input
-                              type="file"
-                              className="hidden"
-                              accept="image/*"
-                              onChange={(e) => void uploadImageField(e, "image_url")}
-                              disabled={uploading}
+                              required
+                              value={form.course_name}
+                              onChange={(e) => setForm({ ...form, course_name: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="e.g. Advanced Diploma in Computer Applications"
                             />
-                          </label>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Social / SEO preview image</Label>
-                        <div className="w-full h-28 border-2 border-dashed border-border flex items-center justify-center bg-muted/20 relative group overflow-hidden rounded-md">
-                          {form.og_image_url ? (
-                            <img src={form.og_image_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[9px] text-muted-foreground uppercase font-bold">Optional OG image</span>
-                          )}
-                          <label className="absolute inset-0 bg-primary/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-black text-white uppercase">
-                            Upload
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Code</Label>
                             <input
-                              type="file"
-                              className="hidden"
-                              accept="image/*"
-                              onChange={(e) => void uploadImageField(e, "og_image_url")}
-                              disabled={uploading}
+                              value={form.course_code}
+                              onChange={(e) => setForm({ ...form, course_code: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="e.g. CRSE-001"
                             />
-                          </label>
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Short Code (for Roll No generation)</Label>
+                            <input
+                              value={form.short_code}
+                              onChange={(e) => setForm({ ...form, short_code: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="e.g. ADCA"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Duration value *</Label>
+                            <input
+                              type="number"
+                              required
+                              min={1}
+                              value={form.duration_value}
+                              onChange={(e) => setForm({ ...form, duration_value: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Duration unit</Label>
+                            <select
+                              value={form.duration_unit}
+                              onChange={(e) => setForm({ ...form, duration_unit: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                            >
+                              <option value="years">Years</option>
+                              <option value="months">Months</option>
+                              <option value="weeks">Weeks</option>
+                              <option value="days">Days</option>
+                              <option value="hours">Hours</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Description</Label>
+                            <CourseRichTextEditor
+                              value={form.description}
+                              onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+                              placeholder="Overview for website & dashboards..."
+                            />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Syllabus (Markdown)</Label>
+                            <textarea
+                              value={form.syllabus}
+                              onChange={(e) => setForm({ ...form, syllabus: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all min-h-[90px]"
+                              placeholder="Syllabus / modules in Markdown..."
+                            />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Eligibility</Label>
+                            <input
+                              value={form.eligibility}
+                              onChange={(e) => setForm({ ...form, eligibility: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="e.g. 10+2 or equivalent"
+                            />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Status</Label>
+                            <select
+                              value={form.status}
+                              onChange={(e) => setForm({ ...form, status: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
 
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-primary border-b border-border pb-2 pt-2">3. Fees &amp; structure</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2">2. Media & Branding</h3>
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course fees (INR)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            value={form.fees}
-                            onChange={(e) => setForm({ ...form, fees: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="Enter course fee"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Admission fees (INR)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            value={form.registration_fee}
-                            onChange={(e) => setForm({ ...form, registration_fee: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                            placeholder="Enter admission fee"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2">
-                        <div>
-                          <Label className="text-xs font-semibold">Exam fees applicable?</Label>
-                          <p className="text-[10px] text-muted-foreground">Show exam fee on public &amp; dashboards</p>
-                        </div>
-                        <Switch
-                          checked={form.exam_fees_applicable}
-                          onCheckedChange={(v) => setForm({ ...form, exam_fees_applicable: v })}
-                        />
-                      </div>
-                      {form.exam_fees_applicable && (
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Exam fee amount (INR)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            value={form.exam_fee_amount}
-                            onChange={(e) => setForm({ ...form, exam_fee_amount: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm"
-                            placeholder="Enter exam fee"
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2">
-                        <div>
-                          <Label className="text-xs font-semibold">Backlog fees applicable?</Label>
-                          <p className="text-[10px] text-muted-foreground">Optional backlog / repeat paper fee</p>
-                        </div>
-                        <Switch
-                          checked={form.backlog_fees_applicable}
-                          onCheckedChange={(v) => setForm({ ...form, backlog_fees_applicable: v })}
-                        />
-                      </div>
-                      {form.backlog_fees_applicable && (
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Backlog fee amount (INR)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            value={form.backlog_fee_amount}
-                            onChange={(e) => setForm({ ...form, backlog_fee_amount: e.target.value })}
-                            className="w-full border border-border bg-background px-4 py-3 text-sm"
-                            placeholder="Enter backlog fee"
-                          />
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Course structure</Label>
-                        <p className="text-[10px] text-muted-foreground mb-1">Does this course have units (semester / yearly)?</p>
-                        <RadioGroup
-                          value={form.has_course_structure_units ? "yes" : "no"}
-                          onValueChange={(v) => setForm({ ...form, has_course_structure_units: v === "yes" })}
-                          className="flex gap-6"
-                        >
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem value="yes" id="units-yes" />
-                            <Label htmlFor="units-yes" className="font-normal cursor-pointer">
-                              Yes
-                            </Label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem value="no" id="units-no" />
-                            <Label htmlFor="units-no" className="font-normal cursor-pointer">
-                              No
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                        {form.has_course_structure_units && (
-                          <div className="grid grid-cols-2 gap-4 pt-2">
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Unit Type</Label>
-                              <select
-                                value={form.unit_type}
-                                onChange={(e) => setForm({ ...form, unit_type: e.target.value })}
-                                className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                              >
-                                <option value="">Select unit type</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="semesters">Semesters</option>
-                                <option value="yearly">Yearly</option>
-                                <option value="custom">Custom</option>
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Unit Count (Total)</Label>
-                              <input
-                                type="number"
-                                min={1}
-                                value={form.unit_count}
-                                onChange={(e) => setForm({ ...form, unit_count: e.target.value })}
-                                className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                                placeholder="Example: 4 for 4 Semesters"
-                              />
-                            </div>
-                            {form.unit_type === "custom" && (
-                              <div className="space-y-2 col-span-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Custom Unit Name</Label>
-                                <input
-                                  value={form.custom_unit_name}
-                                  onChange={(e) => setForm({ ...form, custom_unit_name: e.target.value })}
-                                  className="w-full border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary"
-                                  placeholder="Example: Trimester"
-                                />
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Image</Label>
+                          <div className="w-full h-36 border-2 border-dashed border-slate-800 flex items-center justify-center bg-slate-900/50 relative group overflow-hidden rounded-2xl">
+                            {form.image_url ? (
+                              <img src={form.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-center p-4">
+                                <ImageIcon className="w-7 h-7 text-slate-500 mx-auto mb-1" />
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">No image uploaded</p>
                               </div>
                             )}
+                            <label className="absolute inset-0 bg-indigo-950/80 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                              <Upload className="w-5 h-5 text-white mb-1" />
+                              <span className="text-[10px] font-bold text-white uppercase">Upload File</span>
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={(e) => void uploadImageField(e, "image_url")}
+                                disabled={uploading}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Social Preview Image (OG)</Label>
+                          <div className="w-full h-24 border-2 border-dashed border-slate-800 flex items-center justify-center bg-slate-900/50 relative group overflow-hidden rounded-2xl">
+                            {form.og_image_url ? (
+                              <img src={form.og_image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] text-slate-500 uppercase font-bold">Optional OG preview</span>
+                            )}
+                            <label className="absolute inset-0 bg-indigo-950/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-xs font-bold text-white uppercase">
+                              Upload OG Image
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={(e) => void uploadImageField(e, "og_image_url")}
+                                disabled={uploading}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2 pt-2">3. Fees & Structure</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Fees (INR)</Label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={form.fees}
+                              onChange={(e) => setForm({ ...form, fees: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Admission Fees (INR)</Label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={form.registration_fee}
+                              onChange={(e) => setForm({ ...form, registration_fee: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                          <div>
+                            <Label className="text-xs font-bold text-slate-200">Exam fees applicable?</Label>
+                            <p className="text-[10px] text-slate-400">Include exam fee itemization in receipts</p>
+                          </div>
+                          <Switch
+                            checked={form.exam_fees_applicable}
+                            onCheckedChange={(v) => setForm({ ...form, exam_fees_applicable: v })}
+                          />
+                        </div>
+                        {form.exam_fees_applicable && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Exam Fee Amount (INR)</Label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={form.exam_fee_amount}
+                              onChange={(e) => setForm({ ...form, exam_fee_amount: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="0"
+                            />
                           </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 border-t border-border pt-4">
-                    <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2">
-                      <div>
-                        <Label className="text-xs font-semibold">Enable typing practice for this course</Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          Students see only selected lessons (or languages from Typing allotment). Turn off to hide all typing tests.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={form.typing_tests_enabled}
-                        onCheckedChange={(v) =>
-                          setForm((f) => ({
-                            ...f,
-                            typing_tests_enabled: v,
-                            linked_typing_tests: v ? f.linked_typing_tests : [],
-                          }))
-                        }
-                      />
-                    </div>
-                    {form.typing_tests_enabled && (
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          Linked typing lessons (optional)
-                        </Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          Hold Ctrl/Cmd to select multiple. If none selected, lessons follow <strong>Typing → Tests &amp; Allotment</strong> language mapping for this course.
-                        </p>
-                        <select
-                          multiple
-                          value={form.linked_typing_tests}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              linked_typing_tests: Array.from(e.target.selectedOptions, (o) => o.value),
-                            })
-                          }
-                          className="w-full border border-border bg-background px-4 py-3 text-sm h-32"
-                        >
-                          {typingLessons.map((lesson) => (
-                            <option key={lesson._id} value={lesson._id}>
-                              {lesson.title}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2">
-                      <div>
-                        <Label className="text-xs font-semibold">Enable subject mock tests</Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          When on, students can open mocks you define per subject under{" "}
-                          <button
-                            type="button"
-                            className="underline font-bold text-primary p-0 h-auto align-baseline"
-                            onClick={() => navigate("/dashboard/academics/mock-tests")}
+                        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                          <div>
+                            <Label className="text-xs font-bold text-slate-200">Backlog fees applicable?</Label>
+                            <p className="text-[10px] text-slate-400">Optional backlog/re-paper fee structure</p>
+                          </div>
+                          <Switch
+                            checked={form.backlog_fees_applicable}
+                            onCheckedChange={(v) => setForm({ ...form, backlog_fees_applicable: v })}
+                          />
+                        </div>
+                        {form.backlog_fees_applicable && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Backlog Fee Amount (INR)</Label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={form.backlog_fee_amount}
+                              onChange={(e) => setForm({ ...form, backlog_fee_amount: e.target.value })}
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              placeholder="0"
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Structure Units</Label>
+                          <RadioGroup
+                            value={form.has_course_structure_units ? "yes" : "no"}
+                            onValueChange={(v) => setForm({ ...form, has_course_structure_units: v === "yes" })}
+                            className="flex gap-6"
                           >
-                            Mock tests
-                          </button>
-                          . Center mock-test dates must allow attempts.
-                        </p>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="yes" id="units-yes" />
+                              <Label htmlFor="units-yes" className="font-semibold text-xs text-slate-200 cursor-pointer">
+                                Yes (Semesters/Years)
+                              </Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="no" id="units-no" />
+                              <Label htmlFor="units-no" className="font-semibold text-xs text-slate-200 cursor-pointer">
+                                No (Single Term)
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          {form.has_course_structure_units && (
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Unit Type</Label>
+                                <select
+                                  value={form.unit_type}
+                                  onChange={(e) => setForm({ ...form, unit_type: e.target.value })}
+                                  className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                                >
+                                  <option value="">Select unit type</option>
+                                  <option value="quarterly">Quarterly</option>
+                                  <option value="semesters">Semesters</option>
+                                  <option value="yearly">Yearly</option>
+                                  <option value="custom">Custom</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Unit Count</Label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={form.unit_count}
+                                  onChange={(e) => setForm({ ...form, unit_count: e.target.value })}
+                                  className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                                  placeholder="e.g. 4"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <Switch
-                        checked={form.mock_tests_enabled}
-                        onCheckedChange={(v) =>
-                          setForm((f) => ({
-                            ...f,
-                            mock_tests_enabled: v,
-                            linked_mock_tests: v ? f.linked_mock_tests : [],
-                          }))
-                        }
-                      />
                     </div>
-                    {form.mock_tests_enabled && (
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          Linked mock tests (optional)
-                        </Label>
-                        <p className="text-[10px] text-muted-foreground">
-                          Hold Ctrl/Cmd to select multiple. If none selected, students see all mock tests based on their course subjects.
-                        </p>
-                        <select
-                          multiple
-                          value={form.linked_mock_tests}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              linked_mock_tests: Array.from(e.target.selectedOptions, (o) => o.value),
-                            })
+
+                    <div className="space-y-4 border-t border-slate-800 pt-4">
+                      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                        <div>
+                          <Label className="text-xs font-bold text-slate-200">Enable typing practice for this course</Label>
+                          <p className="text-[10px] text-slate-400">
+                            Grants students access to typing speed & accuracy modules
+                          </p>
+                        </div>
+                        <Switch
+                          checked={form.typing_tests_enabled}
+                          onCheckedChange={(v) =>
+                            setForm((f) => ({
+                              ...f,
+                              typing_tests_enabled: v,
+                              linked_typing_tests: v ? f.linked_typing_tests : [],
+                            }))
                           }
-                          className="w-full border border-border bg-background px-4 py-3 text-sm h-32"
-                        >
-                          {mockTests.map((test) => (
-                            <option key={test.id} value={test.id}>
-                              {test.title}
-                            </option>
-                          ))}
-                        </select>
+                        />
+                      </div>
+                      {form.typing_tests_enabled && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Linked Typing Lessons
+                          </Label>
+                          <select
+                            multiple
+                            value={form.linked_typing_tests}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                linked_typing_tests: Array.from(e.target.selectedOptions, (o) => o.value),
+                              })
+                            }
+                            className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 h-28 focus:outline-none focus:border-indigo-500 transition-all"
+                          >
+                            {typingLessons.map((lesson) => (
+                              <option key={lesson._id} value={lesson._id}>
+                                {lesson.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                        <div>
+                          <Label className="text-xs font-bold text-slate-200">Enable mock test series</Label>
+                          <p className="text-[10px] text-slate-400">
+                            Allows students to attempt subject mock exams
+                          </p>
+                        </div>
+                        <Switch
+                          checked={form.mock_tests_enabled}
+                          onCheckedChange={(v) =>
+                            setForm((f) => ({
+                              ...f,
+                              mock_tests_enabled: v,
+                              linked_mock_tests: v ? f.linked_mock_tests : [],
+                            }))
+                          }
+                        />
+                      </div>
+                      {form.mock_tests_enabled && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Linked Mock Tests
+                          </Label>
+                          <select
+                            multiple
+                            value={form.linked_mock_tests}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                linked_mock_tests: Array.from(e.target.selectedOptions, (o) => o.value),
+                              })
+                            }
+                            className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 h-28 focus:outline-none focus:border-indigo-500 transition-all"
+                          >
+                            {mockTests.map((test) => (
+                              <option key={test.id} value={test.id}>
+                                {test.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    {uploading && (
+                      <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Uploading image...
                       </div>
                     )}
                   </div>
-                  {uploading && (
-                    <div className="flex items-center gap-2 text-primary text-xs font-bold">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Uploading…
-                    </div>
-                  )}
-                </div>
-                <DialogFooter className="pt-6 mt-4 border-t border-border">
-                  <button
-                    type="submit"
-                    disabled={saving || uploading}
-                    className="w-full bg-primary text-primary-foreground py-4 font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {isEditing ? "Update Course" : "Create Course"}
-                  </button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter className="pt-4 border-t border-slate-800 mt-4">
+                    <button
+                      type="submit"
+                      disabled={saving || uploading}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {isEditing ? "Update Course" : "Save Course"}
+                    </button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        <Card className="rounded-none border-border shadow-sm">
-          <CardContent className="p-4 flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="SEARCH COURSES..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-muted/30 text-[10px] font-black uppercase tracking-widest focus:border-primary focus:outline-none transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        {/* Filter Toolbar */}
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 rounded-3xl p-4 shadow-xl flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="SEARCH COURSES BY NAME, CODE OR CATEGORY..."
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 placeholder-slate-500 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+            <div className="flex-1 flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+              <select
+                value={selectedCategoryFilter}
+                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 px-4 py-3 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id || cat._id} value={cat.id || cat._id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              <div className="flex-1 flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-                <select
-                  value={selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                  className="w-full border border-border bg-muted/10 dark:bg-neutral-900 text-foreground [&_option]:text-foreground [&_option]:bg-white dark:[&_option]:bg-neutral-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id || cat._id} value={cat.id || cat._id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex-1 flex items-center gap-2">
-                <select
-                  value={selectedStatusFilter}
-                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="w-full border border-border bg-muted/10 dark:bg-neutral-900 text-foreground [&_option]:text-foreground [&_option]:bg-white dark:[&_option]:bg-neutral-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              {(selectedCategoryFilter !== "all" || selectedStatusFilter !== "all" || searchQuery) && (
-                <button
-                  onClick={() => {
-                    setSelectedCategoryFilter("all");
-                    setSelectedStatusFilter("all");
-                    setSearchQuery("");
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 transition-all"
-                >
-                  <X className="w-4 h-4" /> Reset
-                </button>
-              )}
+            <div className="flex-1 flex items-center gap-2">
+              <select
+                value={selectedStatusFilter}
+                onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 text-xs font-bold text-slate-100 px-4 py-3 uppercase tracking-wider focus:border-indigo-500 focus:outline-none transition-all"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
-          </CardContent>
-        </Card>
 
+            {(selectedCategoryFilter !== "all" || selectedStatusFilter !== "all" || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedCategoryFilter("all");
+                  setSelectedStatusFilter("all");
+                  setSearchQuery("");
+                }}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold uppercase tracking-wider hover:bg-rose-500/20 transition-all shrink-0"
+              >
+                <X className="w-4 h-4" /> Clear Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Courses Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Courses...</p>
           </div>
         ) : filteredCourses.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 border-border">
-            <CardContent className="py-20 flex flex-col items-center text-center">
-              <BookOpen className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
-              <h3 className="text-lg font-bold uppercase tracking-tight">No Courses Found</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-                {searchQuery || selectedCategoryFilter !== "all" || selectedStatusFilter !== "all"
-                  ? "No courses match your filter criteria."
-                  : "Start by creating your first course and program."}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center text-center">
+            <BookOpen className="w-12 h-12 text-slate-600 mb-4 opacity-40" />
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">No Courses Found</h3>
+            <p className="text-slate-400 text-xs max-w-sm mt-1 mb-6">
+              {searchQuery || selectedCategoryFilter !== "all" || selectedStatusFilter !== "all"
+                ? "No courses match your filter criteria."
+                : "Start by creating your first academic course and program structure."}
+            </p>
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Course
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => (
-              <Card key={course.id || course._id} className="rounded-none border-border group hover:border-primary transition-all overflow-hidden">
-                <div className="h-36 overflow-hidden">
+              <div
+                key={course.id || course._id}
+                className="bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl overflow-hidden shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group flex flex-col"
+              >
+                {/* Image Banner */}
+                <div className="h-44 relative overflow-hidden bg-slate-950">
                   <img
                     src={normalizeAssetUrl(course.image_url) || "/images/icc-3.jpg"}
                     alt={course.course_name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                  
+                  {/* Category Chip Overlay */}
+                  <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md border border-slate-700/60 text-indigo-300 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl shadow-lg">
+                    {getCategoryName(course.category_id)}
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className="absolute top-3 right-3">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border backdrop-blur-md shadow-lg",
+                      course.status === "active"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                    )}>
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        course.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
+                      )} />
+                      {course.status}
+                    </span>
+                  </div>
                 </div>
-                <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between py-4">
-                  <div className="space-y-1">
-                    <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-primary" />
+
+                {/* Card Content */}
+                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+                        {courseTypeLabel(course.course_type)}
+                      </span>
+                      {course.short_code && (
+                        <span className="text-[10px] font-mono text-slate-400 font-bold">
+                          [{course.short_code}]
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-heading font-black text-lg text-white group-hover:text-indigo-300 transition-colors uppercase tracking-tight line-clamp-2 mt-1">
                       {course.course_name}
-                    </CardTitle>
-                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      {getCategoryName(course.category_id)}
-                    </div>
+                    </h3>
+                    <p className="text-xs text-slate-400 line-clamp-2 mt-2 leading-relaxed">
+                      {stripHtml(course.description) || "No description provided."}
+                    </p>
                   </div>
-                  <div className={cn(
-                    "text-[8px] font-black uppercase px-2 py-1 tracking-widest",
-                    course.status === "active" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                  )}>
-                    {course.status}
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="space-y-1">
-                      <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                        <Code className="w-3 h-3" /> Code
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                          <Code className="w-3 h-3 text-indigo-400" /> Code
+                        </div>
+                        <div className="font-mono font-bold text-slate-200 mt-0.5">{course.course_code || "N/A"}</div>
                       </div>
-                      <div className="text-xs font-mono font-bold">{course.course_code}</div>
-                    </div>
-                    <div className="space-y-1 text-right">
-                      <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1 justify-end">
-                        <Clock className="w-3 h-3" /> Duration
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-purple-400" /> Duration
+                        </div>
+                        <div className="font-bold text-slate-200 mt-0.5">{formatCourseDuration(course)}</div>
                       </div>
-                      <div className="text-xs font-bold">{formatCourseDuration(course)}</div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                      <span className="font-medium text-[11px] text-slate-400">
+                        {course.created_at ? format(new Date(course.created_at), "dd MMM yyyy") : "N/A"}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          title={course.featured_on_home ? "Remove from homepage" : "Feature on homepage (max 4)"}
+                          onClick={() => toggleFeaturedHome(course)}
+                          className={cn(
+                            "p-2 rounded-xl border transition-all",
+                            course.featured_on_home
+                              ? "bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-md"
+                              : "bg-slate-800/80 border-slate-700/60 text-slate-400 hover:text-amber-400 hover:border-amber-500/30"
+                          )}
+                        >
+                          <Star className={cn("w-3.5 h-3.5", course.featured_on_home && "fill-current")} />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(course)}
+                          className="p-2 rounded-xl bg-slate-800/80 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 hover:border-indigo-500/40 text-slate-300 transition-all"
+                          title="Edit Course"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(course.id || course._id || "")}
+                          className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 hover:text-rose-400 border border-slate-700/60 hover:border-rose-500/40 text-slate-300 transition-all"
+                          title="Delete Course"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-[9px] font-black uppercase text-primary/80 mb-1">{courseTypeLabel(course.course_type)}</div>
-                  <p className="text-sm text-muted-foreground line-clamp-3 min-h-[60px]">
-                    {stripHtml(course.description) || "No description provided."}
-                  </p>
-                  <div className="mt-6 pt-6 border-t border-border flex items-center justify-between">
-                    <div className="text-[10px] text-muted-foreground font-medium">
-                      Created: {course.created_at ? format(new Date(course.created_at), "dd MMM yyyy") : "N/A"}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        title={course.featured_on_home ? "Remove from home page" : "Feature on home page (max 4)"}
-                        onClick={() => toggleFeaturedHome(course)}
-                        className={cn(
-                          "p-2 border transition-all",
-                          course.featured_on_home
-                            ? "border-amber-500 text-amber-600 bg-amber-500/10"
-                            : "border-border hover:border-amber-500/50 hover:text-amber-600",
-                        )}
-                      >
-                        <Star className={cn("w-3.5 h-3.5", course.featured_on_home && "fill-current")} />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(course)}
-                        className="p-2 border border-border hover:border-primary hover:text-primary transition-all"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(course.id || course._id || "")}
-                        className="p-2 border border-border hover:border-red-500 hover:text-red-500 transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
+
+        {/* CSV Bulk Modal */}
+        <BulkCsvUploadModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          title="Bulk Import Courses"
+          description="Upload multiple courses at once using a CSV spreadsheet."
+          uploadEndpoint="/api/courses/bulk"
+          sampleFilename="courses_bulk_template.csv"
+          onSuccess={fetchData}
+          columns={[
+            { key: "course_name", label: "Course Name", required: true },
+            { key: "category_id", label: "Category ID", required: true },
+            { key: "course_code", label: "Course Code" },
+            { key: "short_code", label: "Short Code" },
+            { key: "duration_value", label: "Duration Value" },
+            { key: "duration_unit", label: "Duration Unit" },
+            { key: "course_type", label: "Course Type" },
+            { key: "fees", label: "Course Fees in INR" },
+            { key: "registration_fee", label: "Admission Fee in INR" },
+            { key: "eligibility", label: "Eligibility" },
+            { key: "status", label: "Status" },
+          ]}
+          sampleData={[
+            {
+              course_name: "Advanced Diploma in Computer Applications ADCA",
+              category_id: categories[0]?.id || (categories[0] as any)?._id || "",
+              course_code: "ADCA-101",
+              short_code: "ADCA",
+              duration_value: "12",
+              duration_unit: "months",
+              course_type: "diploma",
+              fees: "12000",
+              registration_fee: "1000",
+              eligibility: "10th Pass",
+              status: "active",
+            },
+          ]}
+        />
       </div>
     </DashboardLayout>
   );
+
 };
 
 export default AdminCoursesPage;

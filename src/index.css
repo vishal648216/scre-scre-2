@@ -249,30 +249,29 @@
     @apply border-white/70 shadow-dashboard-hover -translate-y-px;
   }
 
-  /* Keep admin/center/student dashboards visually zoomed out without affecting public pages. */
+  /* Full readable font size scale across dashboard */
   .dashboard-panel-scale {
-    font-size: 75%;
+    font-size: 100%;
   }
 
-  /* Dark mode: neutral charcoal / near-black panels */
   .dark .dashboard-hero {
-    @apply border-white/10 shadow-lg;
+    @apply border-white/10 shadow-xl;
     background-image: linear-gradient(
       to bottom right,
-      hsl(0 0% 8% / 0.98),
-      hsl(0 0% 5% / 0.99),
-      hsl(0 0% 7% / 0.95)
+      hsl(222 47% 11% / 0.95),
+      hsl(224 71% 4% / 0.98),
+      hsl(220 50% 8% / 0.95)
     );
   }
 
   .dark .dashboard-hero::before {
-    background: radial-gradient(120% 80% at 100% 0%, hsl(0 0% 100% / 0.04), transparent 55%),
-      radial-gradient(90% 60% at 0% 100%, hsl(0 0% 100% / 0.03), transparent 50%);
+    background: radial-gradient(120% 80% at 100% 0%, hsl(239 84% 67% / 0.12), transparent 55%),
+      radial-gradient(90% 60% at 0% 100%, hsl(263 70% 50% / 0.1), transparent 50%);
   }
 
   .dark .dashboard-surface-panel {
-    @apply border-white/10 shadow-lg;
-    background-image: linear-gradient(to bottom, hsl(0 0% 9% / 0.98), hsl(0 0% 6% / 0.98));
+    @apply border-slate-800/80 shadow-2xl;
+    background-image: linear-gradient(to bottom, hsl(222 47% 11% / 0.9), hsl(224 71% 4% / 0.95));
   }
 
   .dark .dashboard-surface-panel::before {
@@ -280,39 +279,33 @@
   }
 
   .dark .dashboard-surface-panel:hover {
-    @apply border-primary/30;
+    @apply border-indigo-500/40;
   }
 
   .dark .dashboard-surface-stat {
-    @apply border-white/10;
+    @apply border-slate-800/80;
     background-image: linear-gradient(
       to bottom right,
-      hsl(0 0% 10% / 0.98),
-      hsl(0 0% 7% / 0.96),
-      hsl(0 0% 5% / 0.92)
+      hsl(222 47% 11% / 0.9),
+      hsl(224 71% 4% / 0.95),
+      hsl(220 50% 8% / 0.9)
     );
   }
 
   .dark .dashboard-skeleton {
-    @apply border-white/10 bg-zinc-900/90;
+    @apply border-slate-800 bg-slate-900/90;
   }
 
   .dark .dashboard-sidebar-shell {
-    @apply border-white/10 bg-black/55 shadow-lg;
+    @apply border-slate-800/80 bg-slate-950/80 shadow-2xl;
   }
 
   .dark .dashboard-workspace-shell {
-    @apply border-white/10 ring-white/5 shadow-lg;
-    background-image: linear-gradient(
-      to bottom,
-      hsl(0 0% 6% / 0.92),
-      hsl(0 0% 4% / 0.94),
-      hsl(0 0% 5% / 0.9)
-    );
+    @apply border-none ring-0 shadow-none bg-transparent w-full min-h-full;
   }
 
   .dark .dashboard-workspace-shell:hover {
-    @apply border-white/15;
+    @apply border-none shadow-none transform-none;
   }
 }
 

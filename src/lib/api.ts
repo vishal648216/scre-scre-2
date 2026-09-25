@@ -29,7 +29,7 @@ export function apiUrl(path: string): string {
 
 
 export async function apiFetch(path: string, init?: RequestInit) {
-  const token = sessionStorage.getItem("token");
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
   const language =
     (localStorage.getItem("lang") || document.documentElement.getAttribute("lang") || "en")
       .split("-")[0]
@@ -58,40 +58,33 @@ export async function apiFetch(path: string, init?: RequestInit) {
   return res;
 }
 
+export const flattenBson = (obj: any): any => {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(flattenBson);
+  if (obj.$oid) return obj.$oid;
+  if (obj.$date) {
+    const val = obj.$date.$numberLong || obj.$date;
+    if (typeof val === 'object') return flattenBson(val);
+    const num = Number(val);
+    if (!isNaN(num) && /^\d+$/.test(String(val))) {
+      return new Date(num).toISOString();
+    }
+    return String(val);
+  }
+  const newObj: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    newObj[key] = flattenBson(value);
+  }
+  return newObj;
+};
+
 /** Use for endpoints that must return a JSON array; avoids `.map` crashes on error objects or HTML. */
 export async function parseJsonArrayResponse(res: Response): Promise<unknown[]> {
   if (!res.ok) return [];
   try {
     const data = await res.json();
     const array = Array.isArray(data) ? data : [];
-    
-    // Recursive function to flatten MongoDB special types
-    const flatten = (obj: any): any => {
-      if (!obj || typeof obj !== 'object') return obj;
-      
-      if (Array.isArray(obj)) return obj.map(flatten);
-      
-      if (obj.$oid) return obj.$oid;
-      if (obj.$date) {
-        const val = obj.$date.$numberLong || obj.$date;
-        if (typeof val === 'object') return val;
-        const num = Number(val);
-        // If it's a numeric string or number, parse it as a timestamp.
-        // Otherwise, if it's already an ISO string, return as is.
-        if (!isNaN(num) && /^\d+$/.test(String(val))) {
-          return new Date(num).toISOString();
-        }
-        return String(val);
-      }
-      
-      const newObj: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        newObj[key] = flatten(value);
-      }
-      return newObj;
-    };
-
-    return array.map(flatten);
+    return array.map(flattenBson);
   } catch {
     return [];
   }

@@ -262,7 +262,7 @@ function LegacyTakeExamPage() {
   useEffect(() => {
     if (paper?.status !== "InProgress") return;
 
-    // Prevent navigation away
+    // Prevent navigation away & Anti-cheat
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
@@ -275,9 +275,10 @@ function LegacyTakeExamPage() {
         setWarningCount(prev => {
           const newCount = prev + 1;
           if (newCount >= 3) {
+            toast.error("EXAM AUTO-SUBMITTED: Maximum tab switch limit reached!");
             handleSubmit();
           } else {
-            toast.warning(`WARNING (${newCount}/3): TAB SWITCH DETECTED.`);
+            toast.warning(`⚠️ CHEATING WARNING (${newCount}/3): TAB SWITCH DETECTED! Exam will auto-submit after 3 switches.`, { duration: 6000 });
           }
           return newCount;
         });
@@ -286,14 +287,39 @@ function LegacyTakeExamPage() {
 
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
 
+    const handleCopyCutPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      toast.error("Copying, pasting, or cutting is strictly prohibited during exams!");
+    };
+
+    const handleKeyCombo = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "p", "u", "s"].includes(key)) {
+        e.preventDefault();
+        toast.error("Keyboard shortcut disabled during exam!");
+      }
+      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && (key === "i" || key === "c" || key === "j"))) {
+        e.preventDefault();
+        toast.error("Developer Tools inspection disabled!");
+      }
+    };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopyCutPaste);
+    document.addEventListener("paste", handleCopyCutPaste);
+    document.addEventListener("cut", handleCopyCutPaste);
+    document.addEventListener("keydown", handleKeyCombo);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopyCutPaste);
+      document.removeEventListener("paste", handleCopyCutPaste);
+      document.removeEventListener("cut", handleCopyCutPaste);
+      document.removeEventListener("keydown", handleKeyCombo);
     };
   }, [paper?.status]);
 

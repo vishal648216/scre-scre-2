@@ -33,6 +33,18 @@ pub struct UpdateStaffRequest {
     pub status: Option<String>, // "active", "inactive"
     pub permissions: Option<StaffPermissions>,
     pub password: Option<String>,
+    pub assigned_subjects: Option<Vec<String>>,
+    pub assigned_centers: Option<Vec<String>>,
+    pub basic_salary: Option<f64>,
+    pub allowances: Option<f64>,
+    pub deductions: Option<f64>,
+    pub pf_deduction: Option<f64>,
+    pub overtime_hours: Option<f64>,
+    pub overtime_rate: Option<f64>,
+    pub unpaid_leaves: Option<f64>,
+    pub salary_status: Option<String>,
+    pub last_payment_date: Option<String>,
+    pub bank_details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -155,6 +167,10 @@ pub async fn handle_create_staff(
         session_start_date: None,
         session_end_date: None,
         approval_status: None,
+        status: None,
+        admin_instructions: None,
+        priority_centers: None,
+        current_priority: None,
         marks: None,
         active: true,
         is_deleted: false,
@@ -218,6 +234,18 @@ pub async fn handle_create_staff(
         email: payload.email,
         status: "active".to_string(),
         created_at: Utc::now(),
+        assigned_subjects: None,
+        assigned_centers: None,
+        basic_salary: None,
+        allowances: None,
+        deductions: None,
+        pf_deduction: None,
+        overtime_hours: None,
+        overtime_rate: None,
+        unpaid_leaves: None,
+        salary_status: None,
+        last_payment_date: None,
+        bank_details: None,
     };
 
     match staff_coll.insert_one(new_staff, None).await {
@@ -294,18 +322,21 @@ pub async fn update_staff(
         return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
     }
 
-    let staff_oid = match ObjectId::parse_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Invalid staff ID".to_string() })),
-    };
-
     let staff_coll = db.collection::<Staff>("staff");
     let user_coll = db.collection::<User>("users");
 
-    let existing = match staff_coll.find_one(doc! { "_id": staff_oid }, None).await {
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! { "_id": oid }
+    } else {
+        doc! { "$or": [{ "name": &id }, { "role_type": &id }] }
+    };
+
+    let existing = match staff_coll.find_one(filter.clone(), None).await {
         Ok(Some(s)) => s,
         _ => return (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() })),
     };
+
+    let target_oid = existing.id.unwrap_or_else(|| ObjectId::new());
 
     let mut update_doc = doc! {};
     if let Some(name) = &payload.name {
@@ -331,9 +362,27 @@ pub async fn update_staff(
             update_doc.insert("permissions", b);
         }
     }
+    if let Some(subs) = &payload.assigned_subjects {
+        if let Ok(b) = to_bson(subs) { update_doc.insert("assigned_subjects", b); }
+    }
+    if let Some(ctrs) = &payload.assigned_centers {
+        if let Ok(b) = to_bson(ctrs) { update_doc.insert("assigned_centers", b); }
+    }
+    if let Some(v) = payload.basic_salary { update_doc.insert("basic_salary", v); }
+    if let Some(v) = payload.allowances { update_doc.insert("allowances", v); }
+    if let Some(v) = payload.deductions { update_doc.insert("deductions", v); }
+    if let Some(v) = payload.pf_deduction { update_doc.insert("pf_deduction", v); }
+    if let Some(v) = payload.overtime_hours { update_doc.insert("overtime_hours", v); }
+    if let Some(v) = payload.overtime_rate { update_doc.insert("overtime_rate", v); }
+    if let Some(v) = payload.unpaid_leaves { update_doc.insert("unpaid_leaves", v); }
+    if let Some(v) = &payload.salary_status { update_doc.insert("salary_status", v); }
+    if let Some(v) = &payload.last_payment_date { update_doc.insert("last_payment_date", v); }
+    if let Some(v) = &payload.bank_details {
+        if let Ok(b) = to_bson(v) { update_doc.insert("bank_details", b); }
+    }
 
     if !update_doc.is_empty() {
-        let _ = staff_coll.update_one(doc! { "_id": staff_oid }, doc! { "$set": update_doc }, None).await;
+        let _ = staff_coll.update_one(doc! { "_id": target_oid }, doc! { "$set": update_doc }, None).await;
     }
 
     // Also update associated User if name, phone, email, or password changed
@@ -375,19 +424,406 @@ pub async fn delete_staff(
         return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
     }
 
-    let staff_oid = match ObjectId::parse_str(&id) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Invalid staff ID".to_string() })),
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! { "_id": oid }
+    } else {
+        doc! { "name": &id }
     };
 
     let staff_coll = db.collection::<Staff>("staff");
     let user_coll = db.collection::<User>("users");
 
-    if let Ok(Some(staff)) = staff_coll.find_one(doc! { "_id": staff_oid }, None).await {
-        let _ = staff_coll.delete_one(doc! { "_id": staff_oid }, None).await;
+    if let Ok(Some(staff)) = staff_coll.find_one(filter.clone(), None).await {
+        let _ = staff_coll.delete_one(filter, None).await;
         let _ = user_coll.delete_one(doc! { "_id": staff.user_id }, None).await;
         (StatusCode::OK, Json(StaffResponse { success: true, message: "Staff deleted successfully".to_string() }))
     } else {
         (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() }))
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct AttendanceRecordPayload {
+    pub staff_id: String,
+    pub date: String,
+    pub status: String,
+    pub check_in: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SaveAttendanceRequest {
+    pub date: String,
+    pub records: Vec<AttendanceRecordPayload>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AttendanceQuery {
+    pub date: Option<String>,
+}
+
+pub async fn get_staff_attendance(
+    State(db): State<Database>,
+    claims: Claims,
+    axum::extract::Query(query): axum::extract::Query<AttendanceQuery>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({ "error": "Forbidden" })));
+    }
+
+    let date = query.date.unwrap_or_else(|| Utc::now().naive_utc().date().to_string());
+    let att_coll = db.collection::<mongodb::bson::Document>("staff_attendance");
+
+    let is_locked = match att_coll.find_one(doc! { "date": &date, "is_locked": true }, None).await {
+        Ok(Some(_)) => true,
+        _ => false,
+    };
+
+    let filter = doc! { "date": &date, "type": { "$ne": "lock_marker" } };
+    let mut cursor = match att_coll.find(filter, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "is_locked": is_locked, "records": [] }))),
+    };
+
+    let mut records = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            if let Ok(val) = serde_json::to_value(doc) {
+                records.push(val);
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "date": date,
+        "is_locked": is_locked,
+        "records": records
+    })))
+}
+
+pub async fn save_staff_attendance(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<SaveAttendanceRequest>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
+    }
+
+    let att_coll = db.collection::<mongodb::bson::Document>("staff_attendance");
+
+    // Check if date is locked
+    if let Ok(Some(_)) = att_coll.find_one(doc! { "date": &payload.date, "is_locked": true }, None).await {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse {
+            success: false,
+            message: format!("Attendance for date {} is locked and cannot be edited!", payload.date)
+        }));
+    }
+
+    // Save records and mark as locked
+    let now = Utc::now();
+    for rec in payload.records {
+        let rec_doc = doc! {
+            "staff_id": &rec.staff_id,
+            "date": &payload.date,
+            "status": &rec.status,
+            "check_in": rec.check_in.unwrap_or_else(|| "09:30 AM".to_string()),
+            "is_locked": true,
+            "created_at": now.to_rfc3339(),
+        };
+
+        let filter = doc! { "staff_id": &rec.staff_id, "date": &payload.date };
+        let options = mongodb::options::ReplaceOptions::builder().upsert(true).build();
+        let _ = att_coll.replace_one(filter, rec_doc, options).await;
+    }
+
+    // Save date lock marker doc
+    let lock_doc = doc! {
+        "date": &payload.date,
+        "type": "lock_marker",
+        "is_locked": true,
+        "locked_by": &claims.sub,
+        "locked_at": now.to_rfc3339(),
+    };
+    let _ = att_coll.replace_one(doc! { "date": &payload.date, "type": "lock_marker" }, lock_doc, mongodb::options::ReplaceOptions::builder().upsert(true).build()).await;
+
+    (StatusCode::OK, Json(StaffResponse {
+        success: true,
+        message: format!("Attendance for {} saved & locked successfully", payload.date)
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateLeaveRequest {
+    pub staff_id: String,
+    pub staff_name: String,
+    pub leave_type: String, // "casual", "sick", "unpaid"
+    pub start_date: String,
+    pub end_date: String,
+    pub days: f64,
+    pub reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateLeaveStatusRequest {
+    pub status: String, // "approved", "rejected"
+}
+
+pub async fn get_staff_leaves(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<Vec<serde_json::Value>>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
+        return (StatusCode::FORBIDDEN, Json(Vec::new()));
+    }
+
+    let leave_coll = db.collection::<mongodb::bson::Document>("staff_leaves");
+    let mut cursor = match leave_coll.find(doc! {}, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::OK, Json(Vec::new())),
+    };
+
+    let mut list = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            if let Ok(val) = serde_json::to_value(doc) {
+                list.push(val);
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(list))
+}
+
+pub async fn create_staff_leave(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CreateLeaveRequest>,
+) -> (StatusCode, Json<StaffResponse>) {
+    let leave_coll = db.collection::<mongodb::bson::Document>("staff_leaves");
+    let now = Utc::now();
+
+    let doc = doc! {
+        "staff_id": &payload.staff_id,
+        "staff_name": &payload.staff_name,
+        "leave_type": &payload.leave_type,
+        "start_date": &payload.start_date,
+        "end_date": &payload.end_date,
+        "days": payload.days,
+        "reason": &payload.reason,
+        "status": "pending",
+        "applied_by": &claims.sub,
+        "created_at": now.to_rfc3339(),
+    };
+
+    match leave_coll.insert_one(doc, None).await {
+        Ok(_) => (StatusCode::CREATED, Json(StaffResponse { success: true, message: "Leave request submitted for approval".to_string() })),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(StaffResponse { success: false, message: "Failed to submit leave request".to_string() })),
+    }
+}
+
+pub async fn update_staff_leave_status(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateLeaveStatusRequest>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
+    }
+
+    let leave_coll = db.collection::<mongodb::bson::Document>("staff_leaves");
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! { "_id": oid }
+    } else {
+        doc! { "staff_id": &id }
+    };
+
+    let leave_doc = match leave_coll.find_one(filter.clone(), None).await {
+        Ok(Some(d)) => d,
+        _ => return (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Leave request not found".to_string() })),
+    };
+
+    let status = payload.status.to_lowercase();
+    let _ = leave_coll.update_one(filter.clone(), doc! { "$set": { "status": &status, "reviewed_by": &claims.sub } }, None).await;
+
+    // If approved and unpaid leave, increment staff's unpaid_leaves count
+    if status == "approved" {
+        if let Ok(ltype) = leave_doc.get_str("leave_type") {
+            if ltype == "unpaid" {
+                let days = leave_doc.get_f64("days").unwrap_or(1.0);
+                if let Ok(staff_id) = leave_doc.get_str("staff_id") {
+                    let staff_coll = db.collection::<Staff>("staff");
+                    let staff_filter = if let Ok(s_oid) = ObjectId::parse_str(staff_id) {
+                        doc! { "_id": s_oid }
+                    } else {
+                        doc! { "name": staff_id }
+                    };
+                    let _ = staff_coll.update_one(staff_filter, doc! { "$inc": { "unpaid_leaves": days } }, None).await;
+                }
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(StaffResponse { success: true, message: format!("Leave status updated to {}", status) }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateOvertimeRequest {
+    pub staff_id: String,
+    pub staff_name: String,
+    pub hours: f64,
+    pub rate: f64,
+    pub extra_bonus: f64,
+    pub reason: String,
+    pub date: Option<String>,
+}
+
+pub async fn get_staff_overtime(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<Vec<serde_json::Value>>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
+        return (StatusCode::FORBIDDEN, Json(Vec::new()));
+    }
+
+    let ot_coll = db.collection::<mongodb::bson::Document>("staff_overtime");
+    let mut cursor = match ot_coll.find(doc! {}, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::OK, Json(Vec::new())),
+    };
+
+    let mut list = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            if let Ok(val) = serde_json::to_value(doc) {
+                list.push(val);
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(list))
+}
+
+pub async fn create_staff_overtime(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CreateOvertimeRequest>,
+) -> (StatusCode, Json<StaffResponse>) {
+    let ot_coll = db.collection::<mongodb::bson::Document>("staff_overtime");
+    let now = Utc::now();
+    let date_str = payload.date.unwrap_or_else(|| now.naive_utc().date().to_string());
+
+    let doc = doc! {
+        "staff_id": &payload.staff_id,
+        "staff_name": &payload.staff_name,
+        "hours": payload.hours,
+        "rate": payload.rate,
+        "extra_bonus": payload.extra_bonus,
+        "reason": &payload.reason,
+        "date": &date_str,
+        "created_by": &claims.sub,
+        "created_at": now.to_rfc3339(),
+    };
+
+    let _ = ot_coll.insert_one(doc, None).await;
+
+    // Update staff OT hours and allowances
+    let staff_coll = db.collection::<Staff>("staff");
+    let staff_filter = if let Ok(s_oid) = ObjectId::parse_str(&payload.staff_id) {
+        doc! { "_id": s_oid }
+    } else {
+        doc! { "name": &payload.staff_id }
+    };
+
+    let _ = staff_coll.update_one(staff_filter, doc! { 
+        "$inc": { "overtime_hours": payload.hours, "allowances": payload.extra_bonus },
+        "$set": { "overtime_rate": payload.rate }
+    }, None).await;
+
+    (StatusCode::CREATED, Json(StaffResponse { success: true, message: "Overtime logged and added to payroll".to_string() }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DisbursePayrollPayload {
+    pub staff_id: String,
+    pub staff_name: String,
+    pub month_year: String,
+    pub basic: f64,
+    pub overtime_pay: f64,
+    pub allowances: f64,
+    pub deductions: f64,
+    pub net_paid: f64,
+    pub payment_ref: Option<String>,
+}
+
+pub async fn disburse_staff_payroll(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<DisbursePayrollPayload>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
+    }
+
+    let history_coll = db.collection::<mongodb::bson::Document>("staff_payroll_history");
+    let now = Utc::now();
+    let today_str = now.naive_utc().date().to_string();
+    let ref_code = payload.payment_ref.unwrap_or_else(|| format!("REF-{}", now.timestamp_millis() % 1000000));
+
+    let log_doc = doc! {
+        "staff_id": &payload.staff_id,
+        "staff_name": &payload.staff_name,
+        "month_year": &payload.month_year,
+        "basic": payload.basic,
+        "overtime_pay": payload.overtime_pay,
+        "allowances": payload.allowances,
+        "deductions": payload.deductions,
+        "net_paid": payload.net_paid,
+        "disbursed_at": now.to_rfc3339(),
+        "payment_ref": &ref_code,
+        "disbursed_by": &claims.sub,
+    };
+
+    let _ = history_coll.insert_one(log_doc, None).await;
+
+    // Update staff salary status
+    let staff_coll = db.collection::<Staff>("staff");
+    let staff_filter = if let Ok(s_oid) = ObjectId::parse_str(&payload.staff_id) {
+        doc! { "_id": s_oid }
+    } else {
+        doc! { "name": &payload.staff_id }
+    };
+
+    let _ = staff_coll.update_one(staff_filter, doc! {
+        "$set": { "salary_status": "paid", "last_payment_date": &today_str }
+    }, None).await;
+
+    (StatusCode::OK, Json(StaffResponse { success: true, message: format!("Payroll disbursed successfully ({})", ref_code) }))
+}
+
+pub async fn get_staff_payroll_history(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<Vec<serde_json::Value>>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
+        return (StatusCode::FORBIDDEN, Json(Vec::new()));
+    }
+
+    let history_coll = db.collection::<mongodb::bson::Document>("staff_payroll_history");
+    let mut cursor = match history_coll.find(doc! {}, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::OK, Json(Vec::new())),
+    };
+
+    let mut list = Vec::new();
+    while let Some(result) = cursor.next().await {
+        if let Ok(doc) = result {
+            if let Ok(val) = serde_json::to_value(doc) {
+                list.push(val);
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(list))
+}
+

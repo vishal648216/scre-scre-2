@@ -524,14 +524,25 @@ const CenterListPage = () => {
         toast.error(t("Failed to generate PDF"));
         return;
       }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `center_details_${id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        const html = await res.text();
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.focus();
+        }
+      } else {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `center_details_${id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (e) {
       toast.error(t("An error occurred during printing"));
     } finally {
@@ -609,11 +620,11 @@ const CenterListPage = () => {
         bank_details: editingCenter.bank_details || undefined,
         documents: editingCenter.documents || undefined,
         key_documents: editingCenter.key_documents || undefined,
-        branding_media: {
+        branding_media: editingCenter.branding_media ? {
           ...editingCenter.branding_media,
           gallery_urls: editingCenter.branding_media?.gallery_urls?.filter(Boolean) || [],
           short_clip_urls: editingCenter.branding_media?.short_clip_urls?.filter(Boolean) || [],
-        } || undefined,
+        } : undefined,
         working_hours: editingCenter.working_hours || undefined,
         config_validity: editingCenter.config_validity || undefined,
         password: editingCenter.password || undefined,
