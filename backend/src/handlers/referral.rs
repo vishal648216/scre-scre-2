@@ -1,10 +1,9 @@
 use crate::models::referral::{
-    Referral, ReferralRewardType, ReferralSettings, ReferralLevel, ReferralBonus, ReferralStatus,
+    Referral, ReferralSettings, ReferralLevel, ReferralBonus, ReferralStatus,
     ReferralTransaction, ReferralWithdrawal, WithdrawalMethod,
 };
 use crate::models::user::{Claims, User, UserRole};
 use crate::models::center_wallet::CenterWallet;
-use crate::models::wallet_transaction::WalletTransaction;
 use axum::{
     Json,
     extract::{Query, State, Path},

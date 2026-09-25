@@ -16,9 +16,6 @@ use crate::handlers::generate_certificates::{
 use crate::models::certificate::Certificate;
 use crate::models::user::Claims;
 use crate::models::user::UserRole;
-use crate::services::translation_service::{
-    backfill_missing_translations, get_all_supported_languages,
-};
 use axum::http::HeaderValue;
 use axum::{
     Json, Router,
@@ -34,7 +31,7 @@ use std::net::SocketAddr;
 use tokio::time::{Duration, sleep};
 use tower_http::{
     compression::CompressionLayer,
-    cors::{AllowOrigin, Any, CorsLayer},
+    cors::CorsLayer,
     services::ServeDir,
     set_header::SetResponseHeaderLayer,
 };
@@ -60,6 +57,7 @@ pub async fn strip_accept_encoding_for_downloads(
     next.run(req).await
 }
 
+#[allow(dead_code)]
 async fn start_scheduler(db: mongodb::Database) {
     loop {
         let now = Utc::now();
@@ -100,7 +98,7 @@ async fn start_scheduler(db: mongodb::Database) {
     }
 }
 
-async fn start_translation_backfill_scheduler(db: mongodb::Database) {
+async fn start_translation_backfill_scheduler(_db: mongodb::Database) {
     // Translation backfill is disabled to prevent CPU spikes (503 Service Unavailable)
     return;
     /*

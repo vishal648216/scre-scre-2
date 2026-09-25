@@ -1,13 +1,10 @@
-use crate::models::center::Center;
 use crate::models::exam_engine::{
-    BlueprintComponentsPart, BlueprintComponentsPartPayload, BlueprintSnapshot, ExamBlueprint,
+    BlueprintComponentsPart, BlueprintSnapshot, ExamBlueprint,
     ExamBlueprintPayload, PaperQuestionMapping, StudentPaper, SubjectBlueprintConfig,
-    SubjectBlueprintConfigPayload,
 };
 use crate::models::exam_workflow::CourseExamAttempt;
 use crate::models::qb::Question as QBQuestion;
 use crate::models::user::{Claims, User, UserRole};
-use crate::services::exam_eligibility;
 use axum::{
     Json,
     extract::{Path, State},
@@ -1622,7 +1619,7 @@ pub async fn generate_student_paper(
     );
 
     // If caller didn't send windows, derive from blueprint
-    let mut start_window = payload.start_window.and_then(|s| {
+    let start_window = payload.start_window.and_then(|s| {
         chrono::DateTime::parse_from_rfc3339(&s)
             .ok()
             .map(|dt| mongodb::bson::DateTime::from_millis(dt.timestamp_millis()))
@@ -3086,7 +3083,7 @@ pub async fn evaluate_paper(
             // paper.practical_passed = Some(practical_marks >= comp.practical_min_marks);
 
             // Overall Pass: Must pass all enabled components
-            let mut overall_pass = total_score >= comp.exam_min_marks;
+            let overall_pass = total_score >= comp.exam_min_marks;
 
             // If practical is enabled, we'd check practical marks too...
             // For this specific paper/attempt, we focus on the Exam portion.

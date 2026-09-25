@@ -1,8 +1,7 @@
 use crate::db::get_next_sequence;
 use crate::models::center::Center;
-use crate::models::course::Course;
 use crate::models::user::User;
-use chrono::{Datelike, Utc};
+use chrono::Utc;
 use mongodb::{
     Database,
     bson::{doc, oid::ObjectId},
@@ -146,7 +145,7 @@ pub async fn generate_serial_number(
     generate_unique_serial_number(db, center_user_id, full_center_code).await
 }
 
-pub async fn generate_referral_code(db: &Database, user_id: &ObjectId) -> String {
+pub async fn generate_referral_code(_db: &Database, user_id: &ObjectId) -> String {
     let hash = &user_id.to_hex()[..6].to_uppercase();
     let ts = Utc::now().format("%M%S").to_string();
     format!("REF-{}-{}", hash, ts)

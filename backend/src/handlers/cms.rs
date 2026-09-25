@@ -358,7 +358,7 @@ pub async fn list_cms_items(
 pub async fn create_cms_item(
     State(db): State<Database>,
     claims: Claims,
-    Json(mut item): Json<serde_json::Value>,
+    Json(item): Json<serde_json::Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
         return (

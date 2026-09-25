@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use lettre::message::{Message, MultiPart, header};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::client::{Tls, TlsParameters};

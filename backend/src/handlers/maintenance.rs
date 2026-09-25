@@ -1,18 +1,11 @@
-use crate::models::academic::CourseSubject;
-use crate::models::course::Course;
-use crate::models::exam_engine_v2::{
-    ExamV2Exam, ExamV2Paper, ExamV2PaperSection, ExamV2PaperTemplate,
-};
-use crate::models::subject::Subject;
-use crate::models::user::{Claims, User, UserRole};
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use crate::models::user::{Claims, UserRole};
+use axum::{Json, extract::State, http::StatusCode};
 use chrono::Utc;
 use mongodb::{
     Database,
     bson::{DateTime as BsonDateTime, doc, oid::ObjectId},
 };
 use serde::Serialize;
-use std::collections::HashMap;
 
 #[derive(Debug, Serialize)]
 pub struct PurgeResponse {

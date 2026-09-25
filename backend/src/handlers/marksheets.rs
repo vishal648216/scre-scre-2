@@ -117,7 +117,7 @@ pub async fn download_marksheet(
             _ => {
                 // If it's not in marksheet, check certificates collection
                 let certs_coll = db.collection::<mongodb::bson::Document>("certificates");
-                let cert_doc = certs_coll
+                let _cert_doc = certs_coll
                     .find_one(doc! { "_id": oid, "student_id": sid }, None)
                     .await
                     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -133,7 +133,7 @@ pub async fn download_marksheet(
             _ => {
                 // If it's not in marksheet, check certificates collection
                 let certs_coll = db.collection::<mongodb::bson::Document>("certificates");
-                let cert_doc = certs_coll
+                let _cert_doc = certs_coll
                     .find_one(doc! { "_id": oid, "center_id": cid }, None)
                     .await
                     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?

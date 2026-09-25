@@ -12,7 +12,7 @@ use mongodb::{
 };
 use serde::Deserialize;
 
-use crate::models::coupon::{Coupon, CouponType, DiscountType};
+use crate::models::coupon::{Coupon, DiscountType};
 use crate::models::user::{Claims, User, UserRole};
 
 pub async fn list_coupons(
@@ -209,7 +209,7 @@ pub async fn update_coupon(
     if let Some(code) = payload.get("code").and_then(|v| v.as_str()) {
         let upper_code = code.to_string().to_uppercase();
         // Check if code is already taken by another coupon
-        if let Ok(Some(existing)) = coll.find_one(doc! { "code": &upper_code, "_id": { "$ne": oid } }, None).await {
+        if let Ok(Some(_existing)) = coll.find_one(doc! { "code": &upper_code, "_id": { "$ne": oid } }, None).await {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({"message": "Coupon code already exists"})),

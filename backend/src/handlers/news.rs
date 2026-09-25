@@ -19,7 +19,7 @@ use crate::config::languages::get_supported_languages;
 use crate::models::news::{News, NewsStatus};
 use crate::models::user::{Claims, UserRole};
 use crate::services::translation_service::register_and_pretranslate;
-use crate::models::serde_helpers::{optional_rfc3339_datetime, rfc3339_datetime};
+use crate::models::serde_helpers::optional_rfc3339_datetime;
 
 use crate::services::translation_service::{get_translation, normalize_lang};
 

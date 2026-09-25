@@ -96,7 +96,7 @@ fn qr_to_base64(data: &str) -> String {
     String::new()
 }
 
-async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> String {
+async fn generate_enrollment_number(db: &Database, _creator_id: &ObjectId) -> String {
     let counters = db.collection::<mongodb::bson::Document>("counters");
     let filter = doc! { "_id": "enrollment" };
     let update = doc! { "$inc": { "seq": 1 } };
@@ -119,7 +119,7 @@ async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> Str
     }
 }
 
-async fn generate_serial_number(student_id: &ObjectId) -> String {
+async fn generate_serial_number(_student_id: &ObjectId) -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let num: u32 = rng.gen_range(10000..99999);

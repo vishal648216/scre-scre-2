@@ -156,6 +156,7 @@ async fn main() {
         sub_admin_role_id: None,
         sub_admin_role_name: None,
         sub_admin_permissions: None,
+        ..Default::default()
     };
             users
                 .insert_one(new_u, None)
@@ -334,6 +335,7 @@ async fn main() {
         sub_admin_role_id: None,
         sub_admin_role_name: None,
         sub_admin_permissions: None,
+        ..Default::default()
     };
             users.insert_one(new_u, None).await.expect("insert student");
         }

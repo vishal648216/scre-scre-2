@@ -109,6 +109,7 @@ async fn main() {
         sub_admin_role_id: None,
         sub_admin_role_name: None,
         sub_admin_permissions: None,
+        ..Default::default()
     };
 
     let users_coll = db.collection::<User>("users");

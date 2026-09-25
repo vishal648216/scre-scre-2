@@ -206,7 +206,7 @@ pub async fn create_course(
         );
     }
 
-    let mut course_code = if let Some(provided_code) = &payload.course_code {
+    let course_code = if let Some(provided_code) = &payload.course_code {
         // Check if the provided course_code already exists
         if collection
             .find_one(doc! { "course_code": provided_code }, None)
@@ -1124,7 +1124,7 @@ pub async fn get_allotted_courses(
             let cat_coll = db
                 .collection::<crate::models::course_category::CourseCategory>("course_categories");
 
-            let mut filter = doc! {};
+            let _filter = doc! {};
             let mut found_course = None;
 
             // 1. Try by course_id first (most accurate)

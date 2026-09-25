@@ -124,7 +124,7 @@ pub async fn get_intern_tasks(
 
 pub async fn get_intern_tasks_for_intern(
     State(db): State<Database>,
-    claims: Claims,
+    _claims: Claims,
     Path(intern_id): Path<String>,
 ) -> (StatusCode, Json<Vec<InternTask>>) {
     let collection = db.collection::<InternTask>("intern_tasks");
@@ -228,7 +228,7 @@ pub async fn delete_intern_task(
 
 pub async fn update_intern_task_status(
     State(db): State<Database>,
-    claims: Claims,
+    _claims: Claims,
     Path(task_id): Path<String>,
     Json(payload): Json<UpdateInternTaskStatusRequest>,
 ) -> (StatusCode, Json<InternTaskResponse>) {

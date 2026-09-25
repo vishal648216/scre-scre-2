@@ -17,6 +17,7 @@ use crate::models::{
     notification_gateway::{NotificationGatewayConfig, NotificationLog, SendTestNotificationRequest},
 };
 
+#[allow(dead_code)]
 const CONFIG_KEY: &str = "active_gateway_config";
 
 /// GET /api/admin/notifications/config

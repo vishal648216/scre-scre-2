@@ -1455,13 +1455,13 @@ pub async fn list_eligible_for_marksheet(
         db.collection::<Document>("users");
     let elig_coll =
         db.collection::<CertificateEligibility>("certificate_eligibility");
-    let certs_coll =
+    let _certs_coll =
         db.collection::<Certificate>("certificates");
     let course_attempts_coll =
         db.collection::<crate::models::exam_workflow::CourseExamAttempt>(
             "course_exam_attempts",
         );
-    let paper_v2_coll =
+    let _paper_v2_coll =
         db.collection::<ExamV2Paper>("exam_v2_papers");
 
     // ================================================================
@@ -4103,7 +4103,7 @@ pub async fn process_generate_certificates(
         ) = if is_consolidated {
             let mut total_obtained = 0.0;
             let mut total_max = 0.0;
-            let mut all_subjects = Vec::new();
+            let all_subjects = Vec::new();
             let mut consolidated_marks_rows: Vec<MarksRow> = Vec::new();
             let mut seen_subjects = std::collections::HashSet::new();
 
@@ -4162,7 +4162,7 @@ pub async fn process_generate_certificates(
             }
 
             // Process legacy papers similarly
-            let mut sorted_v1_papers = all_papers.clone();
+            let sorted_v1_papers = all_papers.clone();
             // Assuming v1 papers don't have attempt field, we rely on submit_time (already sorted by latest)
             for paper in sorted_v1_papers {
                 if let Ok(Some(bp)) = blueprint_coll
@@ -4820,6 +4820,7 @@ fn build_manual_rows(marks: &[SubjectMarks]) -> Vec<MarksRow> {
         .collect()
 }
 
+#[allow(dead_code)]
 fn marks_table_column_title(key: &str) -> &'static str {
     match key {
         "subject" => "Subject / Section",
@@ -4832,6 +4833,7 @@ fn marks_table_column_title(key: &str) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn marks_table_th_align(key: &str) -> &'static str {
     match key {
         "obtained" | "max_marks" | "min_marks" | "percentage" => "right",
@@ -4840,6 +4842,7 @@ fn marks_table_th_align(key: &str) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn render_marks_rows_table(field: &TemplateField, rows: &[MarksRow]) -> String {
     let default: Vec<String> = vec![
         "subject".into(),

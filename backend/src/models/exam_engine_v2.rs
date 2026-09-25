@@ -175,8 +175,11 @@ pub struct ExamV2Question {
     pub created_at: DateTime,
 }
 
+#[allow(dead_code)]
 fn default_question_status() -> String { "Draft".to_string() }
+#[allow(dead_code)]
 fn default_version() -> u32 { 1 }
+#[allow(dead_code)]
 fn default_true() -> bool { true }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

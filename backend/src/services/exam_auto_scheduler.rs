@@ -98,6 +98,7 @@ fn parse_exam_time(time_str: Option<&str>) -> (u32, u32) {
         .unwrap_or((9, 0))
 }
 
+#[allow(dead_code)]
 fn with_day_safe<Tz: chrono::TimeZone>(
     dt: chrono::DateTime<Tz>,
     day: u32,
@@ -113,6 +114,7 @@ fn with_day_safe<Tz: chrono::TimeZone>(
     dt.with_day(safe_day).unwrap_or(dt)
 }
 
+#[allow(dead_code)]
 fn with_hms_safe<Tz: chrono::TimeZone>(
     dt: chrono::DateTime<Tz>,
     hour: u32,

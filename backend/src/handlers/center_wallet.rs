@@ -11,10 +11,8 @@ use mongodb::{
     Database,
 };
 use serde::{Deserialize, Serialize};
-use base64::{Engine as _, engine::general_purpose};
 use std::fs;
 use std::process::Command;
-use std::path::PathBuf;
 
 use crate::models::{
     center::Center,
@@ -1044,7 +1042,7 @@ fn generate_receipt_html(
     let recharge_amount = transaction.credit_amount.unwrap_or(0.0);
     let date = transaction.created_at.format("%d-%m-%Y").to_string();
     let time = transaction.created_at.format("%H:%M:%S").to_string();
-    let gateway_order_id = transaction.gateway_order_id.as_deref().unwrap_or("—");
+    let _gateway_order_id = transaction.gateway_order_id.as_deref().unwrap_or("—");
     let gateway_payment_id = transaction.gateway_payment_id.as_deref().unwrap_or("—");
 
     format!(

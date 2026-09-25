@@ -1,4 +1,3 @@
-use crate::models::qb::{Question, QuestionBank};
 use crate::models::user::{Claims, UserRole};
 use axum::{
     Json,

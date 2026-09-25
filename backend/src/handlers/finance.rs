@@ -5,7 +5,7 @@ use axum::{
 };
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson},
+    bson::{doc, oid::ObjectId},
     Database,
 };
 use serde::{Deserialize, Serialize};

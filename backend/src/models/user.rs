@@ -1,12 +1,13 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize, Deserializer};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum UserRole {
     SuperAdmin,
     Admin,
     Center,
+    #[default]
     Student,
     Staff,
     Intern,
@@ -196,6 +197,95 @@ pub struct User {
     pub remarks: Option<String>,
 }
 
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: None,
+            username: String::new(),
+            password_hash: String::new(),
+            raw_password: None,
+            role: UserRole::Student,
+            parent_id: None,
+            sub_admin_role_id: None,
+            sub_admin_role_name: None,
+            sub_admin_permissions: None,
+            full_name: None,
+            first_name: None,
+            middle_name: None,
+            last_name: None,
+            email: None,
+            phone: None,
+            course: None,
+            father_name: None,
+            mother_name: None,
+            dob: None,
+            gender: None,
+            category: None,
+            national_id_type: None,
+            national_id: None,
+            address: None,
+            city: None,
+            state: None,
+            district: None,
+            country: None,
+            pincode: None,
+            other_address: None,
+            emergency_contact_name: None,
+            emergency_contact_phone: None,
+            emergency_contact_relation: None,
+            additional_docs: None,
+            enrollment_number: None,
+            serial_number: None,
+            photo_url: None,
+            signature_url: None,
+            national_id_url: None,
+            highest_qualification: None,
+            college: None,
+            admission_mode: None,
+            exam_mode: None,
+            session_id: None,
+            session_start_date: None,
+            session_end_date: None,
+            approval_status: None,
+            status: None,
+            admin_instructions: None,
+            priority_centers: None,
+            current_priority: None,
+            marks: None,
+            active: true,
+            is_deleted: false,
+            deleted_at: None,
+            created_at: chrono::Utc::now(),
+            course_id: None,
+            registration_date: None,
+            roll_number: None,
+            batch_id: None,
+            current_unit: None,
+            referral_code: None,
+            referred_by_code: None,
+            applied_coupon: None,
+            course_category: None,
+            enrolled_courses: None,
+            other_doc_url: None,
+            updated_at: None,
+            is_email_verified: false,
+            is_deleted_by_center_final: false,
+            internship_domain: None,
+            internship_mode: None,
+            total_fees: None,
+            extra_charges: None,
+            grand_total: None,
+            fee_breakdown: None,
+            payment_type: None,
+            is_payment_type_locked: false,
+            installments: None,
+            extra_charges_list: None,
+            due_date: None,
+            remarks: None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Installment {
     pub installment_number: u32,
@@ -231,7 +321,7 @@ fn default_active() -> bool {
 }
 
 fn deserialize_bool_or_null<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
-    use serde::de::Error;
+    
     let opt = Option::deserialize(deserializer)?;
     Ok(opt.unwrap_or(false))
 }

@@ -98,6 +98,7 @@ async fn main() {
         sub_admin_role_id: None,
         sub_admin_role_name: None,
         sub_admin_permissions: None,
+        ..Default::default()
     };
 
         collection.insert_one(new_user, None).await.expect("Failed to insert user");

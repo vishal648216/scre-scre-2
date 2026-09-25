@@ -1,7 +1,6 @@
 use crate::handlers::coupon::consume_coupon;
 use crate::models::center::Center;
 use crate::models::course::Course;
-use crate::models::fee::FeeRecord;
 use crate::models::user::{Claims, User, UserRole};
 use crate::services::email_service::{send_registration_email, send_update_notification_email};
 use crate::services::id_card_auto;
@@ -12,17 +11,16 @@ use crate::util::generators::{
 use axum::{
     Json,
     extract::{Path, Query, State},
-    http::{StatusCode, header},
+    http::StatusCode,
     response::IntoResponse,
 };
-use base64::{Engine as _, engine::general_purpose};
+use base64::Engine as _;
 use bcrypt::{DEFAULT_COST, hash};
 use chrono::{Datelike, NaiveDate, Utc};
 use futures_util::StreamExt;
 use mongodb::{Database, bson::doc, bson::oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -3328,7 +3326,7 @@ pub async fn public_verify_student(
     let upper = clean.to_uppercase();
     let lower = clean.to_lowercase();
 
-    let mut or_clauses = vec![
+    let or_clauses = vec![
         doc! { "enrollment_number": &clean },
         doc! { "enrollment_number": &upper },
         doc! { "enrollment_number": &lower },

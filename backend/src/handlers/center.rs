@@ -129,9 +129,9 @@ pub async fn public_get_center_by_code(
 }
 
 pub async fn handle_create_center(
-    State(db): State<Database>,
+    State(_db): State<Database>,
     _claims: Claims,
-    Json(payload): Json<serde_json::Value>,
+    Json(_payload): Json<serde_json::Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::OK,
@@ -431,9 +431,9 @@ pub async fn restore_center(
 }
 
 pub async fn initiate_permanent_delete(
-    State(db): State<Database>,
+    State(_db): State<Database>,
     _claims: Claims,
-    Path(id): Path<String>,
+    Path(_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::OK,
@@ -442,9 +442,9 @@ pub async fn initiate_permanent_delete(
 }
 
 pub async fn cancel_permanent_delete(
-    State(db): State<Database>,
+    State(_db): State<Database>,
     _claims: Claims,
-    Path(id): Path<String>,
+    Path(_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::OK,
@@ -453,9 +453,9 @@ pub async fn cancel_permanent_delete(
 }
 
 pub async fn execute_permanent_delete(
-    State(db): State<Database>,
+    State(_db): State<Database>,
     _claims: Claims,
-    Path(id): Path<String>,
+    Path(_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::OK,

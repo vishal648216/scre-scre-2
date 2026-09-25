@@ -13,17 +13,15 @@
 //! Same `(exam, student, attempt)` → same master seed → same paper. Different students → different seeds →
 //! different permutations / subsets → **lower overlap** than “always take globally least-used”.
 
-use crate::models::exam_engine_v2::{ExamV2Option, ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question, ExamV2Paper};
+use crate::models::exam_engine_v2::{ExamV2PaperQuestion, ExamV2PaperTemplate, ExamV2Question};
 use futures_util::StreamExt;
 use hmac::{Hmac, Mac};
-use mongodb::bson::{doc, DateTime as BsonDateTime};
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use sha2::Sha256;
-use std::collections::HashSet;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -31,6 +29,7 @@ type HmacSha256 = Hmac<Sha256>;
 const MARKS_EPS: f64 = 1e-6;
 
 /// Decay constant for usage score (e.g., usage count weight decays over 30 days)
+#[allow(dead_code)]
 const DECAY_DAYS: i64 = 30;
 
 fn hmac_secret() -> Result<Vec<u8>, String> {
@@ -59,6 +58,7 @@ pub fn derive_paper_seed(exam_id: ObjectId, student_id: ObjectId, attempt: i32) 
 }
 
 /// Derive a secondary 32-byte seed (section RNG, global shuffle, per-question option shuffle).
+#[allow(dead_code)]
 fn derive_subseed(master: &[u8; 32], label: &[u8], extra: &[u8]) -> Result<[u8; 32], String> {
     let secret = hmac_secret()?;
     let mut mac = HmacSha256::new_from_slice(&secret).map_err(|e| e.to_string())?;
@@ -76,11 +76,13 @@ pub fn seed_hex(seed: &[u8; 32]) -> String {
     hex::encode(seed)
 }
 
+#[allow(dead_code)]
 fn chacha_from_seed(seed: &[u8; 32]) -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*seed)
 }
 
 /// Fisher–Yates shuffle then take first `k` — uniform random k-subset without replacement, deterministic from `seed`.
+#[allow(dead_code)]
 fn pick_questions_uniform_without_replacement(
     mut eligible: Vec<ExamV2Question>,
     k: usize,

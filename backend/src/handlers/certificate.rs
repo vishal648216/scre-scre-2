@@ -5199,16 +5199,13 @@ use axum::{
 };
 use std::path::PathBuf;
 use std::collections::BTreeMap;
-use std::process::Command;
-use mongodb::{Database, bson::{doc, oid::ObjectId, Document as BsonDocument, Bson}};
+use mongodb::{Database, bson::{doc, oid::ObjectId, Document as BsonDocument}};
 use serde::{Deserialize, Serialize};
 use crate::handlers::generate_certificates::{GenerateRequest, process_generate_certificates};
 use crate::models::user::{UserRole, Claims};
 use crate::models::certificate::Certificate;
-use crate::models::center::Center;
 use crate::models::center_assets::CenterAssets;
 use crate::models::admin_assets::AdminAssets; 
-use crate::services::pdf_generator::PdfGenerator;
 use chrono::Utc;
 use futures_util::stream::StreamExt;
 use lopdf::{Document, Object, ObjectId as PdfObjectId};
@@ -5377,7 +5374,7 @@ pub async fn get_certificates(
     };
 
     let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "uploads".to_string());
-    let upload_pb = std::path::PathBuf::from(&upload_dir);
+    let _upload_pb = std::path::PathBuf::from(&upload_dir);
 
     let mut certs = Vec::new();
     while let Some(result) = cursor.next().await {

@@ -30,7 +30,7 @@ use crate::models::exam_engine_v2::{
     PracticalAssignmentMarks, ReappearPayment, ReappearAllocation
 };
 use crate::handlers::exam_v2_migrate::run_migration;
-use crate::services::exam_engine_v2::{template_computed_total, validate_template_structure};
+use crate::services::exam_engine_v2::validate_template_structure;
 use crate::models::user::{Claims, User, UserRole};
 use crate::handlers::attendance::Attendance;
 

@@ -523,7 +523,7 @@ pub async fn verify_payment(
     // Look up current wallet
     println!("6. Looking up wallet document");
     let wallet_coll = db.collection::<CenterWallet>("center_wallet");
-    let current_wallet = match wallet_coll.find_one(doc! { "center_id": center_id }, None).await {
+    let _current_wallet = match wallet_coll.find_one(doc! { "center_id": center_id }, None).await {
         Ok(Some(w)) => {
             println!("   Wallet found:");
             println!("   - _id: {:?}", w.id);

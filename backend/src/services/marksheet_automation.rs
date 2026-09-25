@@ -1,12 +1,10 @@
 use crate::models::academic::CourseSubject;
 use crate::models::admin_assets::AdminAssets;
-use crate::models::announcement::{Announcement, AnnouncementPriority, TargetType};
 use crate::models::center::Center;
 use crate::models::certificate::Certificate;
 use crate::models::certificate_auto_generation::CertificateEligibility;
 use crate::models::exam_workflow::CourseExamAttempt;
-use crate::models::subject::Subject;
-use crate::models::user::{User, UserRole};
+use crate::models::user::User;
 use crate::models::template::{Template, TemplateField};
 use crate::services::marks_calculation::{ResultTableRow, render_result_table_html};
 use crate::services::pdf_generator::PdfGenerator;
@@ -16,7 +14,6 @@ use mongodb::{
     Database,
     bson::{doc, oid::ObjectId},
 };
-use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::PathBuf;
 
@@ -105,7 +102,7 @@ fn qr_to_base64(data: &str) -> String {
     String::new()
 }
 
-async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> String {
+async fn generate_enrollment_number(db: &Database, _creator_id: &ObjectId) -> String {
     let counters = db.collection::<mongodb::bson::Document>("counters");
     let filter = doc! { "_id": "enrollment" };
     let update = doc! { "$inc": { "seq": 1 } };
@@ -128,7 +125,7 @@ async fn generate_enrollment_number(db: &Database, creator_id: &ObjectId) -> Str
     }
 }
 
-async fn generate_serial_number(student_id: &ObjectId) -> String {
+async fn generate_serial_number(_student_id: &ObjectId) -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let num: u32 = rng.gen_range(10000..99999);
@@ -149,7 +146,7 @@ pub async fn process_student_marksheet(db: &Database, eligibility: CertificateEl
     let template_fields_coll = db.collection::<TemplateField>("template_fields");
     let course_exam_attempts_coll = db.collection::<CourseExamAttempt>("course_exam_attempts");
     let base_url = env::var("BASE_URL").unwrap_or_else(|_| "https://screduc.com".to_string());
-    let upload_dir = env::var("UPLOAD_DIR").unwrap_or_else(|_| "uploads".to_string());
+    let _upload_dir = env::var("UPLOAD_DIR").unwrap_or_else(|_| "uploads".to_string());
 
     println!(
         "Starting process_student_marksheet for student: {}, attempt: {:?}",
@@ -398,8 +395,8 @@ pub async fn process_student_marksheet(db: &Database, eligibility: CertificateEl
     println!("  Starting to collect marks...");
     let mut marks_rows = Vec::new();
     let mut seen_subjects = std::collections::HashSet::new();
-    let mut grand_total_max = 0.0;
-    let mut grand_total_obtained = 0.0;
+    let mut _grand_total_max = 0.0;
+    let mut _grand_total_obtained = 0.0;
 
     if !course_exam_attempts.is_empty() {
         let cea = course_exam_attempts.first().unwrap();
@@ -447,8 +444,8 @@ pub async fn process_student_marksheet(db: &Database, eligibility: CertificateEl
                     assignment_obtained: sm.components.assignment_obtained,
                 });
                 seen_subjects.insert(subject_key);
-                grand_total_max += max;
-                grand_total_obtained += obtained;
+                _grand_total_max += max;
+                _grand_total_obtained += obtained;
             }
         }
     } else if !all_evaluated_papers.is_empty() {
@@ -459,9 +456,9 @@ pub async fn process_student_marksheet(db: &Database, eligibility: CertificateEl
             b_attempt.cmp(&a_attempt)
         });
 
-        let mut paper_idx = 0;
+        let mut _paper_idx = 0;
         for p2 in sorted_papers {
-            paper_idx += 1;
+            _paper_idx += 1;
             if let Ok(paper_template_id) = p2.get_object_id("paper_template_id") {
                 if let Ok(Some(tpl)) = paper_v2_tpl_coll
                     .find_one(doc! { "_id": paper_template_id }, None)
@@ -549,8 +546,8 @@ pub async fn process_student_marksheet(db: &Database, eligibility: CertificateEl
                             assignment_obtained: 0.0,
                         });
                         seen_subjects.insert(subject_key);
-                        grand_total_max += max;
-                        grand_total_obtained += obtained;
+                        _grand_total_max += max;
+                        _grand_total_obtained += obtained;
                     }
                 }
             }
