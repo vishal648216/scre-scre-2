@@ -108,6 +108,8 @@ const InternTasksPage = lazy(() => import("./pages/InternTasksPage"));
 const InternCertificatesPage = lazy(() => import("./pages/InternCertificatesPage"));
 const AdminCollegesPage = lazy(() => import("./pages/AdminCollegesPage"));
 const AdminInternshipEnquiriesPage = lazy(() => import("./pages/AdminInternshipEnquiriesPage"));
+const AdminInternLettersPage = lazy(() => import("./pages/AdminInternLettersPage"));
+const AdminInternAttendancePage = lazy(() => import("./pages/AdminInternAttendancePage"));
 
 const StudentExamListPage = lazy(() => import("./pages/StudentExamListPage"));
 const TakeExamPage = lazy(() => import("./pages/TakeExamPage"));
@@ -612,6 +614,9 @@ const AppRoutes = () => {
       <Route path="/dashboard/interns/tasks" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><InternTasksManagerPage /></ProtectedRoute>} />
       <Route path="/dashboard/interns/progress" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><InternProgressPage /></ProtectedRoute>} />
       <Route path="/dashboard/interns/enquiries" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminInternshipEnquiriesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/interns/letters" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminInternLettersPage /></ProtectedRoute>} />
+      <Route path="/dashboard/interns/attendance" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminInternAttendancePage /></ProtectedRoute>} />
+      <Route path="/dashboard/internships/manage" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminInternshipManagerPage /></ProtectedRoute>} />
       <Route path="/dashboard/interns/colleges" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCollegesPage /></ProtectedRoute>} />
 
       {/* Intern Dashboard Routes */}

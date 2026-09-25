@@ -312,7 +312,10 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: List, label: "All Interns", href: "/dashboard/interns" },
         { icon: PlusCircle, label: "Add Intern", href: "/dashboard/interns/add" },
         { icon: Mail, label: "Internship Enquiries", href: "/dashboard/interns/enquiries" },
-        { icon: Building2, label: "Manage College", href: "/dashboard/interns/colleges" },
+        { icon: FileText, label: "Joining & Offer Letters", href: "/dashboard/interns/letters" },
+        { icon: CheckSquare, label: "Attendance & Stipends", href: "/dashboard/interns/attendance" },
+        { icon: Briefcase, label: "Postings & Categories", href: "/dashboard/internships/manage" },
+        { icon: Building2, label: "Colleges & IT Partners", href: "/dashboard/interns/colleges" },
       ]
     },
 
