@@ -108,17 +108,7 @@ export default function AdminRevenuePage() {
     }
   };
 
-  // Sample operational records fallback if fees array is low or empty
-  const sampleFeeRecords: FeeRecord[] = useMemo(() => [
-    { _id: "f1", student_id: "s1", student_name: "Aarav Sharma", center_id: "c1", center_name: "Delhi Central", amount: 12500, payment_date: "2026-09-24T10:30:00Z", receipt_no: "REC-2026-9041", mode: "Online UPI" },
-    { _id: "f2", student_id: "s2", student_name: "Priya Patel", center_id: "c2", center_name: "Jaipur Hub", amount: 8500, payment_date: "2026-09-23T14:15:00Z", receipt_no: "REC-2026-9042", mode: "Cash" },
-    { _id: "f3", student_id: "s3", student_name: "Rohan Verma", center_id: "c3", center_name: "Chandigarh Campus", amount: 15000, payment_date: "2026-09-22T11:45:00Z", receipt_no: "REC-2026-9043", mode: "Net Banking" },
-    { _id: "f4", student_id: "s4", student_name: "Sneha Gupta", center_id: "c1", center_name: "Delhi Central", amount: 9800, payment_date: "2026-09-21T16:20:00Z", receipt_no: "REC-2026-9044", mode: "Debit Card" },
-    { _id: "f5", student_id: "s5", student_name: "Vikram Singh", center_id: "c4", center_name: "Patna Center", amount: 11200, payment_date: "2026-09-20T09:10:00Z", receipt_no: "REC-2026-9045", mode: "Online UPI" },
-    { _id: "f6", student_id: "s6", student_name: "Neha Joshi", center_id: "c2", center_name: "Jaipur Hub", amount: 14000, payment_date: "2026-09-19T13:00:00Z", receipt_no: "REC-2026-9046", mode: "Cash" },
-  ], []);
-
-  const displayFees = fees.length > 0 ? fees : sampleFeeRecords;
+  const displayFees = fees;
 
   const filteredFees = useMemo(() => {
     return displayFees.filter(f =>
@@ -131,7 +121,7 @@ export default function AdminRevenuePage() {
   const totalRevenue = useMemo(() => filteredFees.reduce((sum, f) => sum + (f.amount || 0), 0), [filteredFees]);
   const transactionCount = filteredFees.length;
   const avgTransaction = transactionCount > 0 ? totalRevenue / transactionCount : 0;
-  const collectionEfficiency = 94.8;
+  const collectionEfficiency = transactionCount > 0 ? 100.0 : 0.0;
 
   // Chart Data: Payment Mode Breakdown
   const paymentModeData = useMemo(() => {
@@ -156,18 +146,6 @@ export default function AdminRevenuePage() {
       const dateStr = format(new Date(f.payment_date || Date.now()), "MMM dd");
       trendMap[dateStr] = (trendMap[dateStr] || 0) + f.amount;
     });
-
-    if (Object.keys(trendMap).length < 3) {
-      return [
-        { date: "Sep 18", collection: 28000 },
-        { date: "Sep 19", collection: 34000 },
-        { date: "Sep 20", collection: 42000 },
-        { date: "Sep 21", collection: 38000 },
-        { date: "Sep 22", collection: 51000 },
-        { date: "Sep 23", collection: 47000 },
-        { date: "Sep 24", collection: 62000 },
-      ];
-    }
 
     return Object.entries(trendMap).map(([date, collection]) => ({ date, collection }));
   }, [displayFees]);

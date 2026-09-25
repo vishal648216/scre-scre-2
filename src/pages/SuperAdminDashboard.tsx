@@ -156,30 +156,12 @@ export default function SuperAdminDashboard() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  // Default trends if empty
-  const defaultMonthlyTrends: MonthlyTrend[] = [
-    { month: "Apr", income: 145000, expenses: 42000, workingCapital: 103000 },
-    { month: "May", income: 168000, expenses: 48000, workingCapital: 120000 },
-    { month: "Jun", income: 192000, expenses: 51000, workingCapital: 141000 },
-    { month: "Jul", income: 215000, expenses: 59000, workingCapital: 156000 },
-    { month: "Aug", income: 248000, expenses: 62000, workingCapital: 186000 },
-    { month: "Sep", income: 285000, expenses: 67000, workingCapital: 218000 },
-  ];
-
-  const chartTrends = monthlyTrends.length > 0 ? monthlyTrends : defaultMonthlyTrends;
-
-  const defaultCenterPerf: CenterPerformance[] = [
-    { name: "Delhi Central", code: "DEL-01", students: 142, revenue: 639000, performance: 96.5 },
-    { name: "Jaipur Hub", code: "JPR-02", students: 98, revenue: 441000, performance: 94.1 },
-    { name: "Chandigarh Campus", code: "CHD-03", students: 86, revenue: 387000, performance: 91.8 },
-    { name: "Patna Center", code: "PAT-04", students: 64, revenue: 288000, performance: 88.4 },
-  ];
-
-  const chartCenterPerf = centerPerformances.length > 0 ? centerPerformances : defaultCenterPerf;
+  const chartTrends = monthlyTrends;
+  const chartCenterPerf = centerPerformances;
 
   const examDistributionData = [
-    { name: "Passed", value: metrics?.passRate ? Math.round(metrics.passRate) : 88, color: "#10b981" },
-    { name: "Needs Review", value: metrics?.passRate ? Math.round(100 - metrics.passRate) : 12, color: "#f59e0b" },
+    { name: "Passed", value: metrics?.passRate ? Math.round(metrics.passRate) : 0, color: "#10b981" },
+    { name: "Needs Review", value: metrics?.passRate ? Math.max(0, Math.round(100 - (metrics.passRate || 0))) : 0, color: "#f59e0b" },
   ];
 
   const filteredUsers = users.filter((u) =>
@@ -244,19 +226,24 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="mt-3">
                 <div className="text-3xl font-heading font-black text-white">
-                  ₹{((metrics?.workingCapital || metrics?.totalRevenue || 185000) / 100000).toFixed(2)}L
+                  ₹{((metrics?.workingCapital || 0) / 100000).toFixed(2)}L
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-emerald-400 font-semibold">
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>+14.2% capital ratio</span>
+                  <span>Real-time Capital Ratio</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Liquidity Buffer</span>
-                  <span className="text-zinc-200">82%</span>
+                  <span>Liquidity Ratio</span>
+                  <span className="text-zinc-200">
+                    {metrics?.totalIncome ? Math.min(100, Math.round((metrics.workingCapital / metrics.totalIncome) * 100)) : 0}%
+                  </span>
                 </div>
-                <Progress value={82} className="h-1.5 bg-zinc-800" />
+                <Progress
+                  value={metrics?.totalIncome ? Math.min(100, Math.round((metrics.workingCapital / metrics.totalIncome) * 100)) : 0}
+                  className="h-1.5 bg-zinc-800"
+                />
               </div>
             </CardContent>
           </Card>
@@ -273,19 +260,24 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="mt-3">
                 <div className="text-3xl font-heading font-black text-white">
-                  ₹{((metrics?.totalIncome || metrics?.totalRevenue || 245000) / 100000).toFixed(2)}L
+                  ₹{((metrics?.totalIncome || 0) / 100000).toFixed(2)}L
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-400 font-semibold">
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Fees & Direct Grants</span>
+                  <span>Fees & Income Stream</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Collection Target</span>
-                  <span className="text-zinc-200">91%</span>
+                  <span>Fee Yield Ratio</span>
+                  <span className="text-zinc-200">
+                    {metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalRevenue / metrics.totalIncome) * 100)) : 0}%
+                  </span>
                 </div>
-                <Progress value={91} className="h-1.5 bg-zinc-800" />
+                <Progress
+                  value={metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalRevenue / metrics.totalIncome) * 100)) : 0}
+                  className="h-1.5 bg-zinc-800"
+                />
               </div>
             </CardContent>
           </Card>
@@ -302,18 +294,23 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="mt-3">
                 <div className="text-3xl font-heading font-black text-white">
-                  ₹{((metrics?.totalExpenses || 62000) / 100000).toFixed(2)}L
+                  ₹{((metrics?.totalExpenses || 0) / 100000).toFixed(2)}L
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-rose-400 font-semibold">
-                  <span>Controlled expenditure</span>
+                  <span>Logged Expenses</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Budget Allocation</span>
-                  <span className="text-zinc-200">25%</span>
+                  <span>Expense Share</span>
+                  <span className="text-zinc-200">
+                    {metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalExpenses / metrics.totalIncome) * 100)) : 0}%
+                  </span>
                 </div>
-                <Progress value={25} className="h-1.5 bg-zinc-800" />
+                <Progress
+                  value={metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalExpenses / metrics.totalIncome) * 100)) : 0}
+                  className="h-1.5 bg-zinc-800"
+                />
               </div>
             </CardContent>
           </Card>
@@ -330,19 +327,19 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="mt-3">
                 <div className="text-3xl font-heading font-black text-white">
-                  {metrics?.passRate ? metrics.passRate.toFixed(1) : "92.4"}%
+                  {metrics?.passRate ? metrics.passRate.toFixed(1) : "0.0"}%
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-purple-400 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{metrics?.totalExams || 14} Active Exam Blueprints</span>
+                  <span>{metrics?.totalExams || 0} Exam Papers</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Evaluation Rate</span>
-                  <span className="text-zinc-200">{metrics?.passRate || 92}%</span>
+                  <span>Pass Rate Score</span>
+                  <span className="text-zinc-200">{metrics?.passRate ? Math.round(metrics.passRate) : 0}%</span>
                 </div>
-                <Progress value={metrics?.passRate || 92} className="h-1.5 bg-zinc-800" />
+                <Progress value={metrics?.passRate ? Math.round(metrics.passRate) : 0} className="h-1.5 bg-zinc-800" />
               </div>
             </CardContent>
           </Card>

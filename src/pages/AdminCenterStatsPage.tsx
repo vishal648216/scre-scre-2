@@ -92,17 +92,9 @@ export default function AdminCenterStatsPage() {
     fetchData();
   }, []);
 
-  // Sample backup centers if DB has empty records
-  const fallbackCenters: CenterStatItem[] = useMemo(() => [
-    { id: "c1", name: "Delhi Central Regional Hub", code: "DEL-01", city: "New Delhi", state: "Delhi", students: 142, revenue: 639000, performance: 96.5, active: true },
-    { id: "c2", name: "Jaipur Academic Center", code: "JPR-02", city: "Jaipur", state: "Rajasthan", students: 98, revenue: 441000, performance: 94.1, active: true },
-    { id: "c3", name: "Chandigarh Excellence Center", code: "CHD-03", city: "Chandigarh", state: "Punjab", students: 86, revenue: 387000, performance: 91.8, active: true },
-    { id: "c4", name: "Patna Skill Institute", code: "PAT-04", city: "Patna", state: "Bihar", students: 64, revenue: 288000, performance: 88.4, active: true },
-  ], []);
-
-  // Compute live center stats
+  // Compute live center stats from real database
   const centerStatsList: CenterStatItem[] = useMemo(() => {
-    if (centers.length === 0) return fallbackCenters;
+    if (centers.length === 0) return [];
 
     const feeMap: Record<string, number> = {};
     fees.forEach(f => {
@@ -112,22 +104,21 @@ export default function AdminCenterStatsPage() {
 
     return centers.map((c, idx) => {
       const cid = c._id || c.user_id || `c-${idx}`;
-      const rev = feeMap[cid] || feeMap[c.code] || (140000 + idx * 35000);
-      const stu = Math.round(rev / 4500) || 20;
+      const rev = feeMap[cid] || feeMap[c.code] || 0;
 
       return {
         id: cid,
         name: c.name || `Center ${c.code}`,
         code: c.code || `CTR-0${idx + 1}`,
-        city: c.city || "Central Hub",
+        city: c.city || "Center Hub",
         state: c.state || "State Zone",
-        students: stu,
+        students: 0,
         revenue: rev,
-        performance: Math.min(99, 88 + (idx % 4) * 3),
+        performance: c.active !== false ? 100 : 0,
         active: c.active !== false,
       };
     });
-  }, [centers, fees, fallbackCenters]);
+  }, [centers, fees]);
 
   const filteredCenterStats = useMemo(() => {
     return centerStatsList.filter(c =>
@@ -260,18 +251,18 @@ export default function AdminCenterStatsPage() {
               </div>
               <div className="mt-3">
                 <div className="text-2xl font-heading font-black text-white truncate">
-                  {topCenter?.name || "Delhi Central"}
+                  {topCenter?.name || "N/A"}
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-xs text-purple-400 font-semibold">
-                  <span>₹{topCenter?.revenue.toLocaleString("en-IN") || "6,39,000"} Collections</span>
+                  <span>₹{topCenter?.revenue ? topCenter.revenue.toLocaleString("en-IN") : "0"} Collections</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
                   <span>Performance Rating</span>
-                  <span className="text-zinc-200">{topCenter?.performance || 96.5}%</span>
+                  <span className="text-zinc-200">{topCenter?.performance || 0}%</span>
                 </div>
-                <Progress value={topCenter?.performance || 96.5} className="h-1.5 bg-zinc-800" />
+                <Progress value={topCenter?.performance || 0} className="h-1.5 bg-zinc-800" />
               </div>
             </CardContent>
           </Card>
