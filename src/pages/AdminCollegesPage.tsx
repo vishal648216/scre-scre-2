@@ -1,27 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Plus,
-  Loader2,
-  Pencil,
-  Trash2,
-  Building2,
-  Search,
-  X,
-  MapPin
-} from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, Building2, Search, X, MapPin, GraduationCap, Award, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,14 +31,13 @@ const AdminCollegesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   const [editingCollege, setEditingCollege] = useState<College | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     country_id: "",
     state_id: "",
     district_id: "",
-    city_id: ""
+    city_id: "",
   });
   const [countries, setCountries] = useState<GeoItem[]>([]);
   const [states, setStates] = useState<GeoItem[]>([]);
@@ -70,85 +53,63 @@ const AdminCollegesPage = () => {
       const res = await apiFetch(url);
       if (res.ok) {
         const data = await res.json();
-        console.log("LOAD_COLLEGES_RESPONSE", data);
-        const collegesData = Array.isArray(data) ? data : [];
-        console.log("SET_COLLEGES_CALLED", collegesData);
-        setColleges(collegesData);
+        setColleges(Array.isArray(data) ? data : []);
       } else {
         toast.error("Failed to load colleges");
       }
-    } catch (error) {
-      console.error("Failed to load colleges:", error);
+    } catch {
       toast.error("Failed to load colleges");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadCountries = async (): Promise<GeoItem[]> => {
+  const loadCountries = async () => {
     try {
       const res = await apiFetch("/api/admin/locations/countries");
       if (res.ok) {
         const data = await res.json();
-        const countries = Array.isArray(data) ? data : [];
-        setCountries(countries);
-        return countries;
+        setCountries(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error("Failed to load countries:", error);
+    } catch {
+      // ignore
     }
-    return [];
   };
 
-  const loadStates = async (countryId: string): Promise<GeoItem[]> => {
+  const loadStates = async (countryId: string) => {
     try {
-      const res = await apiFetch(
-        `/api/admin/locations/states?country_id=${encodeURIComponent(countryId)}`
-      );
+      const res = await apiFetch(`/api/admin/locations/states?country_id=${encodeURIComponent(countryId)}`);
       if (res.ok) {
         const data = await res.json();
-        const states = Array.isArray(data) ? data : [];
-        setStates(states);
-        return states;
+        setStates(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error("Failed to load states:", error);
+    } catch {
+      // ignore
     }
-    return [];
   };
 
-  const loadDistricts = async (stateId: string): Promise<GeoItem[]> => {
+  const loadDistricts = async (stateId: string) => {
     try {
-      const res = await apiFetch(
-        `/api/admin/locations/districts?state_id=${encodeURIComponent(stateId)}`
-      );
+      const res = await apiFetch(`/api/admin/locations/districts?state_id=${encodeURIComponent(stateId)}`);
       if (res.ok) {
         const data = await res.json();
-        const districts = Array.isArray(data) ? data : [];
-        setDistricts(districts);
-        return districts;
+        setDistricts(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error("Failed to load districts:", error);
+    } catch {
+      // ignore
     }
-    return [];
   };
 
-  const loadCities = async (districtId: string): Promise<GeoItem[]> => {
+  const loadCities = async (districtId: string) => {
     try {
-      const res = await apiFetch(
-        `/api/admin/locations/cities?district_id=${encodeURIComponent(districtId)}`
-      );
+      const res = await apiFetch(`/api/admin/locations/cities?district_id=${encodeURIComponent(districtId)}`);
       if (res.ok) {
         const data = await res.json();
-        const cities = Array.isArray(data) ? data : [];
-        setCities(cities);
-        return cities;
+        setCities(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error("Failed to load cities:", error);
+    } catch {
+      // ignore
     }
-    return [];
   };
 
   useEffect(() => {
@@ -157,7 +118,6 @@ const AdminCollegesPage = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoadingEdit) return;
     if (formData.country_id) {
       loadStates(formData.country_id);
     } else {
@@ -165,26 +125,24 @@ const AdminCollegesPage = () => {
       setDistricts([]);
       setCities([]);
     }
-  }, [formData.country_id, isLoadingEdit]);
+  }, [formData.country_id]);
 
   useEffect(() => {
-    if (isLoadingEdit) return;
     if (formData.state_id) {
       loadDistricts(formData.state_id);
     } else {
       setDistricts([]);
       setCities([]);
     }
-  }, [formData.state_id, isLoadingEdit]);
+  }, [formData.state_id]);
 
   useEffect(() => {
-    if (isLoadingEdit) return;
     if (formData.district_id) {
       loadCities(formData.district_id);
     } else {
       setCities([]);
     }
-  }, [formData.district_id, isLoadingEdit]);
+  }, [formData.district_id]);
 
   const resetForm = () => {
     setFormData({
@@ -192,291 +150,217 @@ const AdminCollegesPage = () => {
       country_id: "",
       state_id: "",
       district_id: "",
-      city_id: ""
+      city_id: "",
     });
     setEditingCollege(null);
   };
 
   const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter a college/partner name");
+      return;
+    }
     try {
-      // Process payload: convert empty strings to undefined for location fields
       const payload = {
-        name: formData.name,
-        country_id: formData.country_id ? formData.country_id : undefined,
-        state_id: formData.state_id ? formData.state_id : undefined,
-        district_id: formData.district_id ? formData.district_id : undefined,
-        city_id: formData.city_id ? formData.city_id : undefined
+        name: formData.name.trim(),
+        country_id: formData.country_id || undefined,
+        state_id: formData.state_id || undefined,
+        district_id: formData.district_id || undefined,
+        city_id: formData.city_id || undefined,
       };
-
-      // Log exact payload
-      console.log("Submitting college payload:", payload);
 
       let res;
       if (isEditing && editingCollege) {
         res = await apiFetch(`/api/admin/colleges/${editingCollege._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
       } else {
         res = await apiFetch("/api/admin/colleges", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
       }
 
       if (res.ok) {
-        toast.success(
-          isEditing ? "College updated successfully" : "College created successfully"
-        );
+        toast.success(isEditing ? "College updated successfully" : "College registered successfully");
         setIsAdding(false);
         setIsEditing(false);
         resetForm();
-
-        // Reload colleges and verify the updated record exists
-        await loadColleges(searchQuery);
-        console.log("Colleges after reload:", colleges);
+        loadColleges(searchQuery);
       } else {
-        const errorText = await res.text();
-        console.error("Failed to save college - response:", errorText);
         toast.error("Failed to save college");
       }
-    } catch (error) {
-      console.error("Failed to save college:", error);
+    } catch {
       toast.error("Failed to save college");
     }
   };
 
-  const handleEdit = async (college: College) => {
-    setIsLoadingEdit(true);
+  const handleEdit = (college: College) => {
     setEditingCollege(college);
-
-    // Step 1: Set initial form data with just name and country_id first
     setFormData({
       name: college.name,
       country_id: college.country_id || "",
-      state_id: "",
-      district_id: "",
-      city_id: ""
+      state_id: college.state_id || "",
+      district_id: college.district_id || "",
+      city_id: college.city_id || "",
     });
-
-    // Step 2: Load states for country
-    if (college.country_id) {
-      await loadStates(college.country_id);
-
-      // Step 3: Set state_id
-      setFormData((prev) => ({ ...prev, state_id: college.state_id || "" }));
-
-      // Step 4: Load districts for state
-      if (college.state_id) {
-        await loadDistricts(college.state_id);
-
-        // Step 5: Set district_id
-        setFormData((prev) => ({ ...prev, district_id: college.district_id || "" }));
-
-        // Step 6: Load cities for district
-        if (college.district_id) {
-          await loadCities(college.district_id);
-
-          // Step 7: Set city_id
-          setFormData((prev) => ({ ...prev, city_id: college.city_id || "" }));
-        }
-      }
-    }
-
-    // Final step: Open edit modal and release flag
     setIsEditing(true);
-    setIsLoadingEdit(false);
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this college?")) return;
     try {
-      const res = await apiFetch(`/api/admin/colleges/${id}`, {
-        method: "DELETE"
-      });
+      const res = await apiFetch(`/api/admin/colleges/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("College deleted successfully");
         loadColleges(searchQuery);
       } else {
         toast.error("Failed to delete college");
       }
-    } catch (error) {
-      console.error("Failed to delete college:", error);
+    } catch {
       toast.error("Failed to delete college");
     }
   };
 
-  const getLocationName = (
-    id: string | undefined,
-    list: GeoItem[]
-  ): string => {
+  const getLocationName = (id: string | undefined, list: GeoItem[]): string => {
     if (!id) return "—";
     const item = list.find((i) => i.id === id);
     return item?.name || "—";
   };
 
-  {
-    (() => {
-      console.log("RENDER_COLLEGES", colleges);
-      console.log("SEARCH_QUERY", searchQuery);
-      console.log("DEBUG RENDER:");
-      console.log("  loading:", loading);
-      console.log("  searchQuery:", JSON.stringify(searchQuery));
-      console.log("  colleges.length:", colleges.length);
-      console.log("  colleges:", JSON.stringify(colleges, null, 2));
-      return null;
-    })()
-  }
-
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto space-y-8 pb-12">
+        {/* Header Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-2xl border border-indigo-500/20 shadow-xl">
           <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">
-              {t("Manage Colleges")}
+            <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-widest mb-1">
+              <Building2 className="w-4 h-4" /> Academic & Placement Network
+            </div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              Colleges & IT Placement Partners
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">
-              {t("Add, edit, and delete college information.")}
+            <p className="text-xs text-slate-400 mt-1">
+              Manage institutions, university tie-ups, and corporate training centers for student allotment.
             </p>
           </div>
-          <div className="flex gap-2">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("Search colleges...")}
-                className="pl-9 rounded-xl"
-                value={searchQuery}
-                onChange={(e) => {
-                  console.log("DEBUG search onChange:", e.target.value);
-                  setSearchQuery(e.target.value);
-                  loadColleges(e.target.value);
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    loadColleges("");
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-3">
             <Button
               onClick={() => {
                 resetForm();
                 setIsAdding(true);
               }}
-              className="rounded-xl"
+              className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-2"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              {t("Add College")}
+              <Plus className="w-4 h-4" /> Add Partner Institution
             </Button>
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {colleges.map((college, index) => {
-              console.log(`DEBUG rendering college index ${index}:`, JSON.stringify(college, null, 2));
-              return (
-                <Card
-                  key={college._id}
-                  className="rounded-xl border-border shadow-sm overflow-hidden"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-5 h-5 text-primary" />
-                          <h3 className="text-lg font-bold text-foreground">
-                            {college.name}
-                          </h3>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {college.country_id && (
-                            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {getLocationName(college.country_id, countries)}
-                            </span>
-                          )}
-                          {college.state_id && (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {getLocationName(college.state_id, states)}
-                            </span>
-                          )}
-                          {college.district_id && (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {getLocationName(college.district_id, districts)}
-                            </span>
-                          )}
-                          {college.city_id && (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {getLocationName(college.city_id, cities)}
-                            </span>
-                          )}
-                        </div>
+        {/* Directory Card */}
+        <Card className="rounded-2xl border border-slate-800 bg-slate-950/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <CardHeader className="border-b border-slate-800/80 py-4 px-6 bg-slate-900/50">
+            <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
+              <CardTitle className="text-sm font-bold text-slate-200 flex items-center gap-2 uppercase tracking-wider">
+                <GraduationCap className="w-4 h-4 text-cyan-400" /> College Directory ({colleges.length})
+              </CardTitle>
+              <div className="relative min-w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search college name..."
+                  className="pl-9 pr-9 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl text-xs font-medium focus:border-cyan-500 outline-none"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    loadColleges(e.target.value);
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      loadColleges("");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {loading ? (
+              <div className="p-16 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                <span className="text-xs text-slate-400 font-medium">Loading Institution Network...</span>
+              </div>
+            ) : colleges.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                No colleges or partner institutions found.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {colleges.map((c) => (
+                  <div
+                    key={c._id}
+                    className="bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 p-5 rounded-2xl shadow-lg transition-all group relative"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+                        <Building2 className="w-5 h-5" />
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleEdit(college)}
-                          className="rounded-lg"
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(c)}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+                          title="Edit"
                         >
-                          <Pencil className="w-4 h-4 mr-1" />
-                          {t("Edit")}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(college._id)}
-                          className="rounded-lg"
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(c._id)}
+                          className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          {t("Delete")}
-                        </Button>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {colleges.length === 0 && !loading && (
-              <Card className="rounded-xl border-border shadow-sm">
-                <CardContent className="p-12 text-center">
-                  <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-bold text-foreground mb-2">
-                    {t("No colleges yet")}
-                  </h3>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    {t("Add your first college to get started.")}
-                  </p>
-                  <Button
-                    onClick={() => {
-                      resetForm();
-                      setIsAdding(true);
-                    }}
-                    className="rounded-lg"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("Add College")}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
 
+                    <h3 className="font-bold text-white text-base mt-3 leading-snug">{c.name}</h3>
+
+                    <div className="mt-3 text-xs text-slate-400 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>
+                        {[
+                          getLocationName(c.city_id, cities),
+                          getLocationName(c.state_id, states),
+                          getLocationName(c.country_id, countries),
+                        ]
+                          .filter((x) => x !== "—")
+                          .join(", ") || "Location General"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+                        <CheckCircle2 className="w-3 h-3" /> Verified Institution
+                      </span>
+                      <span className="text-slate-500">Active Network</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ADD / EDIT DIALOG */}
         <Dialog
           open={isAdding || isEditing}
           onOpenChange={(open) => {
@@ -487,30 +371,27 @@ const AdminCollegesPage = () => {
             }
           }}
         >
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg bg-slate-950 border border-slate-800 text-slate-200">
             <DialogHeader>
-              <DialogTitle className="text-lg font-black uppercase tracking-widest">
-                {isEditing ? t("Edit College") : t("Add College")}
+              <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-cyan-400" />
+                {isEditing ? "Edit Institution Details" : "Register New College / Partner"}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest">
-                  {t("College Name")}
-                </Label>
+
+            <div className="space-y-4 py-3 text-xs">
+              <div>
+                <Label className="text-slate-400 font-bold block mb-1">College / University Name</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  placeholder={t("Enter college name")}
-                  className="rounded-lg"
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Delhi Technological University"
+                  className="bg-slate-900 border-slate-700 text-slate-200 rounded-xl"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest">
-                  {t("Country")}
-                </Label>
+
+              <div>
+                <Label className="text-slate-400 font-bold block mb-1">Country</Label>
                 <select
                   value={formData.country_id}
                   onChange={(e) =>
@@ -519,12 +400,12 @@ const AdminCollegesPage = () => {
                       country_id: e.target.value,
                       state_id: "",
                       district_id: "",
-                      city_id: ""
+                      city_id: "",
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl text-xs outline-none"
                 >
-                  <option value="">{t("Select country")}</option>
+                  <option value="">Select Country</option>
                   {countries.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -532,11 +413,10 @@ const AdminCollegesPage = () => {
                   ))}
                 </select>
               </div>
+
               {formData.country_id && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest">
-                    {t("State")}
-                  </Label>
+                <div>
+                  <Label className="text-slate-400 font-bold block mb-1">State</Label>
                   <select
                     value={formData.state_id}
                     onChange={(e) =>
@@ -544,12 +424,12 @@ const AdminCollegesPage = () => {
                         ...prev,
                         state_id: e.target.value,
                         district_id: "",
-                        city_id: ""
+                        city_id: "",
                       }))
                     }
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl text-xs outline-none"
                   >
-                    <option value="">{t("Select state")}</option>
+                    <option value="">Select State</option>
                     {states.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -558,23 +438,16 @@ const AdminCollegesPage = () => {
                   </select>
                 </div>
               )}
+
               {formData.state_id && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest">
-                    {t("District")}
-                  </Label>
+                <div>
+                  <Label className="text-slate-400 font-bold block mb-1">City / District</Label>
                   <select
                     value={formData.district_id}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        district_id: e.target.value,
-                        city_id: ""
-                      }))
-                    }
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                    onChange={(e) => setFormData((prev) => ({ ...prev, district_id: e.target.value, city_id: "" }))}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl text-xs outline-none"
                   >
-                    <option value="">{t("Select district")}</option>
+                    <option value="">Select District</option>
                     {districts.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -583,45 +456,27 @@ const AdminCollegesPage = () => {
                   </select>
                 </div>
               )}
-              {formData.district_id && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest">
-                    {t("City")}
-                  </Label>
-                  <select
-                    value={formData.city_id}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, city_id: e.target.value }))
-                    }
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">{t("Select city")}</option>
-                    {cities.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+
+            <DialogFooter className="flex gap-2">
               <Button
+                type="button"
                 variant="secondary"
                 onClick={() => {
                   setIsAdding(false);
                   setIsEditing(false);
                   resetForm();
                 }}
-                className="rounded-lg"
+                className="bg-slate-900 border border-slate-800 text-slate-300 rounded-xl"
               >
-                {t("Cancel")}
+                Cancel
               </Button>
               <Button
+                type="button"
                 onClick={handleSubmit}
-                className="rounded-lg"
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl"
               >
-                {isEditing ? t("Update College") : t("Add College")}
+                {isEditing ? "Update Institution" : "Save Institution"}
               </Button>
             </DialogFooter>
           </DialogContent>
