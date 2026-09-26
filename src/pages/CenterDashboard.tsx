@@ -420,6 +420,56 @@ const CenterDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main Feed */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Internships & Placement Drive Center Widget */}
+            <Card variant="dashboard" className="border-l-4 border-l-sky-500">
+              <CardHeader className="px-8 py-6 border-b border-border/40 bg-sky-50/20 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center border border-sky-500/20 shadow-inner">
+                    <Briefcase className="w-5 h-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-foreground">
+                      {t("Internship & Corporate Placement Hub")}
+                    </CardTitle>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+                      {t("Manage center internships, corporate drives & student applications")}
+                    </p>
+                  </div>
+                </div>
+                <Link to="/dashboard/internships/manage">
+                  <Button size="sm" className="rounded-none text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground">
+                    <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+                    {t("Post Internship")}
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Link to="/dashboard/interns" className="p-4 border border-border/60 bg-muted/20 hover:bg-card hover:border-primary/40 transition-all text-center space-y-1">
+                  <Users className="w-5 h-5 text-primary mx-auto" />
+                  <p className="text-xs font-black text-foreground">{t("All Interns")}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Manage Roster")}</p>
+                </Link>
+
+                <Link to="/dashboard/interns/enquiries" className="p-4 border border-border/60 bg-muted/20 hover:bg-card hover:border-primary/40 transition-all text-center space-y-1">
+                  <Mail className="w-5 h-5 text-amber-500 mx-auto" />
+                  <p className="text-xs font-black text-foreground">{t("Enquiries")}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Lead Pipeline")}</p>
+                </Link>
+
+                <Link to="/dashboard/interns/letters" className="p-4 border border-border/60 bg-muted/20 hover:bg-card hover:border-primary/40 transition-all text-center space-y-1">
+                  <FileText className="w-5 h-5 text-emerald-500 mx-auto" />
+                  <p className="text-xs font-black text-foreground">{t("Letters & Certificates")}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Offer & Completion")}</p>
+                </Link>
+
+                <Link to="/dashboard/interns/attendance" className="p-4 border border-border/60 bg-muted/20 hover:bg-card hover:border-primary/40 transition-all text-center space-y-1">
+                  <CheckSquare className="w-5 h-5 text-purple-500 mx-auto" />
+                  <p className="text-xs font-black text-foreground">{t("Attendance & Stipends")}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Payout Register")}</p>
+                </Link>
+              </CardContent>
+            </Card>
+
             <Card variant="dashboard">
               <CardHeader className="border-b border-border/40 px-8 py-6 bg-gradient-to-r from-sky-50/50 to-transparent flex flex-row items-center justify-between">
                 <div className="flex items-center gap-4">
