@@ -542,6 +542,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       roles: ["student"],
       subItems: [
         { icon: Briefcase, label: "Browse Internships", href: "/dashboard/student/internships" },
+        { icon: FileText, label: "Build ATS Resume", href: "/dashboard/student/resume-builder" },
       ]
     },
     {
