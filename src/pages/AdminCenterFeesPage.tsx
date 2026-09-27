@@ -47,10 +47,9 @@ const AdminCenterFeesPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("token");
       const [centerRes, studentRes] = await Promise.all([
         apiFetch("/api/centers"),
-        fetch("/api/students", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/students"),
       ]);
 
       if (centerRes.ok) {

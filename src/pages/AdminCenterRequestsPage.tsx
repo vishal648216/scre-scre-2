@@ -115,8 +115,7 @@ const AdminCenterRequestsPage = () => {
   const fetchStudentRequests = async () => {
     setLoadingStudents(true);
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch("/api/students", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await apiFetch("/api/students");
       if (res.ok) {
         const data = await res.json();
         setStudents(Array.isArray(data) ? data : []);
@@ -181,17 +180,12 @@ const AdminCenterRequestsPage = () => {
     const sid = toId(selectedStudent._id || selectedStudent.id);
     setProcessing(true);
     try {
-      const token = sessionStorage.getItem("token");
       const endpoint = studentActionType === "approve"
         ? `/api/admin/students/${sid}/approve`
         : `/api/admin/students/${sid}/reject`;
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           instructions: adminInstruction,
           student_id: sid,

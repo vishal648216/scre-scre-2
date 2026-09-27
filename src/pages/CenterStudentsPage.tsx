@@ -51,10 +51,7 @@ const CenterStudentsPage = () => {
 
   const downloadEnrollmentPdf = async (studentId: string) => {
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch(`/api/students/${studentId}/enrollment-pdf`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/students/${studentId}/enrollment-pdf`);
       if (res.ok) {
         const contentType = res.headers.get("content-type") || "";
         if (contentType.includes("application/pdf")) {
@@ -84,10 +81,7 @@ const CenterStudentsPage = () => {
 
   const downloadHallTicket = async (studentId: string) => {
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch(`/api/exam/hall-ticket/${studentId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/exam/hall-ticket/${studentId}`);
       const data = await res.json();
       if (res.ok && data.pdf_url) {
         window.open(data.pdf_url, '_blank');
@@ -101,10 +95,7 @@ const CenterStudentsPage = () => {
 
   const downloadIdCardPdf = async (studentId: string) => {
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch(`/api/students/${studentId}/id-card-pdf`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await apiFetch(`/api/students/${studentId}/id-card-pdf`);
       if (res.ok) {
         const contentType = res.headers.get("content-type") || "";
         if (contentType.includes("application/pdf")) {
@@ -139,8 +130,7 @@ const CenterStudentsPage = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch("/api/students", { headers: { "Authorization": `Bearer ${token}` } });
+      const res = await apiFetch("/api/students");
       const data = await res.json();
       if (res.ok) {
         // Map id to _id, full_name to fullName for frontend consistency
@@ -177,10 +167,8 @@ const CenterStudentsPage = () => {
   const deleteStudent = async (id: string) => {
     if (!window.confirm(t("Are you sure you want to move this student to the recycle bin?"))) return;
     try {
-      const token = sessionStorage.getItem("token");
-      const res = await fetch(`/api/students/${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+      const res = await apiFetch(`/api/students/${id}`, {
+        method: "DELETE"
       });
       if (res.ok) {
         toast.success(t("Student moved to recycle bin"));

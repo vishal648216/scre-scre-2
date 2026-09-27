@@ -5,6 +5,7 @@ import { Users, CheckCircle2, XCircle, Search, Loader2, Filter, MessageSquare, B
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 
 interface StudentRow {
   _id?: { $oid: string } | string;
@@ -21,6 +22,7 @@ interface StudentRow {
   current_priority?: number;
   admin_instructions?: string;
   registration_date?: string;
+  total_fees?: number;
 }
 
 interface Center {
@@ -55,10 +57,9 @@ const AdminStudentApprovalPage = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("token");
       const [sRes, cRes] = await Promise.all([
-        fetch("/api/students", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/centers", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/students"),
+        apiFetch("/api/centers"),
       ]);
       if (sRes.ok) {
         const data = await sRes.json();
@@ -93,7 +94,6 @@ const AdminStudentApprovalPage = () => {
     setProcessing(true);
 
     try {
-      const token = sessionStorage.getItem("token");
       let endpoint = "";
       let reqBody: any = {};
 
@@ -112,12 +112,8 @@ const AdminStudentApprovalPage = () => {
         };
       }
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(reqBody),
       });
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
+import { apiFetch } from "@/lib/api";
 
 interface Student {
   _id?: string;
@@ -67,7 +68,6 @@ const AdminFeesPage = () => {
 
   const fetchData = async () => {
     try {
-      const token = sessionStorage.getItem("token");
       let feeUrl = "/api/fees";
       const params = new URLSearchParams();
       if (filters.month) params.set("month", filters.month);
@@ -78,9 +78,9 @@ const AdminFeesPage = () => {
       if (params.toString()) feeUrl += `?${params.toString()}`;
 
       const [studentRes, feeRes, centerRes] = await Promise.all([
-        fetch("/api/students", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch(feeUrl, { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch("/api/centers", { headers: { "Authorization": `Bearer ${token}` } })
+        apiFetch("/api/students"),
+        apiFetch(feeUrl),
+        apiFetch("/api/centers")
       ]);
       
       const studentData = await studentRes.json();
@@ -112,13 +112,8 @@ const AdminFeesPage = () => {
 
     setCollectingFee(true);
     try {
-      const token = sessionStorage.getItem("token");
-      const response = await fetch("/api/fees", {
+      const response = await apiFetch("/api/fees", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
         body: JSON.stringify({
           student_id: studentId,
           amount: parseFloat(feeForm.amount),
@@ -166,13 +161,8 @@ const AdminFeesPage = () => {
 
     setUpdatingTotal(true);
     try {
-      const token = sessionStorage.getItem("token");
-      const response = await fetch("/api/fees/total", {
+      const response = await apiFetch("/api/fees/total", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
         body: JSON.stringify({
           student_id: studentId,
           total_fees: parseFloat(totalFees)
