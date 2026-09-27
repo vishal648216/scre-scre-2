@@ -708,6 +708,173 @@ pub async fn update_user_role(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct UpdateUserPayload {
+    pub username: Option<String>,
+    pub full_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub role: Option<UserRole>,
+    pub active: Option<bool>,
+    pub status: Option<String>,
+    pub password: Option<String>,
+}
+
+pub async fn update_user(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateUserPayload>,
+) -> (StatusCode, Json<DeleteUserResponse>) {
+    if !require_admin(&claims) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(DeleteUserResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+
+    let oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(DeleteUserResponse {
+                    success: false,
+                    message: "Invalid User ID".to_string(),
+                }),
+            );
+        }
+    };
+
+    let collection = db.collection::<User>("users");
+
+    // Protect Super Admin from being edited by non-superadmins
+    if let Ok(Some(target_user)) = collection.find_one(doc! { "_id": oid }, None).await {
+        if target_user.role == UserRole::SuperAdmin && claims.role != UserRole::SuperAdmin {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(DeleteUserResponse {
+                    success: false,
+                    message: "Super Admin details can only be modified by Super Admin".to_string(),
+                }),
+            );
+        }
+    }
+
+    let mut update_doc = doc! {};
+    if let Some(u) = payload.username {
+        update_doc.insert("username", u);
+    }
+    if let Some(fn_val) = payload.full_name {
+        update_doc.insert("full_name", fn_val);
+    }
+    if let Some(em) = payload.email {
+        update_doc.insert("email", em);
+    }
+    if let Some(ph) = payload.phone {
+        update_doc.insert("phone", ph);
+    }
+    if let Some(r) = payload.role {
+        if let Ok(role_str) = serde_json::to_value(&r) {
+            update_doc.insert("role", role_str.as_str().unwrap_or("admin"));
+        }
+    }
+    if let Some(act) = payload.active {
+        update_doc.insert("active", act);
+        update_doc.insert("status", if act { "Active" } else { "Inactive" });
+    } else if let Some(st) = payload.status {
+        let is_act = st.eq_ignore_ascii_case("active") || st.eq_ignore_ascii_case("enabled");
+        update_doc.insert("active", is_act);
+        update_doc.insert("status", if is_act { "Active" } else { "Inactive" });
+    }
+    if let Some(pass) = payload.password {
+        if !pass.trim().is_empty() {
+            if let Ok(hashed) = bcrypt::hash(&pass, bcrypt::DEFAULT_COST) {
+                update_doc.insert("password_hash", hashed);
+                update_doc.insert("raw_password", pass);
+            }
+        }
+    }
+
+    update_doc.insert("updated_at", mongodb::bson::DateTime::from_millis(Utc::now().timestamp_millis()));
+
+    match collection.update_one(doc! { "_id": oid }, doc! { "$set": update_doc }, None).await {
+        Ok(_) => (StatusCode::OK, Json(DeleteUserResponse { success: true, message: "User updated successfully".to_string() })),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DeleteUserResponse { success: false, message: "Update failed".to_string() })),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserStatusPayload {
+    pub active: Option<bool>,
+    pub status: Option<String>,
+}
+
+pub async fn update_user_status(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateUserStatusPayload>,
+) -> (StatusCode, Json<DeleteUserResponse>) {
+    if !require_admin(&claims) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(DeleteUserResponse {
+                success: false,
+                message: "Unauthorized".to_string(),
+            }),
+        );
+    }
+
+    let oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(DeleteUserResponse {
+                    success: false,
+                    message: "Invalid User ID".to_string(),
+                }),
+            );
+        }
+    };
+
+    let is_active = if let Some(act) = payload.active {
+        act
+    } else if let Some(st) = payload.status {
+        st.eq_ignore_ascii_case("active") || st.eq_ignore_ascii_case("enabled")
+    } else {
+        true
+    };
+
+    let status_str = if is_active { "Active" } else { "Inactive" };
+    let collection = db.collection::<User>("users");
+
+    match collection.update_one(
+        doc! { "_id": oid },
+        doc! { "$set": { "active": is_active, "status": status_str, "updated_at": mongodb::bson::DateTime::from_millis(Utc::now().timestamp_millis()) } },
+        None,
+    ).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(DeleteUserResponse {
+                success: true,
+                message: format!("User status changed to {}", status_str),
+            }),
+        ),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DeleteUserResponse {
+                success: false,
+                message: "Status update failed".to_string(),
+            }),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ResetPasswordPayload {
     pub new_password: String,
 }
