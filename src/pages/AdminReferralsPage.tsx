@@ -74,8 +74,14 @@ const AdminReferralsPage = () => {
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "center" | "history">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "staff" | "center" | "history">("overview");
 
+  // Referral Code Creation Workflow State
+  const [showCreateCodeModal, setShowCreateCodeModal] = useState(false);
+  const [newCodeRole, setNewCodeRole] = useState<"student" | "staff" | "center">("student");
+  const [newCodeOwnerName, setNewCodeOwnerName] = useState("");
+  const [customCodeInput, setCustomCodeInput] = useState("");
+  const [creatingCode, setCreatingCode] = useState(false);
 
   // Referral Code Redemption Workflow State
   const [inputCode, setInputCode] = useState("");
@@ -88,26 +94,36 @@ const AdminReferralsPage = () => {
   const [upiId, setUpiId] = useState("student@upi");
   const [withdrawing, setWithdrawing] = useState(false);
 
-  // Settings State
+  // Settings State for 5-Level Multi-Tier Commissions
   const [studentSettings, setStudentSettings] = useState<ReferralSettings>({
     target_role: "student",
     default_reward_amount: 500,
     activation_percentage: 100,
     min_withdrawal_amount: 500,
     max_rewarded_referrals: 20,
-    max_child_depth: 3,
-    child_rewards: [200, 100, 50]
+    max_child_depth: 5,
+    child_rewards: [500, 250, 100, 50, 25]
+  });
+
+  const [staffSettings, setStaffSettings] = useState<ReferralSettings>({
+    target_role: "staff",
+    default_reward_amount: 1000,
+    activation_percentage: 100,
+    min_withdrawal_amount: 500,
+    max_rewarded_referrals: 50,
+    max_child_depth: 5,
+    child_rewards: [1000, 500, 250, 100, 50]
   });
 
   const [centerSettings, setCenterSettings] = useState<ReferralSettings>({
     target_role: "center",
     default_reward_amount: 5000,
-    payout_model: "flat",
+    payout_model: "percentage",
     flat_amount: 5000,
-    percentage_rate: 10,
+    percentage_rate: 20,
     franchise_base_fee: 50000,
     min_withdrawal_amount: 2000,
-    child_rewards: [1000, 500]
+    child_rewards: [20, 10, 5, 3, 2]
   });
 
   const [savingSettings, setSavingSettings] = useState(false);
@@ -177,6 +193,53 @@ const AdminReferralsPage = () => {
     }, 600);
   };
 
+  const handleCreateNewReferralCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCodeOwnerName.trim()) {
+      toast.error("Please enter user/center owner name");
+      return;
+    }
+
+    setCreatingCode(true);
+    setTimeout(() => {
+      const generatedCode = customCodeInput.trim() 
+        ? customCodeInput.trim().toUpperCase() 
+        : `REF-${newCodeRole.toUpperCase().substring(0, 4)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const rewardVal = newCodeRole === "center" ? 5000 : newCodeRole === "staff" ? 1000 : 500;
+
+      const newRecord: ReferralRecord = {
+        _id: `ref_gen_${Date.now()}`,
+        referrer_id: `usr_${Date.now()}`,
+        referrer_name: newCodeOwnerName.trim(),
+        referrer_role: newCodeRole.toUpperCase(),
+        referred_id: "usr_pending",
+        referred_user_name: "Active Code (Awaiting Onboarding)",
+        referred_user_role: newCodeRole,
+        code_used: generatedCode,
+        reward_amount: rewardVal,
+        reward_type: `${newCodeRole.toUpperCase()} Referral Code`,
+        is_applied: true,
+        status: "RewardGiven",
+        created_at: new Date().toISOString()
+      };
+
+      setReferrals([newRecord, ...referrals]);
+      setCreatingCode(false);
+      setShowCreateCodeModal(false);
+      setNewCodeOwnerName("");
+      setCustomCodeInput("");
+      toast.success(`New referral code ${generatedCode} created for ${newCodeOwnerName.trim()} (${newCodeRole.toUpperCase()})!`);
+    }, 500);
+  };
+
+  const handleDeleteReferralCode = (id: string, code: string) => {
+    if (confirm(`Are you sure you want to delete referral code ${code}?`)) {
+      setReferrals(referrals.filter(r => r._id !== id));
+      toast.success(`Referral code ${code} deleted!`);
+    }
+  };
+
   const handleWithdrawRewards = () => {
     if (withdrawAmount < (studentSettings.min_withdrawal_amount || 500)) {
       toast.error(`Minimum withdrawal amount is ₹${studentSettings.min_withdrawal_amount || 500}`);
@@ -195,7 +258,7 @@ const AdminReferralsPage = () => {
     setSavingSettings(true);
     setTimeout(() => {
       setSavingSettings(false);
-      toast.success("Referral configuration & rules saved successfully!");
+      toast.success("Super Admin 5-Level Commission & Referral Rules saved successfully!");
     }, 500);
   };
 
@@ -223,17 +286,25 @@ const AdminReferralsPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 bg-slate-950 border border-slate-800 p-4 rounded-xl">
-            <div className="text-right font-mono">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Rewards Distributed</p>
-              <p className="text-2xl font-black text-amber-400 mt-0.5">₹{totalRewardsDistributed.toLocaleString("en-IN")}</p>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 shadow-lg shadow-amber-500/20"
+              onClick={() => setShowCreateCodeModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 shadow-lg shadow-emerald-600/20"
             >
-              <Wallet className="w-4 h-4" /> Request Payout
+              <Plus className="w-4 h-4" /> Generate New Referral Code
             </button>
+            <div className="flex items-center gap-4 bg-slate-950 border border-slate-800 p-4 rounded-xl">
+              <div className="text-right font-mono">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Rewards Distributed</p>
+                <p className="text-2xl font-black text-amber-400 mt-0.5">₹{totalRewardsDistributed.toLocaleString("en-IN")}</p>
+              </div>
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 shadow-lg shadow-amber-500/20"
+              >
+                <Wallet className="w-4 h-4" /> Request Payout
+              </button>
+            </div>
           </div>
         </div>
 
@@ -257,7 +328,7 @@ const AdminReferralsPage = () => {
                 : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            <Users className="w-4 h-4" /> Visual Referral Tree Network
+            <Users className="w-4 h-4" /> 5-Level Tree Network
           </button>
           <button
             onClick={() => setActiveTab("student")}
@@ -267,7 +338,17 @@ const AdminReferralsPage = () => {
                 : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            <Users className="w-4 h-4" /> Student Referral Rules
+            <Users className="w-4 h-4" /> Student 5-Tier Commission
+          </button>
+          <button
+            onClick={() => setActiveTab("staff")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 ${
+              activeTab === "staff"
+                ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <Users className="w-4 h-4" /> Staff 5-Tier Commission
           </button>
           <button
             onClick={() => setActiveTab("center")}
@@ -277,7 +358,7 @@ const AdminReferralsPage = () => {
                 : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            <Settings className="w-4 h-4" /> Center Franchise Payout Split
+            <Settings className="w-4 h-4" /> Center Franchise Commission
           </button>
           <button
             onClick={() => setActiveTab("history")}
@@ -287,7 +368,7 @@ const AdminReferralsPage = () => {
                 : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            <Trophy className="w-4 h-4" /> Referral Network History ({referrals.length})
+            <Trophy className="w-4 h-4" /> All Active Referral Codes ({referrals.length})
           </button>
         </div>
 
@@ -396,15 +477,15 @@ const AdminReferralsPage = () => {
           </div>
         )}
 
-        {/* TAB 2: STUDENT REFERRAL CONFIG */}
+        {/* TAB: STUDENT REFERRAL CONFIG (5 LEVELS) */}
         {activeTab === "student" && (
           <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  <Users className="w-4 h-4 text-amber-400" /> Student Referral Configuration & Reward Rules
+                  <Users className="w-4 h-4 text-amber-400" /> Super Admin Student 5-Tier Commission Rules
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">Set default referral bonus, withdrawal limits, and multi-tier rewards.</p>
+                <p className="text-xs text-slate-400 mt-1">Super Admin full control for Student Referral commission payouts across Level 1 to Level 5.</p>
               </div>
               <button
                 onClick={handleSaveSettings}
@@ -415,7 +496,37 @@ const AdminReferralsPage = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Multi-Level Commission Payout (Level 1 to Level 5)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {[
+                  { lvl: 1, key: 0, label: "Level 1 (Direct)", defaultVal: 500 },
+                  { lvl: 2, key: 1, label: "Level 2 Sub-Ref", defaultVal: 250 },
+                  { lvl: 3, key: 2, label: "Level 3 Sub-Ref", defaultVal: 100 },
+                  { lvl: 4, key: 3, label: "Level 4 Sub-Ref", defaultVal: 50 },
+                  { lvl: 5, key: 4, label: "Level 5 Sub-Ref", defaultVal: 25 },
+                ].map((item) => (
+                  <div key={item.lvl} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">{item.label}</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-500">₹</span>
+                      <input
+                        type="number"
+                        value={studentSettings.child_rewards[item.key] ?? item.defaultVal}
+                        onChange={(e) => {
+                          const updated = [...studentSettings.child_rewards];
+                          updated[item.key] = parseFloat(e.target.value) || 0;
+                          setStudentSettings({ ...studentSettings, child_rewards: updated });
+                        }}
+                        className="w-full pl-6 pr-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-white font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-800 pt-4">
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Default Reward Amount (₹)</label>
                 <input
@@ -449,15 +560,15 @@ const AdminReferralsPage = () => {
           </Card>
         )}
 
-        {/* TAB 3: CENTER REFERRAL SPLIT */}
-        {activeTab === "center" && (
+        {/* TAB: STAFF REFERRAL CONFIG (5 LEVELS) */}
+        {activeTab === "staff" && (
           <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-blue-400" /> Center Franchise Referral Payout Split
+                  <Users className="w-4 h-4 text-purple-400" /> Super Admin Staff 5-Tier Commission Rules
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">Configure flat or percentage commission when an existing center refers a new franchise campus.</p>
+                <p className="text-xs text-slate-400 mt-1">Super Admin full control for Staff Referral commission payouts across Level 1 to Level 5.</p>
               </div>
               <button
                 onClick={handleSaveSettings}
@@ -468,7 +579,110 @@ const AdminReferralsPage = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider">Multi-Level Staff Commission Payout (Level 1 to Level 5)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {[
+                  { lvl: 1, key: 0, label: "Level 1 (Direct Staff)", defaultVal: 1000 },
+                  { lvl: 2, key: 1, label: "Level 2 Sub-Staff", defaultVal: 500 },
+                  { lvl: 3, key: 2, label: "Level 3 Sub-Staff", defaultVal: 250 },
+                  { lvl: 4, key: 3, label: "Level 4 Sub-Staff", defaultVal: 100 },
+                  { lvl: 5, key: 4, label: "Level 5 Sub-Staff", defaultVal: 50 },
+                ].map((item) => (
+                  <div key={item.lvl} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">{item.label}</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-500">₹</span>
+                      <input
+                        type="number"
+                        value={staffSettings.child_rewards[item.key] ?? item.defaultVal}
+                        onChange={(e) => {
+                          const updated = [...staffSettings.child_rewards];
+                          updated[item.key] = parseFloat(e.target.value) || 0;
+                          setStaffSettings({ ...staffSettings, child_rewards: updated });
+                        }}
+                        className="w-full pl-6 pr-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-white font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800 pt-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Default Staff Referral Bonus (₹)</label>
+                <input
+                  type="number"
+                  value={staffSettings.default_reward_amount}
+                  onChange={(e) => setStaffSettings({ ...staffSettings, default_reward_amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-xs font-bold outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Minimum Withdrawal Limit (₹)</label>
+                <input
+                  type="number"
+                  value={staffSettings.min_withdrawal_amount ?? 500}
+                  onChange={(e) => setStaffSettings({ ...staffSettings, min_withdrawal_amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-xs font-bold outline-none"
+                />
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* TAB 3: CENTER REFERRAL SPLIT (5 LEVELS) */}
+        {activeTab === "center" && (
+          <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-blue-400" /> Super Admin Center Franchise 5-Tier Commission
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Super Admin full control for Center Franchise Commission Split across Level 1 to Level 5.</p>
+              </div>
+              <button
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5"
+              >
+                {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Rules
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider">Multi-Level Franchise Commission Split (Level 1 to Level 5 %)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {[
+                  { lvl: 1, key: 0, label: "Level 1 Franchise", defaultVal: 20 },
+                  { lvl: 2, key: 1, label: "Level 2 Franchise", defaultVal: 10 },
+                  { lvl: 3, key: 2, label: "Level 3 Franchise", defaultVal: 5 },
+                  { lvl: 4, key: 3, label: "Level 4 Franchise", defaultVal: 3 },
+                  { lvl: 5, key: 4, label: "Level 5 Franchise", defaultVal: 2 },
+                ].map((item) => (
+                  <div key={item.lvl} className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">{item.label}</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-500">%</span>
+                      <input
+                        type="number"
+                        value={centerSettings.child_rewards[item.key] ?? item.defaultVal}
+                        onChange={(e) => {
+                          const updated = [...centerSettings.child_rewards];
+                          updated[item.key] = parseFloat(e.target.value) || 0;
+                          setCenterSettings({ ...centerSettings, child_rewards: updated });
+                        }}
+                        className="w-full pl-6 pr-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-white font-mono text-xs font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800 pt-4">
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Flat Franchise Referral Bonus (₹)</label>
                 <input
@@ -498,7 +712,7 @@ const AdminReferralsPage = () => {
             <CardHeader className="bg-slate-950/80 border-b border-slate-800 py-4 px-6 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                 <Trophy className="w-4 h-4" />
-                REFERRAL NETWORK HISTORY LOGS ({filteredReferrals.length})
+                ALL ACTIVE REFERRAL CODES ({filteredReferrals.length})
               </CardTitle>
 
               <div className="relative w-full md:w-64">
@@ -519,11 +733,12 @@ const AdminReferralsPage = () => {
                   <thead className="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800">
                     <tr>
                       <th className="p-4">Date</th>
-                      <th className="p-4">Referrer User</th>
-                      <th className="p-4">Referred Candidate</th>
-                      <th className="p-4">Code Used</th>
-                      <th className="p-4 text-right">Reward Amount</th>
+                      <th className="p-4">Referrer User / Owner</th>
+                      <th className="p-4">Referred Target</th>
+                      <th className="p-4">Code</th>
+                      <th className="p-4 text-right">Commission Reward</th>
                       <th className="p-4 text-center">Status</th>
+                      <th className="p-4 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-mono">
@@ -541,8 +756,18 @@ const AdminReferralsPage = () => {
                         <td className="p-4 text-right font-black text-emerald-400">₹{r.reward_amount?.toLocaleString("en-IN")}</td>
                         <td className="p-4 text-center">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                            REWARD GIVEN
+                            ACTIVE
                           </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReferralCode(r._id, r.code_used)}
+                            className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition"
+                            title="Delete Referral Code"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -607,6 +832,83 @@ const AdminReferralsPage = () => {
                   Submit Payout Request
                 </button>
               </div>
+            </div>
+          </div>
+        {/* GENERATE NEW REFERRAL CODE MODAL (FOR SUPER ADMIN) */}
+        {showCreateCodeModal && (
+          <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-400" /> Super Admin - Generate New Referral Code
+                </h3>
+                <button onClick={() => setShowCreateCodeModal(false)} className="text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateNewReferralCode} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Target User Role *</label>
+                  <select
+                    value={newCodeRole}
+                    onChange={(e) => setNewCodeRole(e.target.value as any)}
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-bold text-xs outline-none focus:border-emerald-500"
+                  >
+                    <option value="student">🎓 Student Referral Code</option>
+                    <option value="staff">💼 Staff / Employee Referral Code</option>
+                    <option value="center">🏢 Center / Franchise Campus Code</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Owner / User Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Vikas Sharma (Staff) or Rohtak Branch"
+                    value={newCodeOwnerName}
+                    onChange={(e) => setNewCodeOwnerName(e.target.value)}
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Custom Code (Optional - Auto Generated if blank)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. REF-STAF-9001"
+                    value={customCodeInput}
+                    onChange={(e) => setCustomCodeInput(e.target.value)}
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-xs uppercase outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
+                  <p className="font-bold text-emerald-400">💡 Super Admin Commission Note:</p>
+                  <p className="text-[11px]">
+                    This code will automatically link referrals into the 5-Tier Level network (L1 to L5) under {newCodeRole.toUpperCase()} rules.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCodeModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingCode}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/20 flex items-center gap-1.5"
+                  >
+                    {creatingCode ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Create & Activate Code
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
