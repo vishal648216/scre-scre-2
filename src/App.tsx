@@ -401,6 +401,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/centers/wallets" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCenterWalletsPage /></ProtectedRoute>} />
       <Route path="/dashboard/admin/bin" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminRecycleBinPage /></ProtectedRoute>} />
 
+      <Route path="/dashboard/typing" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student", "staff"]}><Navigate to="/dashboard/typing/practice" replace /></ProtectedRoute>} />
       <Route path="/dashboard/typing/languages" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><TypingLanguagesPage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/lessons" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><TypingLessonsPage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/analytics" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><AdminTypingAnalyticsPage /></ProtectedRoute>} />
@@ -410,6 +411,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/typing/tests" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "student"]}><AdminTypingTestsPage /></ProtectedRoute>} />
       <Route path="/dashboard/typing/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminTypingAllotPage /></ProtectedRoute>} />
 
+      <Route path="/dashboard/finance" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Navigate to="/dashboard/finance/transactions" replace /></ProtectedRoute>} />
       <Route path="/dashboard/finance/wallet" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceWalletPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/transactions" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceTransactionsPage /></ProtectedRoute>} />
       <Route path="/dashboard/finance/expenses" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminFinanceExpensesPage /></ProtectedRoute>} />
@@ -423,6 +425,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/locations/states" element={<Navigate to="/dashboard/locations" replace />} />
       <Route path="/dashboard/locations/cities" element={<Navigate to="/dashboard/locations" replace />} />
       <Route path="/dashboard/system/roles" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminRolePermissionsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/academics" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Navigate to="/dashboard/academics/courses" replace /></ProtectedRoute>} />
       <Route path="/dashboard/academics/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
       <Route path="/dashboard/categories" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCourseCategoriesPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/courses" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCoursesPage /></ProtectedRoute>} />
@@ -446,6 +449,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/question-feedback" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminQuestionFeedbackPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><Navigate to="/dashboard/exams/papers" replace /></ProtectedRoute>} />
       <Route path="/dashboard/exams/builder" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminPaperBuilderPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/candidates-360" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminCandidate360Page /></ProtectedRoute>} />
       <Route path="/dashboard/exams/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamAllotPage /></ProtectedRoute>} />
@@ -471,6 +475,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/staff/salary" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminStaffSalaryPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/attendance" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminExamAttendancePage /></ProtectedRoute>} />
 
+      <Route path="/dashboard/system" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Navigate to="/dashboard/system/settings" replace /></ProtectedRoute>} />
       <Route path="/dashboard/system/settings" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminSystemSettingsPage /></ProtectedRoute>} />
       <Route path="/dashboard/system/shop" element={<Navigate to="/dashboard/cms/shop" replace />} />
       <Route path="/dashboard/system/maintenance" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminMaintenancePage /></ProtectedRoute>} />
@@ -478,11 +483,13 @@ const AppRoutes = () => {
       <Route path="/dashboard/system/notifications-gateway" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminNotificationSettingsPage /></ProtectedRoute>} />
       <Route path="/dashboard/system/backup-diagnostics" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminBackupDiagnosticsPage /></ProtectedRoute>} />
 
+      <Route path="/dashboard/crm" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Navigate to="/dashboard/crm/enquiries" replace /></ProtectedRoute>} />
       <Route path="/dashboard/crm/enquiries" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminEnquiriesPage /></ProtectedRoute>} />
       <Route path="/dashboard/crm/enquiries/:id" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><AdminEnquiryDetailsPage /></ProtectedRoute>} />
       <Route path="/dashboard/crm/pipeline" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminEnquiryPipelinePage /></ProtectedRoute>} />
       <Route path="/dashboard/crm/reminders" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminEnquiryRemindersPage /></ProtectedRoute>} />
       <Route path="/dashboard/crm/coupons" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCouponsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/cms" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><Navigate to="/dashboard/cms/blogs" replace /></ProtectedRoute>} />
       <Route path="/dashboard/cms/pages" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCMSPage /></ProtectedRoute>} />
       <Route path="/dashboard/cms/slider" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCMSPage /></ProtectedRoute>} />
       <Route path="/dashboard/cms/gallery" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminCMSPage /></ProtectedRoute>} />

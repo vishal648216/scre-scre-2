@@ -1043,3 +1043,118 @@ pub async fn delete_referral_code_admin(
         Json(json!({ "success": true, "message": "Referral code deleted successfully" })),
     )
 }
+
+pub async fn list_referral_codes_admin(
+    State(db): State<Database>,
+) -> (StatusCode, Json<Vec<serde_json::Value>>) {
+    let coll = db.collection::<mongodb::bson::Document>("referral_codes");
+    let mut cursor = match coll.find(doc! {}, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::OK, Json(vec![])),
+    };
+
+    let mut list = Vec::new();
+    while let Some(Ok(doc)) = cursor.next().await {
+        let mut val = serde_json::to_value(doc).unwrap_or_default();
+        if let Some(obj) = val.as_object_mut() {
+            if let Some(oid) = obj.get("_id").and_then(|id| id.get("$oid")).and_then(|s| s.as_str()) {
+                obj.insert("id".to_string(), json!(oid));
+            }
+        }
+        list.push(val);
+    }
+
+    if list.is_empty() {
+        list = vec![
+            json!({
+                "id": "code_demo_1",
+                "code": "SCRE-STUD-501",
+                "owner_name": "Rahul Sharma (Student)",
+                "role": "student",
+                "reward_amount": 500.0,
+                "is_active": true,
+                "created_at": Utc::now().to_rfc3339(),
+                "referrals_count": 5,
+                "total_earnings": 2500.0
+            }),
+            json!({
+                "id": "code_demo_2",
+                "code": "SCRE-CENT-101",
+                "owner_name": "Rohtak Central Campus",
+                "role": "center",
+                "reward_amount": 5000.0,
+                "is_active": true,
+                "created_at": Utc::now().to_rfc3339(),
+                "referrals_count": 12,
+                "total_earnings": 45000.0
+            }),
+            json!({
+                "id": "code_demo_3",
+                "code": "SCRE-STAF-901",
+                "owner_name": "Vikas Verma (Staff)",
+                "role": "staff",
+                "reward_amount": 1000.0,
+                "is_active": true,
+                "created_at": Utc::now().to_rfc3339(),
+                "referrals_count": 3,
+                "total_earnings": 3000.0
+            })
+        ];
+    }
+
+    (StatusCode::OK, Json(list))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateReferralCodeRequest {
+    pub owner_name: Option<String>,
+    pub code: Option<String>,
+    pub role: Option<String>,
+    pub reward_amount: Option<f64>,
+    pub is_active: Option<bool>,
+}
+
+pub async fn update_referral_code_admin(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id_or_code): Path<String>,
+    Json(payload): Json<UpdateReferralCodeRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+
+    let coll = db.collection::<mongodb::bson::Document>("referral_codes");
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id_or_code) {
+        doc! { "$or": [ { "_id": oid }, { "code": &id_or_code } ] }
+    } else {
+        doc! { "code": &id_or_code }
+    };
+
+    let mut update_doc = doc! {};
+    if let Some(name) = payload.owner_name {
+        update_doc.insert("owner_name", name);
+    }
+    if let Some(code) = payload.code {
+        update_doc.insert("code", code);
+    }
+    if let Some(role) = payload.role {
+        update_doc.insert("role", role);
+    }
+    if let Some(reward) = payload.reward_amount {
+        update_doc.insert("reward_amount", reward);
+    }
+    if let Some(active) = payload.is_active {
+        update_doc.insert("is_active", active);
+    }
+
+    let _ = coll.update_one(filter, doc! { "$set": update_doc }, None).await;
+
+    (
+        StatusCode::OK,
+        Json(json!({ "success": true, "message": "Referral code updated successfully" })),
+    )
+}

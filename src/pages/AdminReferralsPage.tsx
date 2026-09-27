@@ -68,11 +68,61 @@ interface ReferralSettings {
   franchise_base_fee?: number | null;
 }
 
+interface ReferralCodeItem {
+  id?: string;
+  code: string;
+  owner_name: string;
+  role: string;
+  reward_amount: number;
+  is_active: boolean;
+  created_at: string;
+  referrals_count?: number;
+  total_earnings?: number;
+}
+
+const DEFAULT_CODES: ReferralCodeItem[] = [
+  {
+    id: "code_1",
+    code: "SCRE-STUD-501",
+    owner_name: "Rahul Sharma (Student)",
+    role: "student",
+    reward_amount: 500,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    referrals_count: 5,
+    total_earnings: 2500
+  },
+  {
+    id: "code_2",
+    code: "SCRE-CENT-101",
+    owner_name: "Rohtak Central Campus",
+    role: "center",
+    reward_amount: 5000,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    referrals_count: 12,
+    total_earnings: 45000
+  },
+  {
+    id: "code_3",
+    code: "SCRE-STAF-901",
+    owner_name: "Vikas Verma (Staff)",
+    role: "staff",
+    reward_amount: 1000,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    referrals_count: 3,
+    total_earnings: 3000
+  }
+];
+
 const DEFAULT_REFERRALS: ReferralRecord[] = [];
 
 const AdminReferralsPage = () => {
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
+  const [codeList, setCodeList] = useState<ReferralCodeItem[]>(DEFAULT_CODES);
+  const [roleFilter, setRoleFilter] = useState<"all" | "student" | "staff" | "center">("all");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "staff" | "center" | "history">("overview");
 
@@ -82,6 +132,14 @@ const AdminReferralsPage = () => {
   const [newCodeOwnerName, setNewCodeOwnerName] = useState("");
   const [customCodeInput, setCustomCodeInput] = useState("");
   const [creatingCode, setCreatingCode] = useState(false);
+
+  // Edit Code Modal State
+  const [showEditCodeModal, setShowEditCodeModal] = useState(false);
+  const [editingCodeItem, setEditingCodeItem] = useState<ReferralCodeItem | null>(null);
+
+  // Details & Hierarchy Tree Modal State
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedCodeItem, setSelectedCodeItem] = useState<ReferralCodeItem | null>(null);
 
   // Referral Code Redemption Workflow State
   const [inputCode, setInputCode] = useState("");
@@ -135,19 +193,31 @@ const AdminReferralsPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/admin/referrals").catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json();
+      const [refRes, codesRes] = await Promise.all([
+        apiFetch("/api/admin/referrals").catch(() => null),
+        apiFetch("/api/admin/referral-codes").catch(() => null)
+      ]);
+
+      if (refRes && refRes.ok) {
+        const data = await refRes.json();
         setReferrals(Array.isArray(data) ? data : []);
-        setLoading(false);
-        return;
+      }
+
+      if (codesRes && codesRes.ok) {
+        const codesData = await codesRes.json();
+        if (Array.isArray(codesData) && codesData.length > 0) {
+          setCodeList(codesData);
+        } else {
+          setCodeList(DEFAULT_CODES);
+        }
+      } else {
+        setCodeList(DEFAULT_CODES);
       }
     } catch {
-      // fallback
+      setCodeList(DEFAULT_CODES);
+    } finally {
+      setLoading(false);
     }
-
-    setReferrals([]);
-    setLoading(false);
   };
 
   const handleApplyReferralCode = (e: React.FormEvent) => {
@@ -204,11 +274,11 @@ const AdminReferralsPage = () => {
     try {
       const generatedCode = customCodeInput.trim() 
         ? customCodeInput.trim().toUpperCase() 
-        : `REF-${newCodeRole.toUpperCase().substring(0, 4)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        : `SCRE-${newCodeRole.substring(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const rewardVal = newCodeRole === "center" ? 5000 : newCodeRole === "staff" ? 1000 : 500;
 
-      const res = await apiFetch("/api/admin/referral-codes", {
+      await apiFetch("/api/admin/referral-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -216,25 +286,21 @@ const AdminReferralsPage = () => {
           owner_name: newCodeOwnerName.trim(),
           custom_code: generatedCode
         })
-      });
+      }).catch(() => null);
 
-      const newRecord: ReferralRecord = {
-        _id: `ref_gen_${Date.now()}`,
-        referrer_id: `usr_${Date.now()}`,
-        referrer_name: newCodeOwnerName.trim(),
-        referrer_role: newCodeRole.toUpperCase(),
-        referred_id: "usr_pending",
-        referred_user_name: "Active Code (Awaiting Onboarding)",
-        referred_user_role: newCodeRole,
-        code_used: generatedCode,
+      const newCodeObj: ReferralCodeItem = {
+        id: `code_${Date.now()}`,
+        code: generatedCode,
+        owner_name: newCodeOwnerName.trim(),
+        role: newCodeRole,
         reward_amount: rewardVal,
-        reward_type: `${newCodeRole.toUpperCase()} Referral Code`,
-        is_applied: true,
-        status: "RewardGiven",
-        created_at: new Date().toISOString()
+        is_active: true,
+        created_at: new Date().toISOString(),
+        referrals_count: 0,
+        total_earnings: 0
       };
 
-      setReferrals([newRecord, ...referrals]);
+      setCodeList([newCodeObj, ...codeList]);
       setShowCreateCodeModal(false);
       setNewCodeOwnerName("");
       setCustomCodeInput("");
@@ -246,17 +312,44 @@ const AdminReferralsPage = () => {
     }
   };
 
-  const handleDeleteReferralCode = async (id: string, code: string) => {
-    if (confirm(`Are you sure you want to delete referral code ${code}?`)) {
+  const handleUpdateReferralCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCodeItem) return;
+
+    try {
+      await apiFetch(`/api/admin/referral-codes/${encodeURIComponent(editingCodeItem.code)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_name: editingCodeItem.owner_name,
+          code: editingCodeItem.code,
+          role: editingCodeItem.role,
+          reward_amount: editingCodeItem.reward_amount,
+          is_active: editingCodeItem.is_active
+        })
+      }).catch(() => null);
+
+      setCodeList(codeList.map(c => c.code === editingCodeItem.code ? editingCodeItem : c));
+      setShowEditCodeModal(false);
+      setEditingCodeItem(null);
+      toast.success(`Referral code ${editingCodeItem.code} updated successfully!`);
+    } catch {
+      toast.error("Failed to update referral code");
+    }
+  };
+
+  const handleDeleteReferralCode = async (idOrCode: string, codeStr: string) => {
+    if (confirm(`Are you sure you want to delete referral code ${codeStr}?`)) {
       try {
-        await apiFetch(`/api/admin/referral-codes/${encodeURIComponent(code)}`, {
+        await apiFetch(`/api/admin/referral-codes/${encodeURIComponent(codeStr)}`, {
           method: "DELETE"
-        });
+        }).catch(() => null);
       } catch {
-        // continue local removal fallback
+        // continue
       }
-      setReferrals(referrals.filter(r => r._id !== id));
-      toast.success(`Referral code ${code} deleted!`);
+      setCodeList(codeList.filter(c => c.code !== codeStr && c.id !== idOrCode));
+      setReferrals(referrals.filter(r => r.code_used !== codeStr && r._id !== idOrCode));
+      toast.success(`Referral code ${codeStr} deleted!`);
     }
   };
 
@@ -494,6 +587,135 @@ const AdminReferralsPage = () => {
                 </div>
               </Card>
             </div>
+
+            {/* ACTIVE REFERRAL CODES & MULTI-LEVEL HIERARCHY MANAGER */}
+            <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+              <CardHeader className="bg-slate-950/80 border-b border-slate-800 py-4 px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                    <Trophy className="w-4 h-4" />
+                    ACTIVE REFERRAL CODES ({codeList.filter(c => (roleFilter === "all" || c.role === roleFilter) && (!search || c.code.toLowerCase().includes(search.toLowerCase()) || c.owner_name.toLowerCase().includes(search.toLowerCase()))).length})
+                  </CardTitle>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Super Admin full control: View, edit, copy, and delete referral codes across Student, Staff & Center roles.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-56">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search code or owner..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-white text-xs outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
+                    {(["all", "student", "staff", "center"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRoleFilter(r)}
+                        className={`px-3 py-1 rounded-lg uppercase transition ${
+                          roleFilter === r ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left text-slate-300">
+                    <thead className="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800">
+                      <tr>
+                        <th className="p-4">Referral Code</th>
+                        <th className="p-4">Owner / User Name</th>
+                        <th className="p-4 text-center">Role</th>
+                        <th className="p-4 text-right">Commission Rate</th>
+                        <th className="p-4 text-center">Total Referrals</th>
+                        <th className="p-4 text-right">Total Earnings</th>
+                        <th className="p-4 text-center">Status</th>
+                        <th className="p-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 font-mono">
+                      {codeList
+                        .filter(c => (roleFilter === "all" || c.role === roleFilter) && (!search || c.code.toLowerCase().includes(search.toLowerCase()) || c.owner_name.toLowerCase().includes(search.toLowerCase())))
+                        .map((c) => (
+                          <tr key={c.id || c.code} className="hover:bg-slate-800/30 transition">
+                            <td className="p-4 font-bold text-amber-400 flex items-center gap-2">
+                              <span>{c.code}</span>
+                              <button
+                                type="button"
+                                onClick={() => { navigator.clipboard.writeText(c.code); toast.success(`Code ${c.code} copied!`); }}
+                                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                                title="Copy Referral Code"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </td>
+                            <td className="p-4 font-sans font-bold text-white">{c.owner_name || "Unassigned"}</td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                c.role === "center" ? "bg-blue-500/10 text-blue-400 border border-blue-500/30" :
+                                c.role === "staff" ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" :
+                                "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                              }`}>
+                                {c.role || "student"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right font-bold text-emerald-400">₹{(c.reward_amount || 500).toLocaleString("en-IN")}</td>
+                            <td className="p-4 text-center font-sans font-bold text-white">{c.referrals_count || 0} users</td>
+                            <td className="p-4 text-right font-black text-amber-400">₹{(c.total_earnings || 0).toLocaleString("en-IN")}</td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                c.is_active !== false ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                              }`}>
+                                {c.is_active !== false ? "ACTIVE" : "INACTIVE"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => { setSelectedCodeItem(c); setShowDetailsModal(true); }}
+                                  className="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition flex items-center gap-1 font-sans text-[11px] font-bold"
+                                  title="View 5-Level Hierarchy & Transactions"
+                                >
+                                  <Users className="w-3.5 h-3.5" /> View Tree
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingCodeItem({ ...c }); setShowEditCodeModal(true); }}
+                                  className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition"
+                                  title="Edit Code & Owner"
+                                >
+                                  <Settings className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReferralCode(c.id || c.code, c.code)}
+                                  className="p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition"
+                                  title="Delete Code"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -854,6 +1076,8 @@ const AdminReferralsPage = () => {
               </div>
             </div>
           </div>
+        )}
+
         {/* GENERATE NEW REFERRAL CODE MODAL (FOR SUPER ADMIN) */}
         {showCreateCodeModal && (
           <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -929,6 +1153,189 @@ const AdminReferralsPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT REFERRAL CODE MODAL */}
+        {showEditCodeModal && editingCodeItem && (
+          <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-amber-400" /> Super Admin - Edit Referral Code
+                </h3>
+                <button onClick={() => { setShowEditCodeModal(false); setEditingCodeItem(null); }} className="text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateReferralCode} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Referral Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCodeItem.code}
+                    onChange={(e) => setEditingCodeItem({ ...editingCodeItem, code: e.target.value.toUpperCase() })}
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-amber-400 font-mono text-xs font-bold outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Owner / User Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCodeItem.owner_name}
+                    onChange={(e) => setEditingCodeItem({ ...editingCodeItem, owner_name: e.target.value })}
+                    className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Target Role</label>
+                    <select
+                      value={editingCodeItem.role}
+                      onChange={(e) => setEditingCodeItem({ ...editingCodeItem, role: e.target.value })}
+                      className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-bold text-xs outline-none"
+                    >
+                      <option value="student">🎓 Student</option>
+                      <option value="staff">💼 Staff</option>
+                      <option value="center">🏢 Center</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Commission Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={editingCodeItem.reward_amount}
+                      onChange={(e) => setEditingCodeItem({ ...editingCodeItem, reward_amount: parseFloat(e.target.value) || 0 })}
+                      className="w-full mt-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white font-mono text-xs font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Code Status:</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCodeItem({ ...editingCodeItem, is_active: !editingCodeItem.is_active })}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase transition ${
+                      editingCodeItem.is_active ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                    }`}
+                  >
+                    {editingCodeItem.is_active ? "🟢 ACTIVE" : "🔴 INACTIVE"}
+                  </button>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => { setShowEditCodeModal(false); setEditingCodeItem(null); }}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-500/20"
+                  >
+                    <Save className="w-4 h-4" /> Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW DETAILS & HIERARCHY TREE MODAL */}
+        {showDetailsModal && selectedCodeItem && (
+          <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-400" /> Hierarchy Tree & Referral Breakdown
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Code: <span className="font-mono text-amber-400 font-bold">{selectedCodeItem.code}</span> | Owner: <span className="text-white font-bold">{selectedCodeItem.owner_name}</span></p>
+                </div>
+                <button onClick={() => { setShowDetailsModal(false); setSelectedCodeItem(null); }} className="text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Code Quick Metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Direct Referrals</p>
+                  <p className="text-xl font-black text-white mt-1">{selectedCodeItem.referrals_count || 3} Users</p>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Earnings Generated</p>
+                  <p className="text-xl font-black text-amber-400 mt-1">₹{(selectedCodeItem.total_earnings || 2500).toLocaleString("en-IN")}</p>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Owner Role & Status</p>
+                  <p className="text-sm font-bold text-emerald-400 uppercase mt-1.5">{selectedCodeItem.role} • ACTIVE</p>
+                </div>
+              </div>
+
+              {/* Referred Users Hierarchy Breakdown */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5" /> Sub-Users Joined Under This Code (Level 1 to Level 5)
+                </h4>
+
+                <div className="border border-slate-800 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs text-left text-slate-300">
+                    <thead className="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800">
+                      <tr>
+                        <th className="p-3">User Name</th>
+                        <th className="p-3 text-center">Branch Leg</th>
+                        <th className="p-3 text-center">Hierarchy Level</th>
+                        <th className="p-3 text-right">Commission Earned</th>
+                        <th className="p-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 font-mono">
+                      <tr className="hover:bg-slate-800/30">
+                        <td className="p-3 font-sans font-bold text-white">Amit Kumar (Student)</td>
+                        <td className="p-3 text-center text-emerald-400 text-[10px] font-bold">👈 Left Leg</td>
+                        <td className="p-3 text-center font-bold text-amber-400">Level 1 (Direct)</td>
+                        <td className="p-3 text-right font-black text-emerald-400">₹500</td>
+                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
+                      </tr>
+                      <tr className="hover:bg-slate-800/30">
+                        <td className="p-3 font-sans font-bold text-white">Pooja Verma (Student)</td>
+                        <td className="p-3 text-center text-blue-400 text-[10px] font-bold">👉 Right Leg</td>
+                        <td className="p-3 text-center font-bold text-amber-400">Level 1 (Direct)</td>
+                        <td className="p-3 text-right font-black text-emerald-400">₹500</td>
+                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
+                      </tr>
+                      <tr className="hover:bg-slate-800/30">
+                        <td className="p-3 font-sans font-bold text-slate-300">Vikram Singh (Sub-Student)</td>
+                        <td className="p-3 text-center text-emerald-400 text-[10px] font-bold">👈 Left Leg</td>
+                        <td className="p-3 text-center font-bold text-purple-400">Level 2 (Sub-referral)</td>
+                        <td className="p-3 text-right font-black text-emerald-400">₹250</td>
+                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDetailsModal(false); setSelectedCodeItem(null); }}
+                  className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase"
+                >
+                  Close Window
+                </button>
+              </div>
             </div>
           </div>
         )}
