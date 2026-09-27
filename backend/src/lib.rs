@@ -638,6 +638,7 @@ pub async fn run_server() {
         .route("/api/center-updates/history/:center_id", get(handlers::center_update::get_update_history))
         .route("/api/uploads", post(handlers::upload::upload_file))
         .route("/api/referrals/validate", post(handlers::referral::validate_referral_code))
+        .route("/api/referrals/tree", get(handlers::referral::get_referral_tree))
         .route("/api/referrals/my", get(handlers::referral::get_my_referrals))
         .route("/api/referrals/stats", get(handlers::referral::get_referral_stats))
         .route("/api/referrals/dashboard", get(handlers::referral::get_referral_dashboard))

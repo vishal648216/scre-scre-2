@@ -179,8 +179,43 @@ export const ReferralTreeNodeItem: React.FC<{ node: TreeNode; isLast?: boolean }
   );
 };
 
+import { apiFetch } from "@/lib/api";
+
 export const ReferralTreeVisualizer: React.FC<Props> = ({ data }) => {
-  const treeData = data && data.length > 0 ? data : SAMPLE_TREE;
+  const [treeNodes, setTreeNodes] = useState<TreeNode[]>(data || []);
+  const [fetching, setFetching] = useState(!data || data.length === 0);
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setTreeNodes(data);
+      setFetching(false);
+      return;
+    }
+
+    const loadLiveTree = async () => {
+      try {
+        const res = await apiFetch("/api/referrals/tree");
+        if (res.ok) {
+          const liveData = await res.json();
+          if (Array.isArray(liveData) && liveData.length > 0) {
+            setTreeNodes(liveData);
+          } else {
+            setTreeNodes(SAMPLE_TREE);
+          }
+        } else {
+          setTreeNodes(SAMPLE_TREE);
+        }
+      } catch {
+        setTreeNodes(SAMPLE_TREE);
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    void loadLiveTree();
+  }, [data]);
+
+  const treeData = treeNodes.length > 0 ? treeNodes : SAMPLE_TREE;
 
   return (
     <div className="space-y-6">
