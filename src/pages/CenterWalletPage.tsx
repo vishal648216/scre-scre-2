@@ -57,7 +57,9 @@ const CenterWalletPage = () => {
     const [wallet, setWallet] = useState<WalletInfo | null>(null);
     const [txData, setTxData] = useState<TxListResponse>({ items: [], total: 0, page: 1, limit: 20 });
     const [txLoading, setTxLoading] = useState(false);
-    const [rechargeAmount, setRechargeAmount] = useState<string>("500");
+    const [rechargeAmount, setRechargeAmount] = useState<string>("1000");
+    const [rechargeMode, setRechargeMode] = useState<"wallet" | "royalty_only">("wallet");
+    const [paymentChannel, setPaymentChannel] = useState<"online" | "upi" | "offline">("online");
     const [isRecharging, setIsRecharging] = useState(false);
     const [showRechargeDialog, setShowRechargeDialog] = useState(false);
     const [orderData, setOrderData] = useState<any>(null);
@@ -66,11 +68,12 @@ const CenterWalletPage = () => {
     const calculatePayableAmount = () => {
         if (!wallet) return 0;
         const amount = parseFloat(rechargeAmount) || 0;
-        const royaltyPercent = wallet.royalty_percentage || 0;
-        return (amount * royaltyPercent) / 100;
+        const royaltyPercent = wallet.royalty_percentage || 20;
+        const calculatedRoyalty = (amount * royaltyPercent) / 100;
+        return rechargeMode === "royalty_only" ? calculatedRoyalty : calculatedRoyalty;
     };
     const payableAmount = calculatePayableAmount();
-    const royaltyAmount = calculatePayableAmount();
+    const royaltyAmount = wallet ? (parseFloat(rechargeAmount) || 0) * ((wallet.royalty_percentage || 20) / 100) : 0;
 
   const loadData = async () => {
     try {
@@ -201,30 +204,76 @@ const CenterWalletPage = () => {
                 {t("Recharge Wallet")}
               </button>
             </DialogTrigger>
-            <DialogContent className="rounded-none border-border max-w-sm">
+            <DialogContent className="rounded-xl border-border max-w-md">
               <DialogHeader>
-                <DialogTitle className="font-heading font-bold uppercase tracking-tight">{t("Recharge Wallet")}</DialogTitle>
+                <DialogTitle className="font-heading font-black uppercase tracking-tight text-base">{t("Center Royalty & Wallet Recharge")}</DialogTitle>
                 <DialogDescription className="text-xs">
-                  {t("Enter the amount you want to add to your center wallet.")}
+                  {t("Select recharge mode & payment channel as per Company Royalty guidelines.")}
                 </DialogDescription>
               </DialogHeader>
-              <div className="py-6 space-y-4">
+              <div className="py-4 space-y-4">
+                {/* Royalty Calculation Formula Info Banner */}
+                <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl text-xs space-y-1">
+                  <p className="font-extrabold text-amber-600 uppercase flex items-center gap-1.5">
+                    💡 Company Royalty Formula Rule
+                  </p>
+                  <p className="text-slate-700 dark:text-slate-300 font-mono leading-relaxed">
+                    E.g. Student Fee = <strong>₹1,000/month</strong> & Royalty = <strong>20%</strong>
+                    <br />
+                    Royalty Amount: <strong>₹1,000 × 20% = ₹200 Royalty</strong> credited to Company Account.
+                  </p>
+                </div>
+
+                {/* Mode Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t("Select Payment Flow Mode")}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRechargeMode("wallet")}
+                      className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${
+                        rechargeMode === "wallet"
+                          ? "bg-primary text-primary-foreground border-primary shadow-md"
+                          : "bg-card border-border hover:bg-muted"
+                      }`}
+                    >
+                      <p className="font-black text-xs uppercase">Self Wallet Recharge</p>
+                      <p className="text-[10px] opacity-80 mt-0.5">Pay student fee from wallet (20% Royalty auto-deducted)</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRechargeMode("royalty_only")}
+                      className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${
+                        rechargeMode === "royalty_only"
+                          ? "bg-primary text-primary-foreground border-primary shadow-md"
+                          : "bg-card border-border hover:bg-muted"
+                      }`}
+                    >
+                      <p className="font-black text-xs uppercase">Manual Company Royalty</p>
+                      <p className="text-[10px] opacity-80 mt-0.5">Pay ONLY 20% Royalty directly via Online/UPI/Offline</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Amount Input */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t("Amount (INR)")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    {rechargeMode === "wallet" ? t("Student Fee / Base Amount (INR)") : t("Course Base Fee Amount (INR)")}
+                  </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₹</span>
                     <input
                       type="number"
                       value={rechargeAmount}
                       onChange={(e) => { setRechargeAmount(e.target.value); setOrderData(null); }}
-                      className="w-full border border-border bg-background pl-8 pr-4 py-3 text-lg font-bold focus:outline-none focus:border-primary"
-                      placeholder="500"
+                      className="w-full border border-border bg-background pl-8 pr-4 py-3 text-lg font-bold focus:outline-none focus:border-primary rounded-xl"
+                      placeholder="1000"
                       min="100"
                       disabled={isRecharging}
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">{t("Minimum recharge amount: ₹100")}</p>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   {["500", "1000", "2000"].map((amt) => (
                     <button
@@ -232,7 +281,7 @@ const CenterWalletPage = () => {
                       onClick={() => { setRechargeAmount(amt); setOrderData(null); }}
                       disabled={isRecharging}
                       className={cn(
-                        "py-2 text-[10px] font-black border transition-all",
+                        "py-2 text-[10px] font-black border rounded-lg transition-all",
                         rechargeAmount === amt ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
                       )}
                     >
@@ -240,20 +289,44 @@ const CenterWalletPage = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* Payment Channel Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t("Payment Channel Method")}</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "online", label: "Online Gateway" },
+                      { id: "upi", label: "UPI Direct" },
+                      { id: "offline", label: "Offline Company" },
+                    ].map((ch) => (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => setPaymentChannel(ch.id as any)}
+                        className={`py-2 px-1 text-[10px] font-bold border rounded-lg uppercase tracking-tight text-center ${
+                          paymentChannel === ch.id ? "border-primary bg-primary/10 text-primary font-black" : "border-border text-muted-foreground"
+                        }`}
+                      >
+                        {ch.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {wallet && (
-                  <div className="bg-muted/30 p-4 space-y-2 border border-border">
-                    <p className="text-xs font-bold uppercase tracking-tight">{t("Recharge Summary")}</p>
-                    <div className="flex justify-between text-sm">
-                      <span>{t("Credit to Wallet")}</span>
-                      <span className="font-bold">₹{parseFloat(rechargeAmount).toLocaleString("en-IN")}</span>
+                  <div className="bg-muted/40 p-4 rounded-xl space-y-2 border border-border">
+                    <p className="text-xs font-black uppercase tracking-tight border-b border-border pb-1">{t("Fee & Royalty Summary")}</p>
+                    <div className="flex justify-between text-xs">
+                      <span>{t("Base Course Fee")}</span>
+                      <span className="font-bold font-mono">₹{(parseFloat(rechargeAmount) || 0).toLocaleString("en-IN")}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>{t("Royalty")} ({wallet?.royalty_percentage || 0}%)</span>
-                      <span className="font-bold">₹{royaltyAmount.toLocaleString("en-IN")}</span>
+                    <div className="flex justify-between text-xs text-amber-600 font-semibold">
+                      <span>{t("Company Royalty Share")} ({(wallet?.royalty_percentage || 20)}%)</span>
+                      <span className="font-mono">₹{royaltyAmount.toLocaleString("en-IN")}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
-                      <span>{t("You Pay")}</span>
-                      <span className="text-primary">₹{payableAmount.toLocaleString("en-IN")}</span>
+                    <div className="flex justify-between text-base font-black border-t border-border pt-2 text-primary">
+                      <span>{rechargeMode === "royalty_only" ? t("Royalty Payable Now") : t("Net Royalty Contribution")}</span>
+                      <span className="font-mono">₹{payableAmount.toLocaleString("en-IN")}</span>
                     </div>
                   </div>
                 )}
@@ -262,10 +335,10 @@ const CenterWalletPage = () => {
                 <button
                   disabled={isRecharging}
                   onClick={handleRecharge}
-                  className="w-full bg-primary text-primary-foreground py-4 font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-heading font-black text-xs uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
                   {isRecharging ? <Loader2 className="w-4 h-4 animate-spin" /> : <IndianRupee className="w-4 h-4" />}
-                  {isRecharging ? t("Processing...") : t("Proceed to Pay")}
+                  {isRecharging ? t("Processing...") : `${t("Pay Royalty")} (₹${payableAmount.toLocaleString("en-IN")})`}
                 </button>
               </DialogFooter>
             </DialogContent>

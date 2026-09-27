@@ -90,6 +90,8 @@ const AdminCoursesPage = () => {
     syllabus: "",
     fees: "" as string | number,
     registration_fee: "" as string | number,
+    fee_country: "India" as string,
+    fee_currency: "INR (₹)" as string,
     exam_fees_applicable: false,
     exam_fee_amount: "" as string | number,
     backlog_fees_applicable: false,
@@ -670,27 +672,70 @@ const AdminCoursesPage = () => {
                           </div>
                         </div>
 
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2 pt-2">3. Fees & Structure</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2 pt-2">3. Country-Based Fees & Structure</h3>
+                        <div className="space-y-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Fee Country Basis</Label>
+                              <select
+                                value={form.fee_country}
+                                onChange={(e) => {
+                                  const c = e.target.value;
+                                  const currMap: Record<string, string> = {
+                                    India: "INR (₹)",
+                                    Nepal: "NPR (रू)",
+                                    USA: "USD ($)",
+                                    UAE: "AED (د.إ)",
+                                    UK: "GBP (£)",
+                                    Bangladesh: "BDT (৳)",
+                                    International: "USD ($)"
+                                  };
+                                  setForm({ ...form, fee_country: c, fee_currency: currMap[c] || "USD ($)" });
+                                }}
+                                className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-100 outline-none focus:border-indigo-500"
+                              >
+                                <option value="India">🇮🇳 India (INR ₹)</option>
+                                <option value="Nepal">🇳🇵 Nepal (NPR रू)</option>
+                                <option value="USA">🇺🇸 United States (USD $)</option>
+                                <option value="UAE">🇦🇪 United Arab Emirates (AED د.إ)</option>
+                                <option value="UK">🇬🇧 United Kingdom (GBP £)</option>
+                                <option value="Bangladesh">🇧🇩 Bangladesh (BDT ৳)</option>
+                                <option value="International">🌐 International / Other</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Active Currency</Label>
+                              <input
+                                type="text"
+                                readOnly
+                                value={form.fee_currency}
+                                className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono font-bold text-indigo-400 outline-none cursor-not-allowed"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Fees (INR)</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Course Fees ({form.fee_currency})</Label>
                             <input
                               type="number"
                               min={0}
                               value={form.fees}
                               onChange={(e) => setForm({ ...form, fees: e.target.value })}
-                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold"
                               placeholder="0"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Admission Fees (INR)</Label>
+                            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Admission Fees ({form.fee_currency})</Label>
                             <input
                               type="number"
                               min={0}
                               value={form.registration_fee}
                               onChange={(e) => setForm({ ...form, registration_fee: e.target.value })}
-                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all font-mono font-bold"
                               placeholder="0"
                             />
                           </div>

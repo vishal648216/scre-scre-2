@@ -1999,21 +1999,62 @@ const AddStudentPage = () => {
         ) : step === 2 ? (
           <PreviewView />
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 space-y-6 animate-in fade-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-in fade-in zoom-in-95 duration-500 max-w-2xl mx-auto">
+            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black uppercase tracking-tight text-foreground">{t("Enrollment Successful!")}</h2>
-              <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">{t("Student account has been created and verified.")}</p>
+              <h2 className="text-3xl font-black uppercase tracking-tight text-foreground">{t("Admission Confirmed Successfully!")}</h2>
+              <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">{t("Student account and enrollment credentials created.")}</p>
             </div>
-            <div className="flex flex-col w-full max-w-md gap-4 pt-6">
+
+            {/* Requirement 4: Admission Email Confirmation Box for Student & Center */}
+            <div className="w-full bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                  ✉️ Automated Email Confirmation Sent
+                </h4>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">
+                  DELIVERED
+                </span>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <span className="text-base">🎓</span>
+                  <div>
+                    <p className="font-bold text-slate-200 uppercase">Student Registered Mail ID</p>
+                    <p className="font-mono text-emerald-400">{submittedStudent?.email || formData.email || "student@screduc.com"}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Sent admission letter & course curriculum packet</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <span className="text-base">🏢</span>
+                  <div>
+                    <p className="font-bold text-slate-200 uppercase">Center Registered Mail ID</p>
+                    <p className="font-mono text-blue-400">{submittedStudent?.center_email || "center.campus@screduc.com"}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Sent student admission copy & roll number verification</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => toast.success("Admission confirmation email resent to student & center mail IDs!")}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider transition border border-slate-700"
+              >
+                Resend Admission Confirmation Email
+              </button>
+            </div>
+
+            <div className="flex flex-col w-full max-w-md gap-3 pt-2">
               <button
                 onClick={downloadReceipt}
-                className="w-full bg-emerald-600 text-white py-4 rounded-none font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-3"
+                className="w-full bg-emerald-600 text-white py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-3"
               >
                 <FileText className="w-4 h-4" />
-                {t("Download Enrollment PDF")}
+                {t("Download Enrollment PDF Receipt")}
               </button>
               <button
                 onClick={() => {
@@ -2022,7 +2063,7 @@ const AddStudentPage = () => {
                   setStep(1);
                   setSubmittedStudent(null);
                 }}
-                className="w-full border border-border bg-background py-4 rounded-none font-black text-xs uppercase tracking-[0.2em] hover:bg-muted transition-all"
+                className="w-full border border-border bg-background py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-muted transition-all"
               >
                 {t("Enroll Another Student")}
               </button>

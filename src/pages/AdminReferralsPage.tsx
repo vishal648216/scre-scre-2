@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
+import ReferralTreeVisualizer from "@/components/ReferralTreeVisualizer";
 
 interface ReferralRecord {
   _id: string;
@@ -73,7 +74,8 @@ const AdminReferralsPage = () => {
   const [loading, setLoading] = useState(true);
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "student" | "center" | "history">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "center" | "history">("overview");
+
 
   // Referral Code Redemption Workflow State
   const [inputCode, setInputCode] = useState("");
@@ -248,6 +250,16 @@ const AdminReferralsPage = () => {
             <Gift className="w-4 h-4" /> Overview & Redeem Code
           </button>
           <button
+            onClick={() => setActiveTab("tree")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 ${
+              activeTab === "tree"
+                ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <Users className="w-4 h-4" /> Visual Referral Tree Network
+          </button>
+          <button
             onClick={() => setActiveTab("student")}
             className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 ${
               activeTab === "student"
@@ -278,6 +290,13 @@ const AdminReferralsPage = () => {
             <Trophy className="w-4 h-4" /> Referral Network History ({referrals.length})
           </button>
         </div>
+
+        {/* TAB: VISUAL TREE NETWORK */}
+        {activeTab === "tree" && (
+          <div className="space-y-6">
+            <ReferralTreeVisualizer />
+          </div>
+        )}
 
         {/* TAB 1: OVERVIEW & REDEEM CODE WORKFLOW */}
         {activeTab === "overview" && (

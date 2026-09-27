@@ -11,6 +11,7 @@ import { Trophy, Users, History, Copy, CheckCircle, IndianRupee, TrendingUp, Clo
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import ReferralTreeVisualizer from "@/components/ReferralTreeVisualizer";
 
 interface ReferralLevel {
   level_number: number;
@@ -297,11 +298,16 @@ const ReferAndEarnPage = () => {
         </div>
 
         <Tabs defaultValue="overview" onValueChange={setActiveTab} value={activeTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="overview">{t("Overview")}</TabsTrigger>
+            <TabsTrigger value="tree">{t("Tree Hierarchy")}</TabsTrigger>
             <TabsTrigger value="referred">{t("Referred Users")}</TabsTrigger>
             <TabsTrigger value="transactions">{t("Transactions")}</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="tree" className="space-y-6">
+            <ReferralTreeVisualizer />
+          </TabsContent>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
