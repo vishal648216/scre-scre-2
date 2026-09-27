@@ -9,6 +9,25 @@ import i18n from "@/i18n";
 import { syncServerTime } from "@/lib/time";
 import LanguageSync from "@/components/LanguageSync";
 import { PortalErrorBoundary } from "@/components/PortalErrorBoundary";
+import { initGoogleTranslateScript, enableDOMAutoTranslationObserver, triggerGoogleTranslateSync } from "@/lib/translator";
+
+const RouteTranslationSync = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const lang = localStorage.getItem("lang") || "en";
+    if (lang !== "en") {
+      setTimeout(() => {
+        triggerGoogleTranslateSync(lang);
+      }, 150);
+      setTimeout(() => {
+        triggerGoogleTranslateSync(lang);
+      }, 600);
+    }
+  }, [location.pathname]);
+
+  return null;
+};
 
 // Core Pages
 const Index = lazy(() => import("./pages/Index"));
@@ -112,6 +131,8 @@ import InternAttendancePage from "./pages/InternAttendancePage";
 import InternTasksPage from "./pages/InternTasksPage";
 import InternCertificatesPage from "./pages/InternCertificatesPage";
 import StudentResumeBuilderPage from "./pages/StudentResumeBuilderPage";
+import AdminPaperBuilderPage from "./pages/AdminPaperBuilderPage";
+import AdminCandidate360Page from "./pages/AdminCandidate360Page";
 
 const StudentExamListPage = lazy(() => import("./pages/StudentExamListPage"));
 const TakeExamPage = lazy(() => import("./pages/TakeExamPage"));
@@ -247,14 +268,14 @@ function LanguageQueryBridge() {
 
 // Auth Guard Component
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
-  const token = sessionStorage.getItem("token");
-  const userStr = sessionStorage.getItem("user");
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  const userStr = sessionStorage.getItem("user") || localStorage.getItem("user");
 
   let user: any = null;
   try {
     user = userStr && userStr !== "undefined" ? JSON.parse(userStr) : null;
   } catch (error) {
-    console.error("Error parsing user from sessionStorage:", error);
+    console.error("Error parsing user from storage:", error);
     user = null;
   }
 
@@ -425,9 +446,11 @@ const AppRoutes = () => {
       <Route path="/dashboard/academics/question-bank/:bankId/add" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/question-bank/:bankId/edit/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><QuestionFormPage /></ProtectedRoute>} />
       <Route path="/dashboard/academics/question-feedback" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminQuestionFeedbackPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/builder" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminPaperBuilderPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/candidates-360" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminCandidate360Page /></ProtectedRoute>} />
       <Route path="/dashboard/exams/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamAllotPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/alloted" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/papers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamListPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/papers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminExamListPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/results" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamResultsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/center-requests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamCenterRequestsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/evaluate/:id" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><ManualEvaluationPage /></ProtectedRoute>} />
@@ -848,6 +871,9 @@ const App = () => {
     // Clear the portal reload flag on successful load of the app
     sessionStorage.removeItem("portal_reload_on_error");
     syncServerTime();
+    initGoogleTranslateScript();
+    enableDOMAutoTranslationObserver();
+
     const rtlLanguages = ["ar", "ur", "ps", "fa", "he"];
     const updateDocLang = (lng: string) => {
       const normalized = (lng || "en").split("-")[0].toLowerCase();
@@ -871,6 +897,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <SmoothScrollTop />
+          <RouteTranslationSync />
           <Suspense fallback={
             <div className="flex items-center justify-center min-h-screen bg-background">
               <div className="flex flex-col items-center gap-4">
@@ -879,7 +906,9 @@ const App = () => {
               </div>
             </div>
           }>
-            <AppRoutes />
+            <PortalErrorBoundary>
+              <AppRoutes />
+            </PortalErrorBoundary>
           </Suspense>
         </BrowserRouter>
       </TooltipProvider>
@@ -889,21 +918,21 @@ const App = () => {
 
 // Helper to redirect to correct role-based dashboard
 const DashboardSelector = () => {
-  const userStr = sessionStorage.getItem("user");
+  const userStr = sessionStorage.getItem("user") || localStorage.getItem("user");
   let user: any = null;
   try {
     user = userStr && userStr !== "undefined" ? JSON.parse(userStr) : null;
   } catch (e) {
     user = null;
   }
-  const role = user?.role?.toLowerCase();
+  const rawRole = (user?.role || "").toLowerCase().replace(/[\s\-_]/g, "");
 
-  if (role === "superadmin") return <Navigate to="/dashboard/superadmin" replace />;
-  if (role === "admin") return <Navigate to="/dashboard/admin" replace />;
-  if (role === "center") return <Navigate to="/dashboard/center" replace />;
-  if (role === "student") return <Navigate to="/dashboard/student" replace />;
-  if (role === "staff") return <Navigate to="/dashboard/staff" replace />;
-  if (role === "intern") return <Navigate to="/dashboard/intern" replace />;
+  if (rawRole === "superadmin") return <Navigate to="/dashboard/superadmin" replace />;
+  if (rawRole === "admin" || rawRole === "subadmin") return <Navigate to="/dashboard/admin" replace />;
+  if (rawRole === "center" || rawRole === "franchise") return <Navigate to="/dashboard/center" replace />;
+  if (rawRole === "student") return <Navigate to="/dashboard/student" replace />;
+  if (rawRole === "staff") return <Navigate to="/dashboard/staff" replace />;
+  if (rawRole === "intern") return <Navigate to="/dashboard/intern" replace />;
 
   return <Navigate to="/" replace />;
 };

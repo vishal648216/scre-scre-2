@@ -73,3 +73,4 @@ pub mod notification_gateway;
 pub mod ai_tutor;
 pub mod system_backup;
 pub mod finance;
+pub mod resume;

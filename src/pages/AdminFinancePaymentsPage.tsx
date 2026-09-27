@@ -313,7 +313,7 @@ const AdminFinancePaymentsPage = () => {
                                   <BadgeCheck className="w-4 h-4 text-blue-400" title="Bank Verified" />
                                 </p>
                                 <p className="text-[10px] text-slate-400 font-mono">
-                                  Bank: {cObj.bank_name || "State Bank of India"} • A/C: {cObj.bank_account || "918273645192"}
+                                  Bank: {cObj?.bank_name || "State Bank of India"} • A/C: {cObj?.bank_account || "918273645192"}
                                 </p>
                               </div>
                             </td>

@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, Download, User, Mail, Phone, MapPin, Briefcase, GraduationCap,
-  Award, Code, Sparkles, CheckCircle2, Plus, Trash2, Globe, Linkedin, Github, RefreshCw
+  Award, Code, Sparkles, CheckCircle2, Plus, Trash2, Save, RefreshCw, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { apiFetch } from "@/lib/api";
 
 interface ExperienceItem {
   id: string;
@@ -39,7 +40,11 @@ interface ProjectItem {
 export default function StudentResumeBuilderPage() {
   const { t } = useTranslation();
 
-  const [activeTheme, setActiveTheme] = useState<"modern" | "executive">("modern");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [atsScore, setAtsScore] = useState<number | null>(null);
+  const [atsSuggestions, setAtsSuggestions] = useState<string[]>([]);
+  const [isCalculatingATS, setIsCalculatingATS] = useState(false);
 
   // Form State
   const [personalInfo, setPersonalInfo] = useState({
@@ -54,7 +59,9 @@ export default function StudentResumeBuilderPage() {
       "Passionate and detail-oriented candidate trained in Web Development and Office Automation. Experienced in building responsive user interfaces, database optimization, and team collaboration.",
   });
 
-  const [skills, setSkills] = useState<string>("React.js, JavaScript, HTML5/CSS3, Python, Advanced Excel, Tally Prime, Communication, Problem Solving");
+  const [skills, setSkills] = useState<string>(
+    "React.js, JavaScript, HTML5/CSS3, Python, Advanced Excel, Tally Prime, Communication, Problem Solving"
+  );
 
   const [education, setEducation] = useState<EducationItem[]>([
     {
@@ -95,34 +102,308 @@ export default function StudentResumeBuilderPage() {
     },
   ]);
 
-  const [certifications, setCertifications] = useState<string[]>(
-    ["Certified Web Development Professional - SCREduc", "Advanced Tally Prime & GST Filing - Government Approved Center"]
-  );
+  const [certifications, setCertifications] = useState<string[]>([
+    "Certified Web Development Professional - SCREduc",
+    "Advanced Tally Prime & GST Filing - Government Approved Center",
+  ]);
 
+  // Load from backend on mount
   useEffect(() => {
-    // Autofill from stored user if available
-    const userStr = sessionStorage.getItem("user");
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        if (user.full_name || user.fullName) {
-          setPersonalInfo((prev) => ({
-            ...prev,
-            fullName: user.full_name || user.fullName || prev.fullName,
-            email: user.email || prev.email,
-            phone: user.phone || prev.phone,
-            location: user.city ? `${user.city}, ${user.state || ""}` : prev.location,
-            jobTitle: user.course ? `${user.course} Candidate` : prev.jobTitle,
-          }));
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    fetchResume();
   }, []);
 
+  const fetchResume = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiFetch("/api/student/resume");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.resume) {
+          const r = json.resume;
+          setPersonalInfo({
+            fullName: r.full_name || personalInfo.fullName,
+            jobTitle: r.job_title || r.target_job_title || personalInfo.jobTitle,
+            email: r.email || personalInfo.email,
+            phone: r.phone || personalInfo.phone,
+            location: r.location || personalInfo.location,
+            linkedin: r.linkedin || r.linkedin_url || personalInfo.linkedin,
+            github: r.github || r.github_url || personalInfo.github,
+            summary: r.summary || r.professional_summary || personalInfo.summary,
+          });
+          const fetchedSkills = r.skills || r.technical_skills;
+          if (fetchedSkills && Array.isArray(fetchedSkills)) setSkills(fetchedSkills.join(", "));
+          if (r.education && Array.isArray(r.education)) {
+            setEducation(
+              r.education.map((e: any, idx: number) => ({
+                id: `edu_${idx}`,
+                degree: e.degree || "",
+                institution: e.institution || "",
+                year: e.year || "",
+                score: e.score || "",
+              }))
+            );
+          }
+          if (r.experience && Array.isArray(r.experience)) {
+            setExperience(
+              r.experience.map((e: any, idx: number) => ({
+                id: `exp_${idx}`,
+                role: e.role || "",
+                company: e.company || "",
+                location: e.location || "",
+                duration: e.duration || "",
+                details: e.details || "",
+              }))
+            );
+          }
+          if (r.projects && Array.isArray(r.projects)) {
+            setProjects(
+              r.projects.map((p: any, idx: number) => ({
+                id: `proj_${idx}`,
+                title: p.title || "",
+                tech: p.tech || "",
+                description: p.description || "",
+              }))
+            );
+          }
+          if (r.certifications && Array.isArray(r.certifications)) {
+            setCertifications(r.certifications);
+          }
+          if (typeof r.ats_score === "number") {
+            setAtsScore(r.ats_score);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch resume:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveResume = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        full_name: personalInfo.fullName,
+        job_title: personalInfo.jobTitle,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+        location: personalInfo.location,
+        linkedin: personalInfo.linkedin,
+        github: personalInfo.github,
+        summary: personalInfo.summary,
+        skills: skills.split(",").map((s) => s.trim()).filter(Boolean),
+        experience: experience.map((e) => ({
+          role: e.role,
+          company: e.company,
+          location: e.location,
+          duration: e.duration,
+          details: e.details,
+        })),
+        education: education.map((e) => ({
+          degree: e.degree,
+          institution: e.institution,
+          year: e.year,
+          score: e.score,
+        })),
+        projects: projects.map((p) => ({
+          title: p.title,
+          tech: p.tech,
+          description: p.description,
+        })),
+        certifications,
+      };
+
+      const res = await apiFetch("/api/student/resume", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message || "Resume saved successfully!");
+        if (json.ats_score !== undefined) {
+          setAtsScore(json.ats_score);
+        }
+        if (json.suggestions) {
+          setAtsSuggestions(json.suggestions);
+        }
+      } else {
+        toast.error(json.message || "Failed to save resume");
+      }
+    } catch (err) {
+      toast.error("Network error while saving resume");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const calculateAtsScore = async () => {
+    setIsCalculatingATS(true);
+    try {
+      const payload = {
+        full_name: personalInfo.fullName,
+        job_title: personalInfo.jobTitle,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+        location: personalInfo.location,
+        linkedin: personalInfo.linkedin,
+        github: personalInfo.github,
+        summary: personalInfo.summary,
+        skills: skills.split(",").map((s) => s.trim()).filter(Boolean),
+        experience: experience.map((e) => ({
+          role: e.role,
+          company: e.company,
+          location: e.location,
+          duration: e.duration,
+          details: e.details,
+        })),
+        education: education.map((e) => ({
+          degree: e.degree,
+          institution: e.institution,
+          year: e.year,
+          score: e.score,
+        })),
+        projects: projects.map((p) => ({
+          title: p.title,
+          tech: p.tech,
+          description: p.description,
+        })),
+        certifications,
+      };
+
+      const res = await apiFetch("/api/student/resume/ats-score", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setAtsScore(json.ats_score);
+        setAtsSuggestions(json.suggestions || []);
+        toast.success(`ATS Score calculated: ${json.ats_score}%`);
+      } else {
+        toast.error(json.message || "Failed to calculate ATS score");
+      }
+    } catch (err) {
+      toast.error("Error calculating ATS score");
+    } finally {
+      setIsCalculatingATS(false);
+    }
+  };
+
   const handlePrint = () => {
-    window.print();
+    const content = document.getElementById("printable-resume");
+    if (!content) {
+      window.print();
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=900,height=1100");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Resume - ${personalInfo.fullName}</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+          }
+          h1 { font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.5px; color: #0f172a; }
+          .title { font-size: 13px; font-weight: 700; color: #334155; margin-top: 2px; }
+          .meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #475569; margin-top: 8px; font-weight: 500; }
+          .header-box { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
+          .section-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-top: 16px; margin-bottom: 8px; }
+          .text-desc { font-size: 11px; color: #334155; margin-top: 4px; line-height: 1.5; }
+          .item-row { margin-bottom: 12px; }
+          .item-header { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; color: #0f172a; }
+          .item-sub { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; color: #475569; font-weight: 500; }
+          .skills-badge { display: inline-block; background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 8px; margin: 2px; border-radius: 4px; }
+        </style>
+      </head>
+      <body>
+        <div class="header-box">
+          <h1>${personalInfo.fullName}</h1>
+          <div class="title">${personalInfo.jobTitle}</div>
+          <div class="meta">
+            ${personalInfo.email ? `<span>📧 ${personalInfo.email}</span>` : ""}
+            ${personalInfo.phone ? `<span>📞 ${personalInfo.phone}</span>` : ""}
+            ${personalInfo.location ? `<span>📍 ${personalInfo.location}</span>` : ""}
+            ${personalInfo.linkedin ? `<span>🔗 ${personalInfo.linkedin}</span>` : ""}
+          </div>
+        </div>
+
+        ${personalInfo.summary ? `
+          <div>
+            <div class="section-title">Professional Summary</div>
+            <p class="text-desc">${personalInfo.summary}</p>
+          </div>
+        ` : ""}
+
+        ${experience.length > 0 ? `
+          <div>
+            <div class="section-title">Internship & Work Experience</div>
+            ${experience.map(exp => `
+              <div class="item-row">
+                <div class="item-header"><span>${exp.role}</span><span>${exp.duration}</span></div>
+                <div class="item-sub"><span>${exp.company}</span><span>${exp.location}</span></div>
+                ${exp.details ? `<div class="text-desc">${exp.details}</div>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+
+        ${education.length > 0 ? `
+          <div>
+            <div class="section-title">Education & Qualifications</div>
+            ${education.map(edu => `
+              <div class="item-row">
+                <div class="item-header"><span>${edu.degree}</span><span>${edu.year}</span></div>
+                <div class="item-sub"><span>${edu.institution}</span><span style="font-weight:bold; color:#0f172a;">${edu.score}</span></div>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+
+        ${skills ? `
+          <div>
+            <div class="section-title">Key Technical & Soft Skills</div>
+            <div>
+              ${skills.split(",").map(s => s.trim()).filter(Boolean).map(s => `<span class="skills-badge">${s}</span>`).join("")}
+            </div>
+          </div>
+        ` : ""}
+
+        ${certifications.length > 0 ? `
+          <div>
+            <div class="section-title">Verified Certifications & Credentials</div>
+            <ul style="padding-left: 16px; margin: 4px 0; font-size: 11px; color: #334155;">
+              ${certifications.map(c => `<li>${c}</li>`).join("")}
+            </ul>
+          </div>
+        ` : ""}
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const addExperience = () => {
@@ -180,29 +461,27 @@ export default function StudentResumeBuilderPage() {
     <DashboardLayout>
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-resume, #printable-resume * {
-            visibility: visible;
-          }
-          #printable-resume {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px;
+          body {
             background: white !important;
             color: black !important;
+          }
+          .no-print, header, nav, sidebar {
+            display: none !important;
+          }
+          #printable-resume {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-          }
-          .no-print {
-            display: none !important;
+            background: white !important;
+            color: black !important;
           }
         }
       `}</style>
+
 
       <div className="space-y-6 pb-16 no-print">
         {/* Top Header */}
@@ -218,16 +497,35 @@ export default function StudentResumeBuilderPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-foreground flex items-center gap-2">
               <FileText className="w-7 h-7 text-primary" />
-              {t("Pro AI Resume Builder")}
+              {t("Pro ATS Resume Builder")}
             </h1>
             <p className="text-xs md:text-sm text-muted-foreground mt-1 max-w-xl">
               {t(
-                "Build, customize, and export a polished professional resume in seconds. Perfectly tailored for internship & campus placement applications."
+                "Build, test ATS score, save to profile, and export a polished professional resume in seconds."
               )}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={calculateAtsScore}
+              disabled={isCalculatingATS}
+              variant="outline"
+              className="rounded-none text-xs font-black uppercase tracking-widest border-amber-500/40 text-amber-500 hover:bg-amber-500/10"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {isCalculatingATS ? "Analyzing..." : "Test ATS Score"}
+            </Button>
+
+            <Button
+              onClick={saveResume}
+              disabled={isSaving}
+              className="rounded-none text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? "Saving..." : "Save Resume"}
+            </Button>
+
             <Button
               onClick={handlePrint}
               className="rounded-none text-xs font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
@@ -237,6 +535,43 @@ export default function StudentResumeBuilderPage() {
             </Button>
           </div>
         </div>
+
+        {/* ATS Score Meter Card */}
+        {atsScore !== null && (
+          <Card className="rounded-none border-amber-500/30 bg-amber-500/5 p-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full border-4 border-amber-500 flex items-center justify-center bg-amber-500/10">
+                  <span className="text-xl font-black text-amber-500">{atsScore}%</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-amber-500">
+                    ATS Resume Score Index
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {atsScore >= 80
+                      ? "Excellent! Your resume passes top recruiters' automated screeners."
+                      : atsScore >= 60
+                      ? "Good potential. Add more metrics and technical skills to reach 85%+."
+                      : "Needs improvement. Complete all sections and expand bullet points."}
+                  </p>
+                </div>
+              </div>
+              {atsSuggestions.length > 0 && (
+                <div className="text-xs space-y-1 bg-background/50 p-3 border border-amber-500/20 max-w-md">
+                  <span className="font-bold text-amber-500 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> Optimization Tips:
+                  </span>
+                  <ul className="list-disc list-inside text-[11px] text-muted-foreground">
+                    {atsSuggestions.map((sug, i) => (
+                      <li key={i}>{sug}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Form Controls */}

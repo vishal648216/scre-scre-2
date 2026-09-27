@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Pencil, Trash2, ClipboardList, CheckCircle2, FileSpreadsheet } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, ClipboardList, CheckCircle2, FileSpreadsheet, Eye } from "lucide-react";
 import { BulkCsvUploadModal } from "@/components/BulkCsvUploadModal";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ const AdminMockTestsPage = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MockRow | null>(null);
+  const [viewingMockTest, setViewingMockTest] = useState<MockRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -432,6 +434,13 @@ const AdminMockTestsPage = () => {
                       <td className="p-4 pr-6 text-right space-x-2">
                         <button
                           type="button"
+                          onClick={() => setViewingMockTest(r)}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-bold text-[11px] uppercase tracking-wider transition-all inline-flex items-center gap-1"
+                        >
+                          <Eye className="w-3 h-3" /> View
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => openEdit(r)}
                           className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600/20 hover:text-indigo-300 border border-slate-700/60 text-indigo-400 font-bold text-[11px] uppercase tracking-wider transition-all"
                         >
@@ -452,6 +461,78 @@ const AdminMockTestsPage = () => {
             </div>
           </div>
         )}
+
+        {/* Mock Test View Preview Modal */}
+        <Dialog open={!!viewingMockTest} onOpenChange={(v) => !v && setViewingMockTest(null)}>
+          <DialogContent className="rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8 max-w-2xl">
+            {viewingMockTest && (
+              <div className="space-y-6">
+                <DialogHeader className="border-b border-slate-800/80 pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <DialogTitle className="font-heading font-black text-2xl text-white uppercase tracking-tight flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <Eye className="w-5 h-5" />
+                      </div>
+                      {viewingMockTest.name}
+                    </DialogTitle>
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border",
+                      viewingMockTest.status === "active" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                    )}>
+                      {viewingMockTest.status}
+                    </span>
+                  </div>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Course Name</p>
+                    <p className="text-sm font-black text-indigo-300 uppercase">{courseName(viewingMockTest.course_id)}</p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Subject Name</p>
+                    <p className="text-sm font-black text-purple-300 uppercase">{subjectName(viewingMockTest.subject_id)}</p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mapped Blueprint</p>
+                    <p className="text-sm font-black text-pink-300 font-mono">{blueprintName(viewingMockTest.blueprint_id)}</p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Creation Date</p>
+                    <p className="text-sm font-bold text-slate-300">
+                      {viewingMockTest.created_at ? new Date(viewingMockTest.created_at).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Blueprint Summary Details */}
+                {(() => {
+                  const bpObj = blueprints.find(b => b._id === viewingMockTest.blueprint_id);
+                  return bpObj ? (
+                    <div className="bg-slate-900/60 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-slate-300 flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-indigo-400" /> Linked Exam Blueprint Details
+                      </h4>
+                      <div className="text-xs space-y-2 text-slate-300 font-medium">
+                        <p><span className="text-slate-400 font-bold uppercase text-[10px]">Blueprint Name:</span> {bpObj.name}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                <DialogFooter className="pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setViewingMockTest(null)}
+                    className="px-8 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                  >
+                    Close Preview
+                  </button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <BulkCsvUploadModal
           isOpen={isBulkModalOpen}

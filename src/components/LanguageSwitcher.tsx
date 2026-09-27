@@ -1,51 +1,63 @@
+import React, { useEffect } from "react";
 import i18n from "@/i18n";
-import { useTranslation } from "react-i18next";
-import { Globe } from "lucide-react";
+import { Globe, ChevronDown } from "lucide-react";
+import { POPULAR_LANGUAGES, setLanguage, initGoogleTranslateScript } from "@/lib/translator";
 
-// Most common languages for the region + global
-const LANG_OPTIONS = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "हिन्दी" },
-  { code: "pa", label: "ਪੰਜਾਬੀ" },
-  { code: "ur", label: "اردو" },
-  { code: "bn", label: "বাংলা" },
-  { code: "mr", label: "मराठी" },
-  { code: "gu", label: "ગુજરાતી" },
-  { code: "te", label: "తెలుగు" },
-  { code: "ta", label: "தமிழ்" },
-  { code: "kn", label: "ಕನ್ನಡ" },
-  { code: "ml", label: "മലയാളം" },
-  { code: "sa", label: "संस्कृतम्" },
-  { code: "fr", label: "Français" },
-  { code: "es", label: "Español" },
-  { code: "ar", label: "العربية" },
-  { code: "zh", label: "中文" },
-];
+export interface LanguageSwitcherProps {
+  className?: string;
+}
 
-const LanguageSwitcher = () => {
-  const { t } = useTranslation();
+const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className = "" }) => {
+  useEffect(() => {
+    initGoogleTranslateScript();
+  }, []);
 
-  const handleChange = async (lang: string) => {
-    await i18n.changeLanguage(lang);
+  const storedLang = (localStorage.getItem("lang") || i18n.language || "en").trim().toLowerCase();
+  
+  // Match exact stored code or base code
+  const currentLang = POPULAR_LANGUAGES.find(
+    (l) => l.code.toLowerCase() === storedLang || storedLang.startsWith(l.code.toLowerCase())
+  )?.code || storedLang;
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedLang = e.target.value;
+    setLanguage(selectedLang);
   };
 
-  const currentLang = (i18n.language || "en").split("-")[0].toLowerCase();
+  const indianLangs = POPULAR_LANGUAGES.filter((l) => l.category === "Indian");
+  const worldLangs = POPULAR_LANGUAGES.filter((l) => l.category === "World" || l.category === "Global");
 
   return (
-    <div className="flex items-center gap-1 group">
-      <Globe className="h-3.5 w-3.5 text-primary group-hover:rotate-12 transition-transform duration-300" />
-      <select
-        value={currentLang}
-        onChange={(e) => handleChange(e.target.value)}
-        className="bg-transparent border-none focus:ring-0 focus:outline-none text-[11px] font-black uppercase tracking-widest cursor-pointer hover:text-primary transition-colors pr-4"
-        aria-label="Select Language"
-      >
-        {LANG_OPTIONS.map((option) => (
-          <option key={option.code} value={option.code} className="bg-background text-foreground">
-            {option.label}
-          </option>
-        ))}
-      </select>
+    <div className={`inline-flex items-center gap-2 ${className}`}>
+      {/* Official Google Translate Dropdown Widget */}
+      <div id="google_translate_element" className="inline-block" />
+
+      {/* Custom Universal Language Selector */}
+      <div className="relative inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 px-3 py-1.5 shadow-xs transition-all hover:bg-slate-200/60 dark:hover:bg-slate-700/90">
+        <Globe className="w-4 h-4 text-primary shrink-0 mr-2" />
+        <select
+          value={currentLang}
+          onChange={handleChange}
+          className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 cursor-pointer focus:outline-none appearance-none pr-4 border-none font-sans uppercase tracking-wide max-w-[150px] truncate"
+          aria-label="Select Language"
+        >
+          <optgroup label="--- All Indian Languages ---" className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold">
+            {indianLangs.map((option) => (
+              <option key={option.code} value={option.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5 normal-case">
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="--- World Languages A to Z ---" className="bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold">
+            {worldLangs.map((option) => (
+              <option key={option.code} value={option.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5 normal-case">
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        <ChevronDown className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 pointer-events-none shrink-0 -ml-3" />
+      </div>
     </div>
   );
 };

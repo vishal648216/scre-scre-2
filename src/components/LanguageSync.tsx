@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import i18n from "@/i18n";
 import { useTranslatedContent } from "@/hooks/useTranslatedContent";
+import { initGoogleTranslateScript } from "@/lib/translator";
 
 /**
  * Syncs backend translations (static_texts) into i18next resources.
@@ -10,6 +11,10 @@ import { useTranslatedContent } from "@/hooks/useTranslatedContent";
 export function LanguageSync() {
   // useTranslatedContent fetches /api/content which includes static_texts
   const { data } = useTranslatedContent();
+
+  useEffect(() => {
+    initGoogleTranslateScript();
+  }, []);
 
   useEffect(() => {
     if (data?.static_texts) {

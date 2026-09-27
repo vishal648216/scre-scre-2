@@ -35,6 +35,18 @@ path = "src/bin/test_bcrypt.rs"
 name = "reset_user_password"
 path = "src/bin/reset_user_password.rs"
 
+[[bin]]
+name = "seed_internship_system"
+path = "src/bin/seed_internship_system.rs"
+
+[[bin]]
+name = "seed_master_system"
+path = "src/bin/seed_master_system.rs"
+
+[[bin]]
+name = "check_db_contents"
+path = "src/bin/check_db_contents.rs"
+
 # [[bin]]
 # name = "simulate_student_052"
 # path = "src/bin/simulate_student_052.rs"

@@ -69,11 +69,14 @@ export const loadLanguageBundle = async (lng: string) => {
       const module: any = await modules[path]();
       if (module && (module.default || typeof module === "object")) {
         i18n.addResourceBundle(normalized, "translation", module.default || module, true, true);
+        return;
       }
     }
   } catch (err) {
     console.debug(`Could not dynamically load bundle for ${normalized}`, err);
   }
+  // Register fallback bundle so i18next retains selected language and allows Google Translate to translate DOM
+  i18n.addResourceBundle(normalized, "translation", {}, true, true);
 };
 
 const applyDocumentLanguage = (lng: string) => {

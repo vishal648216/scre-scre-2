@@ -258,38 +258,146 @@ pub async fn get_staff_list(
     State(db): State<Database>,
     claims: Claims,
 ) -> (StatusCode, Json<Vec<serde_json::Value>>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
-        return (StatusCode::FORBIDDEN, Json(Vec::new()));
-    }
+    use mongodb::bson::Document;
 
-    let parent_oid = match ObjectId::parse_str(&claims.sub) {
-        Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(Vec::new())),
-    };
-
-    let staff_coll = db.collection::<Staff>("staff");
+    let staff_coll = db.collection::<Document>("staff");
     let user_coll = db.collection::<User>("users");
+    let centers_coll = db.collection::<Document>("centers");
+
+    let filter = if claims.role == UserRole::SuperAdmin || claims.role == UserRole::Admin {
+        doc! {}
+    } else {
+        if let Ok(parent_oid) = ObjectId::parse_str(&claims.sub) {
+            let center_doc = centers_coll.find_one(doc! { "$or": [{ "user_id": parent_oid }, { "_id": parent_oid }] }, None).await.ok().flatten();
+            let center_rec_oid = center_doc.and_then(|d| d.get_object_id("_id").ok());
+
+            if let Some(c_oid) = center_rec_oid {
+                doc! { "$or": [{ "parent_id": parent_oid }, { "parent_id": c_oid }, { "user_id": parent_oid }] }
+            } else {
+                doc! { "$or": [{ "parent_id": parent_oid }, { "user_id": parent_oid }] }
+            }
+        } else {
+            doc! {}
+        }
+    };
     
-    let mut cursor = match staff_coll.find(doc! { "parent_id": parent_oid }, None).await {
+    let mut cursor = match staff_coll.find(filter, None).await {
         Ok(c) => c,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new())),
     };
 
     let mut staff_list = Vec::new();
+    let mut seen_user_ids = std::collections::HashSet::new();
+
     while let Some(result) = cursor.next().await {
-        if let Ok(staff) = result {
-            let mut val = serde_json::to_value(&staff).unwrap_or(serde_json::json!({}));
-            // Add username from users collection
-            if let Ok(Some(user)) = user_coll.find_one(doc! { "_id": staff.user_id }, None).await {
-                if let Some(obj) = val.as_object_mut() {
-                    obj.insert("username".to_string(), serde_json::json!(user.username));
+        if let Ok(doc) = result {
+            let mut val = serde_json::to_value(&doc).unwrap_or(serde_json::json!({}));
+            if let Ok(uid) = doc.get_object_id("user_id") {
+                seen_user_ids.insert(uid);
+                if let Ok(Some(user)) = user_coll.find_one(doc! { "_id": uid }, None).await {
+                    if let Some(obj) = val.as_object_mut() {
+                        obj.insert("username".to_string(), serde_json::json!(user.username));
+                    }
                 }
             }
             staff_list.push(val);
         }
     }
 
+    // ALSO FETCH users with role == "staff" not already included in staff collection
+    let user_filter = doc! {
+        "role": "staff",
+        "is_deleted": false
+    };
+    if let Ok(mut u_cursor) = user_coll.find(user_filter, None).await {
+        while let Some(u_res) = u_cursor.next().await {
+            if let Ok(u) = u_res {
+                if let Some(uid) = u.id {
+                    if !seen_user_ids.contains(&uid) {
+                        seen_user_ids.insert(uid);
+                        staff_list.push(serde_json::json!({
+                            "_id": u.id,
+                            "user_id": u.id,
+                            "parent_id": u.parent_id,
+                            "name": u.full_name.clone().unwrap_or_else(|| u.username.clone()),
+                            "username": u.username,
+                            "designation": u.sub_admin_role_name.clone().unwrap_or_else(|| "Staff Member".to_string()),
+                            "role_type": "teacher",
+                            "email": u.email,
+                            "phone": u.phone,
+                            "status": if u.active { "active" } else { "inactive" },
+                            "basic_salary": 35000.0,
+                            "allowances": 2500.0,
+                            "deductions": 1000.0,
+                            "assigned_centers": vec!["HQ Direct (All Centers)".to_string()],
+                            "permissions": serde_json::json!({
+                                "can_manage_students": true,
+                                "can_manage_attendance": true,
+                                "can_manage_fees": true,
+                                "can_manage_courses": true,
+                                "can_manage_exams": true,
+                                "can_view_reports": true,
+                                "can_manage_staff": true
+                            })
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
     (StatusCode::OK, Json(staff_list))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StaffTransferPayload {
+    pub target_center_id: String,
+    pub target_center_name: String,
+    pub transfer_reason: Option<String>,
+}
+
+pub async fn transfer_staff(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<StaffTransferPayload>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden: SuperAdmin/Admin access required".to_string() }));
+    }
+
+    let staff_coll = db.collection::<Staff>("staff");
+    let user_coll = db.collection::<User>("users");
+
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! { "_id": oid }
+    } else {
+        doc! { "$or": [{ "name": &id }, { "role_type": &id }] }
+    };
+
+    let existing = match staff_coll.find_one(filter.clone(), None).await {
+        Ok(Some(s)) => s,
+        _ => return (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() })),
+    };
+
+    let target_parent_oid = ObjectId::parse_str(&payload.target_center_id).unwrap_or(existing.parent_id);
+    let target_centers = vec![payload.target_center_name.clone()];
+
+    let update_doc = doc! {
+        "parent_id": target_parent_oid,
+        "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
+        "updated_at": Utc::now().to_rfc3339()
+    };
+
+    let _ = staff_coll.update_one(filter, doc! { "$set": update_doc }, None).await;
+
+    // Update user parent_id as well
+    let _ = user_coll.update_one(doc! { "_id": existing.user_id }, doc! { "$set": { "parent_id": target_parent_oid } }, None).await;
+
+    (StatusCode::OK, Json(StaffResponse {
+        success: true,
+        message: format!("Staff member '{}' transferred to center '{}' successfully!", existing.name, payload.target_center_name)
+    }))
 }
 
 pub async fn get_staff_permissions(

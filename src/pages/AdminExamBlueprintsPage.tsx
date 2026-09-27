@@ -13,6 +13,11 @@ import {
   Loader2,
   PlusCircle,
   ShieldAlert,
+  Eye,
+  Layers,
+  CheckCircle2,
+  Award,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -31,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useTimeSync, syncServerTime } from "@/lib/time";
 
@@ -131,6 +137,7 @@ const AdminExamBlueprintsPage = () => {
   const [banks, setBanks] = useState<QuestionBank[]>([]);
   const isSynced = useTimeSync();
   const [isAdding, setIsAdding] = useState(false);
+  const [viewingBlueprint, setViewingBlueprint] = useState<ExamBlueprint | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
@@ -801,6 +808,13 @@ const AdminExamBlueprintsPage = () => {
 
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
                     <button
+                      onClick={() => setViewingBlueprint(bp)}
+                      className="px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-all flex items-center gap-1 font-bold text-xs uppercase tracking-wider"
+                      title="View Blueprint Preview"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View
+                    </button>
+                    <button
                       onClick={() => {
                         setForm(bp);
                         setSameInstructionsForAll(false);
@@ -863,6 +877,167 @@ const AdminExamBlueprintsPage = () => {
             ))}
           </div>
         )}
+
+        {/* Blueprint Preview Dialog */}
+        <Dialog open={!!viewingBlueprint} onOpenChange={(open) => !open && setViewingBlueprint(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8">
+            {viewingBlueprint && (
+              <div className="space-y-6">
+                <DialogHeader className="border-b border-slate-800/80 pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <DialogTitle className="font-heading font-black text-2xl text-white uppercase tracking-tight flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <Eye className="w-5 h-5" />
+                      </div>
+                      {viewingBlueprint.name}
+                    </DialogTitle>
+                    {viewingBlueprint.default_blueprint && (
+                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Default Blueprint
+                      </span>
+                    )}
+                  </div>
+                </DialogHeader>
+
+                {/* Summary Info Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Category</p>
+                    <p className="text-xs font-bold text-white mt-1">
+                      {categories.find(c => c.id === viewingBlueprint.category_id)?.name || "All Categories"}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Course</p>
+                    <p className="text-xs font-bold text-indigo-400 mt-1">
+                      {courses.find(c => c.id === viewingBlueprint.course_id)?.course_name || "N/A"}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Duration</p>
+                    <p className="text-xs font-bold text-purple-400 mt-1">
+                      {formatDuration(viewingBlueprint.total_duration_minutes || 0)}
+                    </p>
+                  </div>
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Exam Pattern</p>
+                    <p className="text-xs font-bold text-pink-400 mt-1">
+                      {viewingBlueprint.exam_pattern || "Semester"} {viewingBlueprint.term_number ? `(Term ${viewingBlueprint.term_number})` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subjects Breakdown Section */}
+                <div className="space-y-6 pt-2">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-400" /> Subject Structures & Marks Distribution ({viewingBlueprint.subjects.length} Subjects)
+                  </h3>
+
+                  {viewingBlueprint.subjects.length === 0 ? (
+                    <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-xs font-bold uppercase">
+                      No subjects configured in this blueprint.
+                    </div>
+                  ) : (
+                    viewingBlueprint.subjects.map((sConfig, idx) => {
+                      const subObj = subjects.find(s => s.id === sConfig.subject_id);
+                      const defaultBank = banks.find(b => b._id === sConfig.default_question_bank_id);
+                      const reappearBank = banks.find(b => b._id === sConfig.reappear_question_bank_id);
+
+                      return (
+                        <div key={idx} className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-lg">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div>
+                              <h4 className="font-heading font-black text-base text-white">
+                                {subObj?.subject_name || `Subject ID: ${sConfig.subject_id}`}
+                              </h4>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                                Question Bank: <span className="text-indigo-400">{defaultBank?.name || "Default Question Bank"}</span>
+                                {reappearBank && <> | Reappear Bank: <span className="text-blue-400">{reappearBank.name}</span></>}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 text-xs font-bold rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+                                Total: {sConfig.final_subject_total_marks} Marks
+                              </span>
+                              <span className="px-3 py-1 text-xs font-bold rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                                Duration: {sConfig.duration_minutes || 60} Mins
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Components Breakdown Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-3">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Final Theory Exam</p>
+                              <p className="text-sm font-black text-indigo-300 mt-1">
+                                {sConfig.final_exam_component.marks} Marks <span className="text-[10px] font-normal text-slate-400">(Min: {sConfig.final_exam_component.min_marks})</span>
+                              </p>
+                            </div>
+                            <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-3">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Practical Component</p>
+                              <p className="text-sm font-black text-emerald-300 mt-1">
+                                {sConfig.practical_component.enabled ? `${sConfig.practical_component.marks} Marks (Min: ${sConfig.practical_component.min_marks})` : "Disabled"}
+                              </p>
+                            </div>
+                            <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-3">
+                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Assignment Component</p>
+                              <p className="text-sm font-black text-amber-300 mt-1">
+                                {sConfig.assignment_component.enabled ? `${sConfig.assignment_component.marks} Marks (Min: ${sConfig.assignment_component.min_marks})` : "Disabled"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Question Distribution Table */}
+                          {sConfig.question_distribution && sConfig.question_distribution.length > 0 && (
+                            <div className="space-y-2 pt-2">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Question Distribution Rules</p>
+                              <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden text-xs">
+                                <table className="w-full text-left">
+                                  <thead className="bg-slate-900 border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400">
+                                    <tr>
+                                      <th className="p-3">Marks Per Question</th>
+                                      <th className="p-3">Question Count</th>
+                                      <th className="p-3 text-right">Sub-total Marks</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-800/60 font-semibold">
+                                    {sConfig.question_distribution.map((rule, rIdx) => (
+                                      <tr key={rIdx}>
+                                        <td className="p-3 text-slate-300">{rule.marks} Marks</td>
+                                        <td className="p-3 text-slate-300">{rule.count} Questions</td>
+                                        <td className="p-3 text-right text-indigo-400 font-bold">{(rule.marks * rule.count).toFixed(2)} Marks</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {sConfig.instructions && (
+                            <div className="bg-slate-950/60 border border-slate-800/60 rounded-2xl p-3 text-xs text-slate-400 italic">
+                              <span className="font-bold text-slate-300 not-italic uppercase text-[10px] block mb-1">Instructions:</span>
+                              "{sConfig.instructions}"
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <DialogFooter className="pt-4 border-t border-slate-800">
+                  <Button
+                    onClick={() => setViewingBlueprint(null)}
+                    className="rounded-2xl px-8 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider"
+                  >
+                    Close Preview
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isAdding} onOpenChange={setIsAdding}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-indigo-500/30 bg-slate-950/95 backdrop-blur-3xl text-slate-100 shadow-2xl p-6 sm:p-8">

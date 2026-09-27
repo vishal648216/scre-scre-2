@@ -249,13 +249,14 @@ fn is_public_path(path: &str) -> bool {
         || path == "/api/interns/check-serial"
         || path == "/api/internships"
         || path == "/api/ai/doubt-solver"
+        || path == "/api/student/resume/ats-score"
 
         // Public certificate download
         || path.starts_with("/api/certificates/download/")
 }
 
 fn is_allowed_public_method(path: &str, method: &Method) -> bool {
-    if path == "/api/ai/doubt-solver" && *method == Method::POST {
+    if (path == "/api/ai/doubt-solver" || path == "/api/student/resume/ats-score") && *method == Method::POST {
         return true;
     }
 

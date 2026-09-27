@@ -95,7 +95,41 @@ const AdminInternLettersPage = () => {
   );
 
   const handlePrint = () => {
-    window.print();
+    const elem = document.getElementById("printable-letter");
+    if (!elem) {
+      toast.error("Document preview element not found");
+      return;
+    }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Please allow popups to print / save PDF letter");
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${letterType === "offer" ? "Internship_Offer_Letter" : "Internship_Completion_Certificate"}_${selectedIntern?.fullName || "Candidate"}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            @page { size: A4; margin: 15mm; }
+            body { font-family: ui-sans-serif, system-ui, sans-serif; background: #fff; color: #000; padding: 24px; }
+          </style>
+        </head>
+        <body>
+          <div className="max-w-2xl mx-auto">
+            ${elem.innerHTML}
+          </div>
+          <script>
+            setTimeout(() => {
+              window.print();
+              window.close();
+            }, 600);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (

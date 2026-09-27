@@ -108,6 +108,7 @@ import { useTranslation } from "react-i18next";
 import { LiveChatDrawer } from "./LiveChatDrawer";
 import { PWAInstallPrompt } from "./PWAInstallPrompt";
 import { AITutorDrawer } from "./AITutorDrawer";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -401,17 +402,29 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Pro ATS Resume Builder",
+      icon: FileText,
+      href: "/dashboard/student/resume-builder",
+      roles: ["admin", "superadmin", "center", "staff", "student"],
+    },
+    {
       label: "Exams",
       icon: FlaskConical,
-      roles: ["center"],
+      roles: ["admin", "superadmin", "center", "staff"],
       subItems: [
-        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
-        { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
-        { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/center" },
-        { icon: ClipboardCheck, label: "Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: PenTool, label: "Paper Builder Studio", href: "/dashboard/exams/builder" },
+        { icon: Users, label: "360° Candidate Intelligence", href: "/dashboard/exams/candidates-360" },
+        { icon: PlusCircle, label: "Schedule & Allot Exam", href: "/dashboard/exams/allot" },
+        { icon: List, label: "Alloted Exams & Admit Cards", href: "/dashboard/exams/alloted" },
+        { icon: Video, label: "Live CBT Monitor", href: "/dashboard/exams/live-monitor" },
+        { icon: ClipboardCheck, label: "Evaluation & Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: Award, label: "Results & Marksheets", href: "/dashboard/exams/results" },
         { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
-        { icon: ClipboardCheck, label: "Internal Marks Entry", href: "/dashboard/exam-v2/marks-entry" },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: FlaskConical, label: "Mock Tests & CBT", href: "/dashboard/academics/mock-tests" },
+        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
         { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+        ...(USE_EXAM_V2_VAL ? [{ icon: Upload, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" } as const] : []),
       ]
     },
     // --- CENTER SPECIFIC COURSES ---
@@ -459,23 +472,6 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Zap, label: "Practice Now", href: "/dashboard/student/typing" },
         { icon: History, label: "My History", href: "/dashboard/student/typing/history" },
         { icon: Trophy, label: "Leaderboard", href: "/dashboard/student/typing/leaderboard" },
-      ]
-    },
-    {
-      label: "Exams",
-      icon: FileText,
-      roles: ["admin", "superadmin", "staff"],
-      subItems: [
-        { icon: PlusCircle, label: "Allot Exam", href: "/dashboard/exams/allot" },
-        { icon: List, label: "Alloted Exams", href: "/dashboard/exams/alloted" },
-        { icon: List, label: "Exam Papers", href: "/dashboard/exams/papers" },
-        { icon: CalendarCheck, label: "Exam Attendance", href: "/dashboard/exams/attendance" },
-        { icon: ClipboardCheck, label: "Marks Entry", href: "/dashboard/exams/marks-entry" },
-        { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
-        { icon: Award, label: "Exam Results", href: "/dashboard/exams/results" },
-        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
-        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
-        ...(USE_EXAM_V2_VAL ? [{ icon: Upload, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" } as const] : []),
       ]
     },
     {
@@ -576,11 +572,13 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     },
 
     {
-      label: "My Examination",
+      label: "My Examination & Resume",
       icon: FileText,
       roles: ["student"],
       subItems: [
-        { icon: List, label: "Allotted Exams", href: "/dashboard/student/exams" },
+        { icon: FileText, label: "Pro ATS Resume Builder", href: "/dashboard/student/resume-builder" },
+        { icon: List, label: "Allotted Exams & Admit Cards", href: "/dashboard/student/exams" },
+        { icon: FlaskConical, label: "Online CBT Exam", href: "/dashboard/academics/mock-tests" },
         ...(userId ? [{ icon: FileSpreadsheet, label: "My Marksheet", href: `/dashboard/student/marksheet/${userId}` } as const] : []),
         { icon: Award, label: "My Certificates", href: "/dashboard/student/certificates" },
       ]
@@ -754,8 +752,8 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<{ username: string, role: string, photoUrl?: string } | null>(() => {
-    const storedUser = sessionStorage.getItem("user");
-    if (storedUser) {
+    const storedUser = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (storedUser && storedUser !== "undefined") {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser.photo_url) {
@@ -937,8 +935,8 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
 
   useEffect(() => {
     if (!user) {
-      const storedUser = sessionStorage.getItem("user");
-      if (storedUser) {
+      const storedUser = sessionStorage.getItem("user") || localStorage.getItem("user");
+      if (storedUser && storedUser !== "undefined") {
         try {
           const parsedUser = JSON.parse(storedUser);
           if (parsedUser.photo_url) {
@@ -1160,6 +1158,8 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
             </div>
 
 
+
+            <LanguageSwitcher />
 
             <NotificationBell />
 

@@ -412,6 +412,8 @@ const Header = () => {
               >
                 <LogIn className="h-3.5 w-3.5 xl:h-4 xl:w-4" /> {t("login")}
               </button>
+
+              <LanguageSwitcher className="ml-2" />
             </nav>
           </div>
         </div>

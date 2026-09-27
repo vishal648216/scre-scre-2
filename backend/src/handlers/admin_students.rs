@@ -227,3 +227,70 @@ pub async fn toggle_student_active(
         message: if new_status { "Student activated".to_string() } else { "Student deactivated".to_string() }
     }))
 }
+
+#[derive(Debug, serde::Deserialize, Default)]
+pub struct RefundPayload {
+    pub refund_amount: Option<f64>,
+    pub reason: Option<String>,
+    pub remarks: Option<String>,
+}
+
+pub async fn refund_student_fee(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<RefundPayload>,
+) -> (StatusCode, Json<ApproveResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(ApproveResponse { success: false, message: "Unauthorized".to_string() }));
+    }
+    let users = db.collection::<User>("users");
+    let oid = match ObjectId::parse_str(&id) {
+        Ok(oid) => oid,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(ApproveResponse { success: false, message: "Invalid ID".to_string() })),
+    };
+    let user = match users.find_one(doc! { "_id": &oid, "role": "student" }, None).await {
+        Ok(Some(u)) => u,
+        _ => return (StatusCode::NOT_FOUND, Json(ApproveResponse { success: false, message: "Student not found".to_string() })),
+    };
+
+    let refund_amount = payload.refund_amount.unwrap_or(0.0);
+    let reason = payload.reason.unwrap_or_else(|| "Registration Rejected / Fee Refund Request".to_string());
+    let remarks = payload.remarks.unwrap_or_default();
+
+    let update_doc = doc! {
+        "fee_refund_status": "refunded",
+        "fee_refund_amount": refund_amount,
+        "fee_refund_reason": &reason,
+        "admin_instructions": format!("Fee Refund Processed: ₹{}. Note: {}", refund_amount, remarks),
+        "approval_status": "refunded",
+        "status": "cancelled",
+        "active": false,
+        "updated_at": Utc::now()
+    };
+
+    let _ = users.update_one(doc! { "_id": &oid }, doc! { "$set": update_doc }, None).await;
+
+    if refund_amount > 0.0 {
+        let fees_coll = db.collection::<mongodb::bson::Document>("fees");
+        let center_id = user.parent_id.unwrap_or(oid);
+        let refund_fee_doc = doc! {
+            "student_id": oid,
+            "center_id": center_id,
+            "amount": -refund_amount,
+            "payment_date": Utc::now(),
+            "mode": "refund",
+            "receipt_no": format!("REF-{}", Utc::now().timestamp()),
+            "remarks": format!("Fee Refund: {} ({})", reason, remarks),
+            "payment_type": "refund",
+            "payment_name": "Registration Fee Refund",
+            "created_at": Utc::now()
+        };
+        let _ = fees_coll.insert_one(refund_fee_doc, None).await;
+    }
+
+    (StatusCode::OK, Json(ApproveResponse {
+        success: true,
+        message: format!("Successfully processed fee refund of ₹{} for student.", refund_amount)
+    }))
+}

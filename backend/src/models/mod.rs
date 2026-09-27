@@ -59,3 +59,4 @@ pub mod internship;
 pub mod birthday;
 pub mod ticket;
 pub mod notification_gateway;
+pub mod resume;

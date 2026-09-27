@@ -31,10 +31,40 @@ interface Student {
   username: string;
 }
 
+const toId = (v: any): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "object" && "$oid" in v) return String(v.$oid);
+  if (typeof v === "object" && "_id" in v) return toId(v._id);
+  return String(v || "");
+};
+
+const formatDateSafe = (dateVal: any, fmtString: string = "dd MMM yyyy, hh:mm a") => {
+  try {
+    if (!dateVal) return "N/A";
+    let d: Date;
+    if (typeof dateVal === "object") {
+      if (dateVal.$date) {
+        d = typeof dateVal.$date === "number" || typeof dateVal.$date === "string" ? new Date(dateVal.$date) : new Date(dateVal.$date.$numberLong ? parseInt(dateVal.$date.$numberLong) : Date.now());
+      } else if (dateVal.$numberLong) {
+        d = new Date(parseInt(dateVal.$numberLong));
+      } else {
+        d = new Date(dateVal);
+      }
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return "N/A";
+    return format(d, fmtString);
+  } catch {
+    return "N/A";
+  }
+};
+
 const AdminQuestionFeedbackPage = () => {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -46,14 +76,25 @@ const AdminQuestionFeedbackPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [feedbackRes, questionsRes, studentsRes] = await Promise.all([
+      const [feedbackRes, questionsRes, qb2Res, studentsRes] = await Promise.all([
         apiFetch("/api/exam/questions/feedback"),
         apiFetch("/api/exam/questions"),
+        apiFetch("/api/exam-v2/questions"),
         apiFetch("/api/students")
       ]);
+
+      let allQ: any[] = [];
+      if (questionsRes.ok) {
+        const q1 = await questionsRes.json();
+        if (Array.isArray(q1)) allQ.push(...q1);
+      }
+      if (qb2Res.ok) {
+        const q2 = await qb2Res.json();
+        if (Array.isArray(q2)) allQ.push(...q2);
+      }
       
       if (feedbackRes.ok) setFeedback(await feedbackRes.json());
-      if (questionsRes.ok) setQuestions(await questionsRes.json());
+      setQuestions(allQ);
       if (studentsRes.ok) setStudents(await studentsRes.json());
     } catch (error) {
       toast.error("Failed to load feedback data");
@@ -62,34 +103,58 @@ const AdminQuestionFeedbackPage = () => {
     }
   };
 
-  const handleResolve = (id: string, newStatus: string) => {
-    setFeedback(prev => prev.map(f => f._id === id ? { ...f, status: newStatus } : f));
-    toast.success(`Feedback status updated to ${newStatus}`);
+  const handleResolve = async (id: string, newStatus: string) => {
+    const fid = toId(id);
+    setFeedback(prev => prev.map(f => toId(f._id) === fid ? { ...f, status: newStatus } : f));
+
+    try {
+      const res = await apiFetch(`/api/exam/questions/feedback/${fid}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        toast.success(`Feedback status marked as ${newStatus}`);
+      } else {
+        toast.error(data.message || `Failed to update status`);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(`Error updating feedback status`);
+      fetchData();
+    }
   };
+
 
   const stats = useMemo(() => {
     const total = feedback.length;
-    const pending = feedback.filter(f => !f.status || f.status === "pending").length;
-    const resolved = feedback.filter(f => f.status === "resolved").length;
+    const pending = feedback.filter(f => {
+      const st = (f.status || "pending").toLowerCase();
+      return st === "pending" || st === "pending review";
+    }).length;
+    const resolved = feedback.filter(f => (f.status || "").toLowerCase() === "resolved").length;
     const errors = feedback.filter(f => f.feedback_type?.toLowerCase() === "error").length;
     return { total, pending, resolved, errors };
   }, [feedback]);
 
   const filteredFeedback = useMemo(() => {
     return feedback.filter(f => {
-      const question = questions.find(q => q._id === f.question_id);
-      const student = students.find(s => s._id === f.student_id);
+      const fQid = toId(f.question_id);
+      const fSid = toId(f.student_id || (f as any).reported_by);
+      const question = questions.find(q => toId(q._id || q.id) === fQid);
+      const student = students.find(s => toId(s._id || s.id) === fSid);
       const searchLower = search.toLowerCase();
 
-      if (statusFilter === "pending" && f.status === "resolved") return false;
-      if (statusFilter === "resolved" && f.status !== "resolved") return false;
+      const isResolved = (f.status || "").toLowerCase() === "resolved";
+      if (statusFilter === "pending" && isResolved) return false;
+      if (statusFilter === "resolved" && !isResolved) return false;
       if (statusFilter === "error" && f.feedback_type?.toLowerCase() !== "error") return false;
 
       return (
         question?.question_text?.toLowerCase().includes(searchLower) ||
         student?.full_name?.toLowerCase().includes(searchLower) ||
         student?.username?.toLowerCase().includes(searchLower) ||
-        f.comment?.toLowerCase().includes(searchLower) ||
+        (f.comment || (f as any).details)?.toLowerCase().includes(searchLower) ||
         f.feedback_type?.toLowerCase().includes(searchLower)
       );
     });
@@ -195,13 +260,16 @@ const AdminQuestionFeedbackPage = () => {
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {filteredFeedback.map((f) => {
-              const question = questions.find(q => q._id === f.question_id);
-              const student = students.find(s => s._id === f.student_id);
-              const isResolved = f.status === "resolved";
+              const fQid = toId(f.question_id);
+              const fSid = toId(f.student_id || (f as any).reported_by);
+              const question = questions.find(q => toId(q._id || q.id) === fQid);
+              const student = students.find(s => toId(s._id || s.id) === fSid);
+              const isResolved = (f.status || "").toLowerCase() === "resolved";
+              const commentText = f.comment || (f as any).details || "No comment provided.";
 
               return (
                 <div
-                  key={f._id}
+                  key={toId(f._id)}
                   className={cn(
                     "bg-slate-900/80 backdrop-blur-2xl border rounded-3xl p-6 shadow-2xl transition-all duration-300",
                     isResolved ? "border-emerald-500/30" : "border-indigo-500/20 hover:border-indigo-500/40"
@@ -216,7 +284,7 @@ const AdminQuestionFeedbackPage = () => {
                           f.feedback_type === "Typos" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" : 
                           "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
                         )}>
-                          {f.feedback_type}
+                          {f.feedback_type || "Feedback"}
                         </span>
 
                         {isResolved ? (
@@ -230,25 +298,38 @@ const AdminQuestionFeedbackPage = () => {
                         )}
 
                         <span className="text-xs font-medium text-slate-400">
-                          Reported {format(new Date(f.created_at), "dd MMM yyyy, hh:mm a")}
+                          Reported {formatDateSafe(f.created_at)}
                         </span>
 
                         <span className="text-xs font-bold text-indigo-300">
-                          By {student?.full_name || student?.username}
+                          By {student?.full_name || student?.username || "Candidate Student"}
                         </span>
                       </div>
 
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Student Issue Description</p>
                         <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-sm font-semibold text-slate-200 italic">
-                          "{f.comment}"
+                          "{commentText}"
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Target Question Content</p>
-                        <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-mono text-slate-300">
-                          {question?.question_text || <span className="text-rose-400 italic">[Question Removed from Question Bank]</span>}
+                        <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-mono text-slate-300 space-y-2">
+                          <p className="font-bold text-slate-100">{question?.question_text || <span className="text-rose-400 italic">[Question Removed from Question Bank]</span>}</p>
+                          {question?.options && (
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60 text-[11px]">
+                              {(question.options || []).map((opt: any, oidx: number) => {
+                                const optText = typeof opt === "string" ? opt : opt.text || "";
+                                return (
+                                  <div key={oidx} className="px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-400">
+                                    <span className="font-bold text-indigo-400 mr-1.5">{String.fromCharCode(65 + oidx)}.</span>
+                                    {optText}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -257,20 +338,20 @@ const AdminQuestionFeedbackPage = () => {
                       {!isResolved ? (
                         <button
                           onClick={() => handleResolve(f._id, "resolved")}
-                          className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all"
+                          className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
                         >
                           <CheckCircle2 className="w-4 h-4" /> Mark Resolved
                         </button>
                       ) : (
                         <button
                           onClick={() => handleResolve(f._id, "pending")}
-                          className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all"
+                          className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                         >
                           Re-open Case
                         </button>
                       )}
                       <Link to="/dashboard/academics/question-bank">
-                        <button className="w-full px-5 py-3 rounded-2xl bg-slate-800/80 hover:bg-indigo-600/20 text-indigo-300 border border-slate-700/60 hover:border-indigo-500/40 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all">
+                        <button className="w-full px-5 py-3 rounded-2xl bg-slate-800/80 hover:bg-indigo-600/20 text-indigo-300 border border-slate-700/60 hover:border-indigo-500/40 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer">
                           <ExternalLink className="w-4 h-4" /> Open Bank
                         </button>
                       </Link>

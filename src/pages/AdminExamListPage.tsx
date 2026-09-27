@@ -255,8 +255,8 @@ const AdminExamListPage = () => {
     if (!Array.isArray(papers)) return [];
     return papers.filter(p => {
       if (!p) return false;
-      const student = Array.isArray(students) ? students.find(s => s && s._id === p.student_id) : undefined;
-      const blueprint = Array.isArray(blueprints) ? blueprints.find(b => b && b._id === p.blueprint_id) : undefined;
+      const student = Array.isArray(students) ? students.find(s => s && toId(s._id || (s as any).id) === toId(p.student_id)) : undefined;
+      const blueprint = Array.isArray(blueprints) ? blueprints.find(b => b && toId(b._id || (b as any).id) === toId(p.blueprint_id)) : undefined;
       const searchLower = (search || "").toLowerCase();
       
       const studentName = (student?.full_name || student?.name || "").toLowerCase();
@@ -272,8 +272,8 @@ const AdminExamListPage = () => {
   }, [papers, students, blueprints, search]);
 
   const filteredBlueprints = useMemo(() => {
-    if (!Array.isArray(blueprints)) return DEFAULT_CURATED_BLUEPRINTS;
-    return blueprints.filter(b => {
+    const list = Array.isArray(blueprints) && blueprints.length > 0 ? blueprints : DEFAULT_CURATED_BLUEPRINTS;
+    return list.filter(b => {
       if (!b) return false;
       const searchLower = (search || "").toLowerCase();
       const name = (b.name || "").toLowerCase();
@@ -842,8 +842,8 @@ const AdminExamListPage = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredPapers.map((paper) => {
-                  const student = Array.isArray(students) ? students.find(s => s._id === paper.student_id) : undefined;
-                  const blueprint = Array.isArray(blueprints) ? blueprints.find(b => b._id === paper.blueprint_id) : undefined;
+                  const student = Array.isArray(students) ? students.find(s => s && toId(s._id || (s as any).id) === toId(paper.student_id)) : undefined;
+                  const blueprint = Array.isArray(blueprints) ? blueprints.find(b => b && toId(b._id || (b as any).id) === toId(paper.blueprint_id)) : undefined;
                   
                   return (
                     <div key={paper._id} className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl hover:border-blue-500/40 transition-all group overflow-hidden flex flex-col justify-between">

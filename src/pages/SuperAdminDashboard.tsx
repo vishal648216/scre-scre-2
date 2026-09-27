@@ -181,11 +181,11 @@ export default function SuperAdminDashboard() {
                 {t("Super Admin Overview")}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 uppercase tracking-widest">
-                Executive Portal
+                {t("Executive Portal")}
               </span>
             </div>
             <p className="text-zinc-400 text-sm">
-              Real-time capital tracking, center statistics, student performance & managed link credentials.
+              {t("Real-time capital tracking, center statistics, student performance & managed link credentials.")}
             </p>
           </div>
 
@@ -219,7 +219,7 @@ export default function SuperAdminDashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Working Capital</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("Working Capital")}</span>
                 <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                   <Wallet className="w-4 h-4" />
                 </div>
@@ -230,12 +230,12 @@ export default function SuperAdminDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-emerald-400 font-semibold">
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Real-time Capital Ratio</span>
+                  <span>{t("Real-time Capital Ratio")}</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Liquidity Ratio</span>
+                  <span>{t("Liquidity Ratio")}</span>
                   <span className="text-zinc-200">
                     {metrics?.totalIncome ? Math.min(100, Math.round((metrics.workingCapital / metrics.totalIncome) * 100)) : 0}%
                   </span>
@@ -253,7 +253,7 @@ export default function SuperAdminDashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Total Income</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("Total Income")}</span>
                 <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
                   <TrendingUp className="w-4 h-4" />
                 </div>
@@ -264,12 +264,12 @@ export default function SuperAdminDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-400 font-semibold">
                   <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Fees & Income Stream</span>
+                  <span>{t("Fees & Income Stream")}</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Fee Yield Ratio</span>
+                  <span>{t("Fee Yield Ratio")}</span>
                   <span className="text-zinc-200">
                     {metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalRevenue / metrics.totalIncome) * 100)) : 0}%
                   </span>
@@ -287,7 +287,7 @@ export default function SuperAdminDashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all" />
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Total Expenses</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("Total Expenses")}</span>
                 <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
                   <ArrowDownRight className="w-4 h-4" />
                 </div>
@@ -297,12 +297,12 @@ export default function SuperAdminDashboard() {
                   ₹{((metrics?.totalExpenses || 0) / 100000).toFixed(2)}L
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-rose-400 font-semibold">
-                  <span>Logged Expenses</span>
+                  <span>{t("Logged Expenses")}</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Expense Share</span>
+                  <span>{t("Expense Share")}</span>
                   <span className="text-zinc-200">
                     {metrics?.totalIncome ? Math.min(100, Math.round((metrics.totalExpenses / metrics.totalIncome) * 100)) : 0}%
                   </span>
@@ -320,7 +320,7 @@ export default function SuperAdminDashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all" />
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Academic Quality</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("Academic Quality")}</span>
                 <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
                   <Award className="w-4 h-4" />
                 </div>
@@ -331,12 +331,12 @@ export default function SuperAdminDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-purple-400 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{metrics?.totalExams || 0} Exam Papers</span>
+                  <span>{metrics?.totalExams || 0} {t("Exam Papers")}</span>
                 </div>
               </div>
               <div className="mt-4 space-y-1.5">
                 <div className="flex justify-between text-[11px] font-medium text-zinc-400">
-                  <span>Pass Rate Score</span>
+                  <span>{t("Pass Rate Score")}</span>
                   <span className="text-zinc-200">{metrics?.passRate ? Math.round(metrics.passRate) : 0}%</span>
                 </div>
                 <Progress value={metrics?.passRate ? Math.round(metrics.passRate) : 0} className="h-1.5 bg-zinc-800" />
@@ -352,7 +352,7 @@ export default function SuperAdminDashboard() {
               <School className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-zinc-400 font-semibold uppercase">Active Centers</div>
+              <div className="text-xs text-zinc-400 font-semibold uppercase">{t("Active Centers")}</div>
               <div className="text-xl font-bold text-white mt-0.5">
                 {metrics?.activeCenters ?? metrics?.totalCenters ?? 3} / {metrics?.totalCenters ?? 3}
               </div>
@@ -364,7 +364,7 @@ export default function SuperAdminDashboard() {
               <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-zinc-400 font-semibold uppercase">Total Students</div>
+              <div className="text-xs text-zinc-400 font-semibold uppercase">{t("Total Students")}</div>
               <div className="text-xl font-bold text-white mt-0.5">
                 {metrics?.totalStudents ?? 0}
               </div>
@@ -376,7 +376,7 @@ export default function SuperAdminDashboard() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-zinc-400 font-semibold uppercase">Staff Members</div>
+              <div className="text-xs text-zinc-400 font-semibold uppercase">{t("Staff Members")}</div>
               <div className="text-xl font-bold text-white mt-0.5">
                 {metrics?.totalStaff ?? users.filter(u => u.role.toLowerCase() === "staff").length ?? 0}
               </div>
@@ -388,7 +388,7 @@ export default function SuperAdminDashboard() {
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-zinc-400 font-semibold uppercase">System Admins</div>
+              <div className="text-xs text-zinc-400 font-semibold uppercase">{t("System Admins")}</div>
               <div className="text-xl font-bold text-white mt-0.5">
                 {metrics?.totalAdmins ?? users.filter(u => u.role.toLowerCase().includes("admin")).length ?? 1}
               </div>
@@ -405,10 +405,10 @@ export default function SuperAdminDashboard() {
                 <div>
                   <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-primary" />
-                    Working Capital & Income vs Expense Trend
+                    {t("Working Capital & Income vs Expense Trend")}
                   </CardTitle>
                   <CardDescription className="text-zinc-400 text-xs">
-                    Monthly financial breakdown and net working capital accumulation across all centers.
+                    {t("Monthly financial breakdown and net working capital accumulation across all centers.")}
                   </CardDescription>
                 </div>
                 <span className="text-xs text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full font-medium">
@@ -438,8 +438,8 @@ export default function SuperAdminDashboard() {
                       formatter={(val: any) => [`₹${Number(val).toLocaleString("en-IN")}`, ""]}
                     />
                     <Legend wrapperStyle={{ paddingTop: "12px" }} />
-                    <Area type="monotone" dataKey="income" name="Total Income" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#incomeGrad)" />
-                    <Area type="monotone" dataKey="workingCapital" name="Working Capital" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#capGrad)" />
+                    <Area type="monotone" dataKey="income" name={t("Total Income")} stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#incomeGrad)" />
+                    <Area type="monotone" dataKey="workingCapital" name={t("Working Capital")} stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#capGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -451,10 +451,10 @@ export default function SuperAdminDashboard() {
             <CardHeader>
               <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                 <School className="w-5 h-5 text-emerald-400" />
-                Center Revenue Breakdown
+                {t("Center Revenue Breakdown")}
               </CardTitle>
               <CardDescription className="text-zinc-400 text-xs">
-                Top operational centers and student registration output.
+                {t("Top operational centers and student registration output.")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -484,7 +484,7 @@ export default function SuperAdminDashboard() {
               <div>
                 <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
-                  All System Users & Role Governance
+                  {t("All System Users & Role Governance")}
                 </CardTitle>
                 <CardDescription className="text-zinc-400 text-xs">
                   Active accounts across Admin, Staff, Center and Student roles.
@@ -494,7 +494,7 @@ export default function SuperAdminDashboard() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Search user or role..."
+                  placeholder={t("Search user or role...")}
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="w-full pl-9 pr-4 py-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/60 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-primary"
@@ -506,11 +506,11 @@ export default function SuperAdminDashboard() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-400 uppercase text-[10px] font-bold tracking-widest bg-zinc-950/50">
-                      <th className="py-3 px-6">User / Username</th>
-                      <th className="py-3 px-4">Role</th>
-                      <th className="py-3 px-4">Joined Date</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-6 text-right">Actions</th>
+                      <th className="py-3 px-6">{t("User / Username")}</th>
+                      <th className="py-3 px-4">{t("Role")}</th>
+                      <th className="py-3 px-4">{t("Joined Date")}</th>
+                      <th className="py-3 px-4">{t("Status")}</th>
+                      <th className="py-3 px-6 text-right">{t("Actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60 text-xs">
@@ -533,7 +533,7 @@ export default function SuperAdminDashboard() {
                           <td className="py-3.5 px-4">
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              ACTIVE
+                              {t("ACTIVE")}
                             </span>
                           </td>
                           <td className="py-3.5 px-6 text-right">

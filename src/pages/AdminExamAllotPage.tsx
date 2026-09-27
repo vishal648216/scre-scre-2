@@ -142,7 +142,9 @@ const AdminExamAllotPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [banks, setBanks] = useState<QuestionBank[]>([]);
   const [centers, setCenters] = useState<Center[]>([]);
+  const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [selectedCenterIds, setSelectedCenterIds] = useState<string[]>([]);
+  const [centerCoordinators, setCenterCoordinators] = useState<Record<string, string>>({});
 
   // Auto exam dialog state
   const [autoExamDialogOpen, setAutoExamDialogOpen] = useState(false);
@@ -239,7 +241,7 @@ const AdminExamAllotPage = () => {
       const isAdmin = u?.role === "admin" || u?.role === "superadmin";
       const courseApi = isAdmin ? "/api/courses" : "/api/courses/allot";
 
-      const [studentsRes, blueprintsRes, coursesRes, catsRes, subjectsRes, papersRes, banksRes, centersRes] = await Promise.all([
+      const [studentsRes, blueprintsRes, coursesRes, catsRes, subjectsRes, papersRes, banksRes, centersRes, staffRes] = await Promise.all([
         apiFetch("/api/students"),
         apiFetch("/api/exam/blueprints"),
         apiFetch(courseApi),
@@ -247,8 +249,14 @@ const AdminExamAllotPage = () => {
         apiFetch("/api/admin/subjects"),
         apiFetch("/api/exam/papers"),
         apiFetch("/api/qb/banks"),
-        apiFetch("/api/centers")
+        apiFetch("/api/centers"),
+        apiFetch("/api/staff").catch(() => null)
       ]);
+
+      if (staffRes && staffRes.ok) {
+        const rawStaff = await staffRes.json();
+        setStaffMembers(Array.isArray(rawStaff) ? rawStaff : []);
+      }
 
       if (banksRes.ok) {
         const raw = await banksRes.json();
@@ -572,29 +580,53 @@ const AdminExamAllotPage = () => {
                     Select Examination Centers (Multi-Center Merging Supported)
                   </Label>
                   
-                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto p-3 bg-slate-950 rounded-xl border border-slate-800">
                     {centers.map((c) => {
                       const isSelected = selectedCenterIds.includes(c._id);
                       return (
                         <div
                           key={c._id}
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedCenterIds(selectedCenterIds.filter(id => id !== c._id));
-                            } else {
-                              setSelectedCenterIds([...selectedCenterIds, c._id]);
-                            }
-                          }}
                           className={cn(
-                            "p-2.5 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-all",
-                            isSelected ? "bg-purple-500/20 border-purple-500/50 text-white font-bold" : "bg-slate-900/60 border-slate-800 text-slate-300"
+                            "p-3 rounded-xl border text-xs space-y-2 transition-all",
+                            isSelected ? "bg-purple-500/20 border-purple-500/50 text-white" : "bg-slate-900/60 border-slate-800 text-slate-300"
                           )}
                         >
-                          <div className="flex items-center gap-2">
-                            <Building className="w-3.5 h-3.5 text-purple-400" />
-                            <span>{c.name} ({c.code})</span>
+                          <div 
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedCenterIds(selectedCenterIds.filter(id => id !== c._id));
+                              } else {
+                                setSelectedCenterIds([...selectedCenterIds, c._id]);
+                              }
+                            }}
+                            className="flex items-center justify-between cursor-pointer font-bold"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Building className="w-3.5 h-3.5 text-purple-400" />
+                              <span>{c.name} ({c.code})</span>
+                            </div>
+                            {isSelected && <Check className="w-4 h-4 text-purple-400" />}
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-purple-400" />}
+
+                          {isSelected && (
+                            <div className="pt-2 border-t border-purple-500/20" onClick={e => e.stopPropagation()}>
+                              <Label className="text-[9px] font-black uppercase text-purple-300 block mb-1">
+                                Designated Center Exam Coordinator (Staff In-Charge)
+                              </Label>
+                              <select
+                                value={centerCoordinators[c._id] || ""}
+                                onChange={e => setCenterCoordinators({ ...centerCoordinators, [c._id]: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-lg p-1.5 focus:outline-none focus:border-purple-500"
+                              >
+                                <option value="">Auto-Assign Center Admin</option>
+                                {staffMembers.map((s: any) => (
+                                  <option key={s._id || s.id} value={s.name || s.username}>
+                                    👤 {s.name || s.username} ({s.designation || s.role_type || "Staff"})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

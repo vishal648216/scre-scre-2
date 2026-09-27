@@ -2212,6 +2212,41 @@ pub async fn list_question_feedback(
     (StatusCode::OK, Json(feedback_list))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct FeedbackStatusRequest {
+    pub status: String,
+}
+
+pub async fn update_question_feedback_status(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<FeedbackStatusRequest>,
+) -> (StatusCode, Json<ExamEngineResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center {
+        return (StatusCode::FORBIDDEN, Json(ExamEngineResponse { success: false, message: "Unauthorized".to_string() }));
+    }
+
+    let filter = if let Ok(f_oid) = ObjectId::parse_str(&id) {
+        doc! { "$or": [ { "_id": f_oid }, { "_id": &id } ] }
+    } else {
+        doc! { "_id": &id }
+    };
+
+    let coll = db.collection::<mongodb::bson::Document>("question_feedback");
+    match coll.update_one(filter, doc! { "$set": { "status": payload.status } }, None).await {
+        Ok(res) => {
+            if res.matched_count == 0 {
+                (StatusCode::NOT_FOUND, Json(ExamEngineResponse { success: false, message: "Feedback not found".to_string() }))
+            } else {
+                (StatusCode::OK, Json(ExamEngineResponse { success: true, message: "Feedback status updated".to_string() }))
+            }
+        },
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ExamEngineResponse { success: false, message: "Update failed".to_string() })),
+    }
+}
+
+
 pub async fn delete_student_paper(
     State(db): State<Database>,
     claims: Claims,

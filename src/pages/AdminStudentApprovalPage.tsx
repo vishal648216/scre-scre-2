@@ -44,10 +44,12 @@ const AdminStudentApprovalPage = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "rejected">("pending");
   const [centerFilter, setCenterFilter] = useState("all");
 
-  // Instruction Modal State
+  // Instruction & Fee Refund Modal State
   const [selectedStudent, setSelectedStudent] = useState<StudentRow | null>(null);
-  const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
+  const [actionType, setActionType] = useState<"approve" | "reject" | "refund" | null>(null);
   const [adminInstruction, setAdminInstruction] = useState("");
+  const [refundAmount, setRefundAmount] = useState<number>(0);
+  const [refundReason, setRefundReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
   const load = async () => {
@@ -77,10 +79,12 @@ const AdminStudentApprovalPage = () => {
     load();
   }, []);
 
-  const openActionDialog = (student: StudentRow, type: "approve" | "reject") => {
+  const openActionDialog = (student: StudentRow, type: "approve" | "reject" | "refund") => {
     setSelectedStudent(student);
     setActionType(type);
     setAdminInstruction("");
+    setRefundAmount(student.total_fees || 500);
+    setRefundReason("Registration Fee Refund");
   };
 
   const handleConfirmAction = async () => {
@@ -90,9 +94,23 @@ const AdminStudentApprovalPage = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const endpoint = actionType === "approve"
-        ? `/api/admin/students/${sid}/approve`
-        : `/api/admin/students/${sid}/reject`;
+      let endpoint = "";
+      let reqBody: any = {};
+
+      if (actionType === "approve") {
+        endpoint = `/api/admin/students/${sid}/approve`;
+        reqBody = { instructions: adminInstruction, student_id: sid };
+      } else if (actionType === "reject") {
+        endpoint = `/api/admin/students/${sid}/reject`;
+        reqBody = { instructions: adminInstruction, student_id: sid };
+      } else if (actionType === "refund") {
+        endpoint = `/api/admin/students/${sid}/fee-refund`;
+        reqBody = {
+          refund_amount: Number(refundAmount),
+          reason: refundReason,
+          remarks: adminInstruction,
+        };
+      }
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -100,17 +118,16 @@ const AdminStudentApprovalPage = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          instructions: adminInstruction,
-          student_id: sid,
-        }),
+        body: JSON.stringify(reqBody),
       });
 
       if (res.ok) {
         if (actionType === "approve") {
           toast.success(`Student approved & assigned to Center. Certificate template initialized!`);
-        } else {
+        } else if (actionType === "reject") {
           toast.success(`Request rejected. Shifting to next priority center option if applicable.`);
+        } else {
+          toast.success(`Registration Fee Refund of ₹${refundAmount} processed successfully!`);
         }
         setSelectedStudent(null);
         setActionType(null);
@@ -369,6 +386,14 @@ const AdminStudentApprovalPage = () => {
                                 <XCircle className="w-3.5 h-3.5" /> Reject Request
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openActionDialog(s, "refund")}
+                              className="rounded-none font-black text-[10px] uppercase tracking-wider border-amber-500/40 text-amber-600 hover:bg-amber-500/10 gap-1"
+                            >
+                              Refund Fee
+                            </Button>
                           </td>
                         </tr>
                       );
@@ -380,26 +405,61 @@ const AdminStudentApprovalPage = () => {
           </CardContent>
         </Card>
 
-        {/* Action Confirmation & Instruction Modal */}
+        {/* Action Confirmation & Instruction / Fee Refund Modal */}
         {selectedStudent && actionType && (
           <Dialog open={!!selectedStudent} onOpenChange={() => setSelectedStudent(null)}>
             <DialogContent className="max-w-md rounded-none border-2 border-slate-900 shadow-2xl p-6">
               <DialogHeader className="border-b border-border pb-3">
                 <DialogTitle className="font-black uppercase tracking-tight text-lg flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-primary" />
-                  {actionType === "approve" ? "Approve Student Center Allotment" : "Reject Registration Request"}
+                  {actionType === "approve"
+                    ? "Approve Student Center Allotment"
+                    : actionType === "reject"
+                    ? "Reject Registration Request"
+                    : "Process Registration Fee Refund"}
                 </DialogTitle>
               </DialogHeader>
 
               <div className="space-y-4 py-3">
                 <div className="bg-muted/40 p-3 border border-border space-y-1 text-xs font-bold">
-                  <p className="text-foreground">Student: <span className="text-primary">{selectedStudent.full_name || selectedStudent.fullName || selectedStudent.username}</span></p>
+                  <p className="text-foreground">
+                    Student: <span className="text-primary">{selectedStudent.full_name || selectedStudent.fullName || selectedStudent.username}</span>
+                  </p>
                   <p className="text-muted-foreground">Course: {selectedStudent.course || "General"}</p>
                 </div>
 
+                {actionType === "refund" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        Refund Amount (₹):
+                      </label>
+                      <input
+                        type="number"
+                        value={refundAmount}
+                        onChange={(e) => setRefundAmount(Number(e.target.value))}
+                        className="w-full p-2.5 rounded-none border border-border bg-background text-xs font-bold focus:border-primary outline-none"
+                        placeholder="Enter refund amount..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        Refund Reason:
+                      </label>
+                      <input
+                        type="text"
+                        value={refundReason}
+                        onChange={(e) => setRefundReason(e.target.value)}
+                        className="w-full p-2.5 rounded-none border border-border bg-background text-xs font-medium focus:border-primary outline-none"
+                        placeholder="Enter reason for refund..."
+                      />
+                    </div>
+                  </>
+                )}
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    Admin Instructions / Notes for Center & Student:
+                    Admin Instructions / Remarks:
                   </label>
                   <textarea
                     rows={3}
@@ -423,10 +483,22 @@ const AdminStudentApprovalPage = () => {
                   onClick={handleConfirmAction}
                   disabled={processing}
                   className={`rounded-none font-black text-xs uppercase tracking-widest gap-2 text-white ${
-                    actionType === "approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                    actionType === "approve"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : actionType === "reject"
+                      ? "bg-rose-600 hover:bg-rose-700"
+                      : "bg-amber-600 hover:bg-amber-700"
                   }`}
                 >
-                  {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : actionType === "approve" ? "Confirm Accept" : "Confirm Reject"}
+                  {processing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : actionType === "approve" ? (
+                    "Confirm Accept"
+                  ) : actionType === "reject" ? (
+                    "Confirm Reject"
+                  ) : (
+                    "Confirm Fee Refund"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
