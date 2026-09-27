@@ -829,13 +829,15 @@ pub async fn get_referral_tree(
         let mut idx = 1;
         while let Some(Ok(c)) = cursor.next().await {
             let center_id_str = c.id.map(|oid| oid.to_hex()).unwrap_or_else(|| format!("c_{}", idx));
+            let center_code = if c.code.is_empty() { format!("SCRE-CENT-{}", 100 + idx) } else { c.code };
+            let royalty = c.config_validity.as_ref().and_then(|cfg| cfg.royalty_percent).unwrap_or(20.0);
             center_nodes.push(TreeNodeResponse {
                 id: center_id_str.clone(),
                 name: c.name,
-                code: c.code.unwrap_or_else(|| format!("SCRE-CENT-{}", 100 + idx)),
+                code: center_code,
                 role: "center".to_string(),
                 level: 1,
-                royalty_percentage: c.royalty_percentage.unwrap_or(20.0),
+                royalty_percentage: royalty,
                 total_earnings: 45000.0,
                 referrals_count: 3,
                 children: vec![
@@ -954,4 +956,90 @@ pub async fn get_referral_tree(
     }];
 
     (StatusCode::OK, Json(root))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateReferralCodeRequest {
+    pub role: String,
+    pub owner_name: String,
+    pub custom_code: Option<String>,
+}
+
+pub async fn create_referral_code_admin(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CreateReferralCodeRequest>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+
+    let code_str = match payload.custom_code {
+        Some(ref c) if !c.trim().is_empty() => c.trim().to_uppercase(),
+        _ => format!(
+            "REF-{}-{}",
+            payload.role.to_uppercase(),
+            Utc::now().timestamp_millis() % 10000
+        ),
+    };
+
+    let reward_val = match payload.role.as_str() {
+        "center" => 5000.0,
+        "staff" => 1000.0,
+        _ => 500.0,
+    };
+
+    let doc_to_insert = doc! {
+        "code": &code_str,
+        "owner_name": &payload.owner_name,
+        "role": &payload.role,
+        "reward_amount": reward_val,
+        "is_active": true,
+        "created_at": Utc::now().to_rfc3339(),
+    };
+
+    let coll = db.collection::<mongodb::bson::Document>("referral_codes");
+    let _ = coll.insert_one(doc_to_insert, None).await;
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "message": format!("Referral code {} created successfully", code_str),
+            "code": code_str,
+            "owner_name": payload.owner_name,
+            "role": payload.role,
+            "reward_amount": reward_val
+        })),
+    )
+}
+
+pub async fn delete_referral_code_admin(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id_or_code): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+
+    let coll = db.collection::<mongodb::bson::Document>("referral_codes");
+    let filter = if let Ok(oid) = ObjectId::parse_str(&id_or_code) {
+        doc! { "$or": [ { "_id": oid }, { "code": &id_or_code } ] }
+    } else {
+        doc! { "code": &id_or_code }
+    };
+
+    let _ = coll.delete_one(filter, None).await;
+
+    (
+        StatusCode::OK,
+        Json(json!({ "success": true, "message": "Referral code deleted successfully" })),
+    )
 }

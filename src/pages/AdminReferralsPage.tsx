@@ -193,7 +193,7 @@ const AdminReferralsPage = () => {
     }, 600);
   };
 
-  const handleCreateNewReferralCode = (e: React.FormEvent) => {
+  const handleCreateNewReferralCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCodeOwnerName.trim()) {
       toast.error("Please enter user/center owner name");
@@ -201,12 +201,22 @@ const AdminReferralsPage = () => {
     }
 
     setCreatingCode(true);
-    setTimeout(() => {
+    try {
       const generatedCode = customCodeInput.trim() 
         ? customCodeInput.trim().toUpperCase() 
         : `REF-${newCodeRole.toUpperCase().substring(0, 4)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const rewardVal = newCodeRole === "center" ? 5000 : newCodeRole === "staff" ? 1000 : 500;
+
+      const res = await apiFetch("/api/admin/referral-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: newCodeRole,
+          owner_name: newCodeOwnerName.trim(),
+          custom_code: generatedCode
+        })
+      });
 
       const newRecord: ReferralRecord = {
         _id: `ref_gen_${Date.now()}`,
@@ -225,16 +235,26 @@ const AdminReferralsPage = () => {
       };
 
       setReferrals([newRecord, ...referrals]);
-      setCreatingCode(false);
       setShowCreateCodeModal(false);
       setNewCodeOwnerName("");
       setCustomCodeInput("");
       toast.success(`New referral code ${generatedCode} created for ${newCodeOwnerName.trim()} (${newCodeRole.toUpperCase()})!`);
-    }, 500);
+    } catch {
+      toast.error("Failed to create referral code");
+    } finally {
+      setCreatingCode(false);
+    }
   };
 
-  const handleDeleteReferralCode = (id: string, code: string) => {
+  const handleDeleteReferralCode = async (id: string, code: string) => {
     if (confirm(`Are you sure you want to delete referral code ${code}?`)) {
+      try {
+        await apiFetch(`/api/admin/referral-codes/${encodeURIComponent(code)}`, {
+          method: "DELETE"
+        });
+      } catch {
+        // continue local removal fallback
+      }
       setReferrals(referrals.filter(r => r._id !== id));
       toast.success(`Referral code ${code} deleted!`);
     }

@@ -647,6 +647,8 @@ pub async fn run_server() {
         .route("/api/referrals/withdrawal-method", get(handlers::referral::get_withdrawal_method).put(handlers::referral::update_withdrawal_method))
         .route("/api/referrals/withdraw", post(handlers::referral::request_withdrawal))
         .route("/api/admin/referrals", get(handlers::referral::get_all_referrals_admin))
+        .route("/api/admin/referral-codes", post(handlers::referral::create_referral_code_admin))
+        .route("/api/admin/referral-codes/:id", delete(handlers::referral::delete_referral_code_admin))
         .route("/api/admin/referral-settings/:target_role", get(handlers::referral::get_referral_settings))
         .route("/api/admin/referral-settings", put(handlers::referral::update_referral_settings))
         .route("/api/interns", post(handlers::intern::handle_create_intern).get(handlers::intern::get_interns))
