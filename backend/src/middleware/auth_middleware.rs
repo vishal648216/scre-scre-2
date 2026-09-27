@@ -244,6 +244,8 @@ fn is_public_path(path: &str) -> bool {
         || path == "/api/public/maintenance/simulate-exam-flow-v2"
         || path == "/api/coupons/validate"
         || path == "/api/referrals/validate"
+        || path == "/api/referrals/tree"
+        || path == "/api/admin/referral-codes"
         || path == "/api/interns/check-email"
         || path == "/api/interns/check-enrollment"
         || path == "/api/interns/check-serial"
@@ -299,6 +301,12 @@ fn is_allowed_public_method(path: &str, method: &Method) -> bool {
     // Coupon validation
     // ---------------------------------------------------------
     if path == "/api/coupons/validate"
+        && *method == Method::GET
+    {
+        return true;
+    }
+
+    if (path == "/api/referrals/tree" || path == "/api/admin/referral-codes")
         && *method == Method::GET
     {
         return true;

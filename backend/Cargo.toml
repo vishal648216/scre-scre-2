@@ -2,10 +2,15 @@
 name = "backend"
 version = "0.1.0"
 edition = "2024"
+default-run = "backend"
 
 [lib]
 name = "backend"
 path = "src/lib.rs"
+
+[[bin]]
+name = "backend"
+path = "src/main.rs"
 
 [[bin]]
 name = "translate_all"
