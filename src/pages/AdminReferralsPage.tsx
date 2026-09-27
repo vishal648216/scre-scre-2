@@ -1283,48 +1283,9 @@ const AdminReferralsPage = () => {
                 </div>
               </div>
 
-              {/* Referred Users Hierarchy Breakdown */}
+              {/* Referred Users Hierarchy Breakdown & Dual View Switcher */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-3.5 h-3.5" /> Sub-Users Joined Under This Code (Level 1 to Level 5)
-                </h4>
-
-                <div className="border border-slate-800 rounded-xl overflow-hidden">
-                  <table className="w-full text-xs text-left text-slate-300">
-                    <thead className="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800">
-                      <tr>
-                        <th className="p-3">User Name</th>
-                        <th className="p-3 text-center">Branch Leg</th>
-                        <th className="p-3 text-center">Hierarchy Level</th>
-                        <th className="p-3 text-right">Commission Earned</th>
-                        <th className="p-3 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800 font-mono">
-                      <tr className="hover:bg-slate-800/30">
-                        <td className="p-3 font-sans font-bold text-white">Amit Kumar (Student)</td>
-                        <td className="p-3 text-center text-emerald-400 text-[10px] font-bold">👈 Left Leg</td>
-                        <td className="p-3 text-center font-bold text-amber-400">Level 1 (Direct)</td>
-                        <td className="p-3 text-right font-black text-emerald-400">₹500</td>
-                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
-                      </tr>
-                      <tr className="hover:bg-slate-800/30">
-                        <td className="p-3 font-sans font-bold text-white">Pooja Verma (Student)</td>
-                        <td className="p-3 text-center text-blue-400 text-[10px] font-bold">👉 Right Leg</td>
-                        <td className="p-3 text-center font-bold text-amber-400">Level 1 (Direct)</td>
-                        <td className="p-3 text-right font-black text-emerald-400">₹500</td>
-                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
-                      </tr>
-                      <tr className="hover:bg-slate-800/30">
-                        <td className="p-3 font-sans font-bold text-slate-300">Vikram Singh (Sub-Student)</td>
-                        <td className="p-3 text-center text-emerald-400 text-[10px] font-bold">👈 Left Leg</td>
-                        <td className="p-3 text-center font-bold text-purple-400">Level 2 (Sub-referral)</td>
-                        <td className="p-3 text-right font-black text-emerald-400">₹250</td>
-                        <td className="p-3 text-center"><span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACTIVATED</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <ReferralTreeVisualizer />
               </div>
 
               <div className="flex justify-end pt-2">

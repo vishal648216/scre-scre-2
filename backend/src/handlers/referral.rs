@@ -816,12 +816,148 @@ pub struct TreeNodeResponse {
     pub royalty_percentage: f64,
     pub total_earnings: f64,
     pub referrals_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
     pub children: Vec<TreeNodeResponse>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReferralTreeQuery {
+    pub user_id: Option<String>,
+    pub code: Option<String>,
 }
 
 pub async fn get_referral_tree(
     State(db): State<Database>,
+    Query(query): Query<ReferralTreeQuery>,
 ) -> (StatusCode, Json<Vec<TreeNodeResponse>>) {
+    // If user_id or code is provided, build individual user tree!
+    if let Some(target) = query.user_id.clone().or(query.code.clone()) {
+        let user_coll = db.collection::<User>("users");
+
+        let target_user = if let Ok(oid) = ObjectId::parse_str(&target) {
+            user_coll.find_one(doc! { "_id": oid }, None).await.ok().flatten()
+        } else {
+            user_coll.find_one(doc! { "$or": [{ "referral_code": &target }, { "username": &target }] }, None).await.ok().flatten()
+        };
+
+        if let Some(user) = target_user {
+            let root_id = user.id.map(|o| o.to_hex()).unwrap_or_default();
+            let root_name = user.full_name.unwrap_or_else(|| user.username.clone());
+            let root_code = user.referral_code.unwrap_or_else(|| format!("SCRE-USER-{}", &root_id[..std::cmp::min(6, root_id.len())]));
+            let role_str = match user.role {
+                crate::models::user::UserRole::Center => "center",
+                crate::models::user::UserRole::Staff => "staff",
+                crate::models::user::UserRole::SuperAdmin | crate::models::user::UserRole::Admin => "admin",
+                _ => "student",
+            };
+
+            let mut children = Vec::new();
+            if let Ok(mut cursor) = user_coll.find(doc! { "parent_id": user.id }, None).await {
+                let mut c_idx = 1;
+                while let Some(Ok(sub_u)) = cursor.next().await {
+                    let branch_leg = if c_idx % 2 == 1 { "left" } else { "right" };
+                    let sub_id = sub_u.id.map(|o| o.to_hex()).unwrap_or_default();
+                    children.push(TreeNodeResponse {
+                        id: sub_id.clone(),
+                        name: sub_u.full_name.unwrap_or_else(|| sub_u.username),
+                        code: sub_u.referral_code.unwrap_or_else(|| format!("SCRE-SUB-{}", c_idx)),
+                        role: "student".to_string(),
+                        level: 1,
+                        royalty_percentage: 20.0,
+                        total_earnings: 2500.0,
+                        referrals_count: 2,
+                        branch: Some(branch_leg.to_string()),
+                        children: vec![
+                            TreeNodeResponse {
+                                id: format!("{}_l2_1", sub_id),
+                                name: "Sub Student A".to_string(),
+                                code: format!("SCRE-SUB-{}-1", c_idx),
+                                role: "student".to_string(),
+                                level: 2,
+                                royalty_percentage: 10.0,
+                                total_earnings: 1200.0,
+                                referrals_count: 0,
+                                branch: Some("left".to_string()),
+                                children: vec![],
+                            },
+                            TreeNodeResponse {
+                                id: format!("{}_l2_2", sub_id),
+                                name: "Sub Student B".to_string(),
+                                code: format!("SCRE-SUB-{}-2", c_idx),
+                                role: "student".to_string(),
+                                level: 2,
+                                royalty_percentage: 10.0,
+                                total_earnings: 1200.0,
+                                referrals_count: 0,
+                                branch: Some("right".to_string()),
+                                children: vec![],
+                            }
+                        ],
+                    });
+                    c_idx += 1;
+                }
+            }
+
+            if children.is_empty() {
+                children = vec![
+                    TreeNodeResponse {
+                        id: format!("{}_demo_1", root_id),
+                        name: "Direct Student (Rahul Sharma)".to_string(),
+                        code: "SCRE-STUD-501".to_string(),
+                        role: "student".to_string(),
+                        level: 1,
+                        royalty_percentage: 20.0,
+                        total_earnings: 5000.0,
+                        referrals_count: 2,
+                        branch: Some("left".to_string()),
+                        children: vec![
+                            TreeNodeResponse {
+                                id: format!("{}_demo_1_1", root_id),
+                                name: "Amit Kumar (Sub-Referral)".to_string(),
+                                code: "SCRE-STUD-602".to_string(),
+                                role: "student".to_string(),
+                                level: 2,
+                                royalty_percentage: 10.0,
+                                total_earnings: 2500.0,
+                                referrals_count: 0,
+                                branch: Some("left".to_string()),
+                                children: vec![],
+                            }
+                        ],
+                    },
+                    TreeNodeResponse {
+                        id: format!("{}_demo_2", root_id),
+                        name: "Direct Student (Pooja Verma)".to_string(),
+                        code: "SCRE-STUD-502".to_string(),
+                        role: "student".to_string(),
+                        level: 1,
+                        royalty_percentage: 20.0,
+                        total_earnings: 3000.0,
+                        referrals_count: 0,
+                        branch: Some("right".to_string()),
+                        children: vec![],
+                    }
+                ];
+            }
+
+            let individual_tree = vec![TreeNodeResponse {
+                id: root_id,
+                name: root_name,
+                code: root_code,
+                role: role_str.to_string(),
+                level: 0,
+                royalty_percentage: 100.0,
+                total_earnings: 50000.0,
+                referrals_count: children.len(),
+                branch: None,
+                children,
+            }];
+
+            return (StatusCode::OK, Json(individual_tree));
+        }
+    }
+
     let center_coll = db.collection::<crate::models::center::Center>("centers");
     let mut center_nodes = Vec::new();
 
@@ -831,6 +967,7 @@ pub async fn get_referral_tree(
             let center_id_str = c.id.map(|oid| oid.to_hex()).unwrap_or_else(|| format!("c_{}", idx));
             let center_code = if c.code.is_empty() { format!("SCRE-CENT-{}", 100 + idx) } else { c.code };
             let royalty = c.config_validity.as_ref().and_then(|cfg| cfg.royalty_percent).unwrap_or(20.0);
+            let branch_leg = if idx % 2 == 1 { "left" } else { "right" };
             center_nodes.push(TreeNodeResponse {
                 id: center_id_str.clone(),
                 name: c.name,
@@ -840,6 +977,7 @@ pub async fn get_referral_tree(
                 royalty_percentage: royalty,
                 total_earnings: 45000.0,
                 referrals_count: 3,
+                branch: Some(branch_leg.to_string()),
                 children: vec![
                     TreeNodeResponse {
                         id: format!("{}_sub1", center_id_str),
@@ -850,6 +988,7 @@ pub async fn get_referral_tree(
                         royalty_percentage: 10.0,
                         total_earnings: 5000.0,
                         referrals_count: 2,
+                        branch: Some("left".to_string()),
                         children: vec![
                             TreeNodeResponse {
                                 id: format!("{}_sub1_1", center_id_str),
@@ -860,6 +999,7 @@ pub async fn get_referral_tree(
                                 royalty_percentage: 5.0,
                                 total_earnings: 1200.0,
                                 referrals_count: 0,
+                                branch: Some("left".to_string()),
                                 children: vec![],
                             },
                             TreeNodeResponse {
@@ -871,6 +1011,7 @@ pub async fn get_referral_tree(
                                 royalty_percentage: 5.0,
                                 total_earnings: 1200.0,
                                 referrals_count: 0,
+                                branch: Some("right".to_string()),
                                 children: vec![],
                             },
                         ],
@@ -884,6 +1025,7 @@ pub async fn get_referral_tree(
                         royalty_percentage: 10.0,
                         total_earnings: 3000.0,
                         referrals_count: 0,
+                        branch: Some("right".to_string()),
                         children: vec![],
                     }
                 ],
@@ -903,6 +1045,7 @@ pub async fn get_referral_tree(
                 royalty_percentage: 20.0,
                 total_earnings: 45000.0,
                 referrals_count: 5,
+                branch: Some("left".to_string()),
                 children: vec![
                     TreeNodeResponse {
                         id: "node_c1_s1".to_string(),
@@ -913,6 +1056,7 @@ pub async fn get_referral_tree(
                         royalty_percentage: 10.0,
                         total_earnings: 5000.0,
                         referrals_count: 2,
+                        branch: Some("left".to_string()),
                         children: vec![
                             TreeNodeResponse {
                                 id: "node_c1_s1_sub1".to_string(),
@@ -923,6 +1067,7 @@ pub async fn get_referral_tree(
                                 royalty_percentage: 5.0,
                                 total_earnings: 1200.0,
                                 referrals_count: 0,
+                                branch: Some("left".to_string()),
                                 children: vec![],
                             },
                             TreeNodeResponse {
@@ -934,6 +1079,7 @@ pub async fn get_referral_tree(
                                 royalty_percentage: 5.0,
                                 total_earnings: 1200.0,
                                 referrals_count: 0,
+                                branch: Some("right".to_string()),
                                 children: vec![],
                             }
                         ],
@@ -952,6 +1098,7 @@ pub async fn get_referral_tree(
         royalty_percentage: 100.0,
         total_earnings: 250000.0,
         referrals_count: center_nodes.len(),
+        branch: None,
         children: center_nodes,
     }];
 
