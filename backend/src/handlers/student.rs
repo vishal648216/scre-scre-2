@@ -1,3 +1,4 @@
+use crate::authz::require_admin;
 use crate::handlers::coupon::consume_coupon;
 use crate::models::center::Center;
 use crate::models::course::Course;
@@ -3408,4 +3409,107 @@ pub async fn public_verify_student(
             })),
         ),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StudentTransferPayload {
+    pub target_center_id: Option<String>,
+    pub target_center_code: Option<String>,
+    pub target_center_name: Option<String>,
+    pub transfer_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StudentTransferResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn transfer_student(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<StudentTransferPayload>,
+) -> (StatusCode, Json<StudentTransferResponse>) {
+    if !require_admin(&claims) && claims.role != UserRole::Center {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(StudentTransferResponse {
+                success: false,
+                message: "Forbidden: Admin or Center access required".to_string(),
+            }),
+        );
+    }
+
+    let user_coll = db.collection::<User>("users");
+    let student_coll = db.collection::<mongodb::bson::Document>("students");
+
+    let oid_opt = ObjectId::parse_str(&id).ok();
+
+    let user_filter = if let Some(oid) = oid_opt {
+        doc! { "_id": oid, "role": "student" }
+    } else {
+        doc! { "$or": [{ "username": &id }, { "registration_number": &id }], "role": "student" }
+    };
+
+    let target_code = payload.target_center_code.clone().unwrap_or_else(|| "HQ".to_string());
+    let target_name = payload.target_center_name.clone().unwrap_or_else(|| "Target Center".to_string());
+
+    let mut target_parent_oid = None;
+    if let Some(ref t_id) = payload.target_center_id {
+        target_parent_oid = ObjectId::parse_str(t_id).ok();
+    }
+
+    let mut student_name = id.clone();
+    let mut transferred = false;
+
+    if let Ok(Some(u)) = user_coll.find_one(user_filter.clone(), None).await {
+        student_name = u.full_name.clone().unwrap_or_else(|| u.username.clone());
+        let mut set_doc = doc! {
+            "center_code": &target_code,
+            "center_name": &target_name,
+            "updated_at": Utc::now().to_rfc3339()
+        };
+        if let Some(tp_oid) = target_parent_oid {
+            set_doc.insert("parent_id", tp_oid);
+        }
+        let _ = user_coll.update_one(user_filter, doc! { "$set": set_doc }, None).await;
+        transferred = true;
+    }
+
+    // Also update student collection if separate document exists
+    let student_doc_filter = if let Some(oid) = oid_opt {
+        doc! { "$or": [{ "_id": oid }, { "user_id": oid }] }
+    } else {
+        doc! { "$or": [{ "username": &id }, { "registration_number": &id }] }
+    };
+
+    let mut s_set_doc = doc! {
+        "center_code": &target_code,
+        "center_name": &target_name,
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = target_parent_oid {
+        s_set_doc.insert("center_id", tp_oid);
+        s_set_doc.insert("parent_id", tp_oid);
+    }
+    let _ = student_coll.update_many(student_doc_filter, doc! { "$set": s_set_doc }, None).await;
+
+    if !transferred {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(StudentTransferResponse {
+                success: false,
+                message: format!("Student '{}' not found", id),
+            }),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        Json(StudentTransferResponse {
+            success: true,
+            message: format!("Student '{}' transferred to center '{}' ({}) successfully!", student_name, target_name, target_code),
+        }),
+    )
 }

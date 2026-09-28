@@ -367,41 +367,91 @@ pub async fn transfer_staff(
     Json(payload): Json<StaffTransferPayload>,
 ) -> (StatusCode, Json<StaffResponse>) {
     if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
-        return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden: SuperAdmin/Admin access required".to_string() }));
+        return (
+            StatusCode::FORBIDDEN,
+            Json(StaffResponse {
+                success: false,
+                message: "Forbidden: SuperAdmin/Admin access required".to_string(),
+            }),
+        );
     }
 
     let staff_coll = db.collection::<Staff>("staff");
     let user_coll = db.collection::<User>("users");
 
-    let filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+    let oid_opt = ObjectId::parse_str(&id).ok();
+
+    let mut target_parent_oid = None;
+    if let Ok(t_oid) = ObjectId::parse_str(&payload.target_center_id) {
+        target_parent_oid = Some(t_oid);
+    }
+
+    let mut staff_name = id.clone();
+    let mut transferred = false;
+
+    // 1. Try staff collection
+    let staff_filter = if let Some(oid) = oid_opt {
+        doc! { "$or": [{ "_id": oid }, { "user_id": oid }] }
+    } else {
+        doc! { "$or": [{ "name": &id }, { "username": &id }, { "role_type": &id }] }
+    };
+
+    if let Ok(Some(existing_staff)) = staff_coll.find_one(staff_filter.clone(), None).await {
+        staff_name = existing_staff.name.clone();
+        let target_centers = vec![payload.target_center_name.clone()];
+        let mut update_doc = doc! {
+            "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
+            "updated_at": Utc::now().to_rfc3339()
+        };
+        if let Some(tp_oid) = target_parent_oid {
+            update_doc.insert("parent_id", tp_oid);
+        }
+
+        let _ = staff_coll.update_one(staff_filter, doc! { "$set": update_doc }, None).await;
+
+        if let Some(tp_oid) = target_parent_oid {
+            let _ = user_coll.update_one(doc! { "_id": existing_staff.user_id }, doc! { "$set": { "parent_id": tp_oid } }, None).await;
+        }
+        transferred = true;
+    }
+
+    // 2. Try users collection (for users with role staff)
+    let user_filter = if let Some(oid) = oid_opt {
         doc! { "_id": oid }
     } else {
-        doc! { "$or": [{ "name": &id }, { "role_type": &id }] }
+        doc! { "$or": [{ "username": &id }, { "full_name": &id }] }
     };
 
-    let existing = match staff_coll.find_one(filter.clone(), None).await {
-        Ok(Some(s)) => s,
-        _ => return (StatusCode::NOT_FOUND, Json(StaffResponse { success: false, message: "Staff not found".to_string() })),
-    };
+    if let Ok(Some(existing_user)) = user_coll.find_one(user_filter.clone(), None).await {
+        if staff_name == id {
+            staff_name = existing_user.full_name.clone().unwrap_or(existing_user.username.clone());
+        }
+        if let Some(tp_oid) = target_parent_oid {
+            let _ = user_coll.update_one(user_filter, doc! { "$set": { "parent_id": tp_oid } }, None).await;
+        }
+        transferred = true;
+    }
 
-    let target_parent_oid = ObjectId::parse_str(&payload.target_center_id).unwrap_or(existing.parent_id);
-    let target_centers = vec![payload.target_center_name.clone()];
+    if !transferred {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(StaffResponse {
+                success: false,
+                message: format!("Staff member '{}' not found", id),
+            }),
+        );
+    }
 
-    let update_doc = doc! {
-        "parent_id": target_parent_oid,
-        "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
-        "updated_at": Utc::now().to_rfc3339()
-    };
-
-    let _ = staff_coll.update_one(filter, doc! { "$set": update_doc }, None).await;
-
-    // Update user parent_id as well
-    let _ = user_coll.update_one(doc! { "_id": existing.user_id }, doc! { "$set": { "parent_id": target_parent_oid } }, None).await;
-
-    (StatusCode::OK, Json(StaffResponse {
-        success: true,
-        message: format!("Staff member '{}' transferred to center '{}' successfully!", existing.name, payload.target_center_name)
-    }))
+    (
+        StatusCode::OK,
+        Json(StaffResponse {
+            success: true,
+            message: format!(
+                "Staff member '{}' transferred to center '{}' successfully!",
+                staff_name, payload.target_center_name
+            ),
+        }),
+    )
 }
 
 pub async fn get_staff_permissions(

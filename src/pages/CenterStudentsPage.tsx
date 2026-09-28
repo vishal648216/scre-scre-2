@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, UserPlus, Users, Edit, Trash2, CheckCircle, XCircle, Loader2, Ticket, FileText, IdCard } from "lucide-react";
+import { Search, UserPlus, Users, Edit, Trash2, CheckCircle, XCircle, Loader2, Ticket, FileText, IdCard, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface Student {
   _id: any;
@@ -24,6 +25,14 @@ interface Student {
   signature_url?: string;
   additional_docs?: string;
   active: boolean;
+  center_code?: string;
+  center_name?: string;
+}
+
+interface CenterBranch {
+  _id: string;
+  name: string;
+  code: string;
 }
 
 const toId = (v: unknown): string => {
@@ -126,6 +135,73 @@ const CenterStudentsPage = () => {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  const [transferStudentItem, setTransferStudentItem] = useState<Student | null>(null);
+  const [centersList, setCentersList] = useState<CenterBranch[]>([]);
+  const [targetCenterId, setTargetCenterId] = useState("");
+  const [targetCenterCode, setTargetCenterCode] = useState("");
+  const [targetCenterName, setTargetCenterName] = useState("");
+  const [transferReason, setTransferReason] = useState("Administrative Transfer");
+  const [transferring, setTransferring] = useState(false);
+
+  const fetchCentersList = async () => {
+    try {
+      const res = await apiFetch("/api/centers");
+      if (res.ok) {
+        const data = await res.json();
+        setCentersList(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch centers for transfer", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+    fetchCentersList();
+  }, []);
+
+  const openStudentTransferModal = (student: Student) => {
+    setTransferStudentItem(student);
+    setTransferReason("Administrative Center Transfer");
+    if (centersList.length > 0) {
+      const c = centersList[0];
+      setTargetCenterId(c._id);
+      setTargetCenterCode(c.code);
+      setTargetCenterName(c.name);
+    }
+  };
+
+  const handleStudentTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferStudentItem || !targetCenterId) return;
+    setTransferring(true);
+    try {
+      const sid = toId(transferStudentItem._id);
+      const res = await apiFetch(`/api/students/${sid}/transfer`, {
+        method: "POST",
+        body: JSON.stringify({
+          target_center_id: targetCenterId,
+          target_center_code: targetCenterCode,
+          target_center_name: targetCenterName,
+          transfer_reason: transferReason
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        toast.success(data.message || t("Student transferred successfully!"));
+        setTransferStudentItem(null);
+        fetchStudents();
+      } else {
+        toast.error(data.message || t("Failed to transfer student"));
+      }
+    } catch {
+      toast.error(t("Network error transferring student"));
+    } finally {
+      setTransferring(false);
+    }
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -325,6 +401,13 @@ const CenterStudentsPage = () => {
                               >
                                 <Ticket className="w-4 h-4" />
                               </button>
+                              <button
+                                onClick={() => openStudentTransferModal(s)}
+                                className="p-2 hover:bg-purple-500/10 text-muted-foreground hover:text-purple-500 transition-all"
+                                title={t("Transfer Student")}
+                              >
+                                <ArrowRightLeft className="w-4 h-4" />
+                              </button>
                               <Link
                                 to={`/dashboard/students/edit/${sid}`}
                                 className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
@@ -361,6 +444,88 @@ const CenterStudentsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Student Transfer Modal */}
+      <Dialog open={!!transferStudentItem} onOpenChange={(open) => !open && setTransferStudentItem(null)}>
+        <DialogContent className="max-w-md rounded-xl border border-border bg-card shadow-2xl">
+          <DialogHeader className="border-b border-border pb-4">
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                <ArrowRightLeft className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="font-heading font-extrabold text-base text-foreground uppercase tracking-tight">
+                  {t("Transfer Student Branch")}
+                </h3>
+                <p className="text-xs text-muted-foreground font-medium">
+                  {t("Re-allocate student to a new center branch")}
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          {transferStudentItem && (
+            <form onSubmit={handleStudentTransferSubmit} className="space-y-4 py-3 text-xs">
+              <div className="p-3 rounded-xl bg-muted/30 border border-border">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("Student")}:</span>
+                <p className="font-extrabold text-foreground text-sm">{transferStudentItem.fullName || transferStudentItem.username}</p>
+                <p className="text-[11px] text-muted-foreground">Username: @{transferStudentItem.username} | Course: {transferStudentItem.course || "N/A"}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-muted-foreground uppercase text-[10px]">{t("Target Center Branch")} *</label>
+                <select
+                  value={targetCenterId}
+                  onChange={(e) => {
+                    const selected = centersList.find(c => c._id === e.target.value);
+                    setTargetCenterId(e.target.value);
+                    if (selected) {
+                      setTargetCenterCode(selected.code);
+                      setTargetCenterName(selected.name);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2 rounded-lg border border-border bg-background font-bold text-xs focus:border-primary outline-none"
+                >
+                  {centersList.map(c => (
+                    <option key={c._id} value={c._id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-muted-foreground uppercase text-[10px]">{t("Transfer Reason / Remarks")}</label>
+                <textarea
+                  value={transferReason}
+                  onChange={(e) => setTransferReason(e.target.value)}
+                  rows={2}
+                  className="w-full px-3.5 py-2 rounded-lg border border-border bg-background font-bold text-xs focus:border-primary outline-none"
+                  placeholder={t("Enter justification notes...")}
+                />
+              </div>
+
+              <DialogFooter className="border-t border-border pt-3 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={transferring}
+                  className="px-5 py-2 rounded-lg bg-purple-600 text-white font-black text-xs uppercase tracking-wider hover:bg-purple-700 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {transferring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightLeft className="w-3.5 h-3.5" />}
+                  {t("Confirm Transfer")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTransferStudentItem(null)}
+                  className="px-4 py-2 rounded-lg border border-border bg-card font-bold text-xs uppercase tracking-wider"
+                >
+                  {t("Cancel")}
+                </button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

@@ -223,7 +223,8 @@ const StaffListPage = () => {
     setTransferring(true);
 
     try {
-      const res = await apiFetch(`/api/staff/${transferMember._id}/transfer`, {
+      const targetId = transferMember._id || transferMember.user_id || (transferMember as any).id || transferMember.username;
+      const res = await apiFetch(`/api/staff/${targetId}/transfer`, {
         method: "POST",
         body: JSON.stringify({
           target_center_id: targetCenterId,

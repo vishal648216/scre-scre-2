@@ -6,9 +6,10 @@ use axum::{
 use chrono::Utc;
 use futures_util::StreamExt;
 use mongodb::{Database, bson::doc, bson::oid::ObjectId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::authz::require_admin;
 use crate::models::center::Center;
 use crate::models::user::{Claims, User};
 
@@ -611,5 +612,93 @@ pub async fn reject_center_registration(
     ).await;
 
     (StatusCode::OK, Json(json!({"success": true, "message": "Center registration rejected"})))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CenterTransferPayload {
+    pub target_region_id: Option<String>,
+    pub target_region_name: Option<String>,
+    pub target_parent_id: Option<String>,
+    pub transfer_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CenterTransferResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn transfer_center(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<CenterTransferPayload>,
+) -> (StatusCode, Json<CenterTransferResponse>) {
+    if !require_admin(&claims) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CenterTransferResponse {
+                success: false,
+                message: "Forbidden: SuperAdmin/Admin access required".to_string(),
+            }),
+        );
+    }
+
+    let center_coll = db.collection::<Center>("centers");
+    let user_coll = db.collection::<User>("users");
+
+    let oid_opt = ObjectId::parse_str(&id).ok();
+
+    let center_filter = if let Some(oid) = oid_opt {
+        doc! { "_id": oid }
+    } else {
+        doc! { "$or": [{ "code": &id }, { "name": &id }] }
+    };
+
+    let existing = match center_coll.find_one(center_filter.clone(), None).await {
+        Ok(Some(c)) => c,
+        _ => return (
+            StatusCode::NOT_FOUND,
+            Json(CenterTransferResponse {
+                success: false,
+                message: format!("Center '{}' not found", id),
+            }),
+        ),
+    };
+
+    let mut target_parent_oid = None;
+    if let Some(ref tp_id) = payload.target_parent_id {
+        target_parent_oid = ObjectId::parse_str(tp_id).ok();
+    } else if let Some(ref tr_id) = payload.target_region_id {
+        target_parent_oid = ObjectId::parse_str(tr_id).ok();
+    }
+
+    let mut set_doc = doc! {
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = target_parent_oid {
+        set_doc.insert("parent_id", tp_oid);
+    }
+    if let Some(ref r_name) = payload.target_region_name {
+        set_doc.insert("region_name", r_name);
+        set_doc.insert("state", r_name);
+    }
+
+    let _ = center_coll.update_one(center_filter, doc! { "$set": set_doc }, None).await;
+
+    let c_code = existing.code.clone();
+    let _ = user_coll.update_many(
+        doc! { "role": "center", "$or": [{ "center_code": &c_code }, { "username": &c_code }] },
+        doc! { "$set": { "updated_at": Utc::now().to_rfc3339() } },
+        None,
+    ).await;
+
+    (
+        StatusCode::OK,
+        Json(CenterTransferResponse {
+            success: true,
+            message: format!("Center '{}' ({}) transferred / re-allocated successfully!", existing.name, existing.code),
+        }),
+    )
 }
 
