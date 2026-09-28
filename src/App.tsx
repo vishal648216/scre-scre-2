@@ -879,6 +879,7 @@ const App = () => {
   useEffect(() => {
     // Clear the portal reload flag on successful load of the app
     sessionStorage.removeItem("portal_reload_on_error");
+    sessionStorage.removeItem("portal_reload_count");
     syncServerTime();
     initGoogleTranslateScript();
     enableDOMAutoTranslationObserver();

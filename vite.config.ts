@@ -15,8 +15,6 @@ export default defineConfig(({ mode }) => {
           host: true,
           port: 8085,
           allowedHosts: ["screduc.com", "www.screduc.com"],
-          // Disable HMR to prevent periodic reloads in production-like environments
-          hmr: false,
           proxy: {
             "/api": {
               target: "http://localhost:3008",
@@ -47,14 +45,41 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: { "@": path.resolve(__dirname, "./src") },
+      dedupe: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react-router-dom",
+        "react-i18next",
+        "i18next",
+        "@tanstack/react-query",
+      ],
+    },
+    optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react-router-dom",
+        "react-i18next",
+        "i18next",
+        "@tanstack/react-query",
+        "lucide-react",
+        "framer-motion",
+      ],
     },
     build: {
-      // Avoid dozens of tiny vendor-* chunks (e.g. vendor-lucide-react-*.js). Stale cached index.html
-      // pointing at old hashes causes "MIME type text/html" when the server falls back to SPA HTML.
       modulePreload: false,
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (
+              id.includes("node_modules/react/") ||
+              id.includes("node_modules/react-dom/") ||
+              id.includes("node_modules/react-router-dom/")
+            ) {
+              return "react-vendor";
+            }
             if (id.includes("node_modules")) {
               return "vendor";
             }

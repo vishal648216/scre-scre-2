@@ -14,28 +14,41 @@ export class PortalErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error) {
-    const isChunkError =
-      error.message.includes("Failed to fetch dynamically imported module") ||
-      error.message.includes("Loading chunk") ||
-      error.message.includes("Importing a module script failed");
+    const errorMsg = error?.message || error?.toString() || "";
+    const isTransientError =
+      errorMsg.includes("Failed to fetch dynamically imported module") ||
+      errorMsg.includes("Loading chunk") ||
+      errorMsg.includes("Importing a module script failed") ||
+      errorMsg.includes("useContext") ||
+      errorMsg.includes("useState") ||
+      errorMsg.includes("useEffect") ||
+      errorMsg.includes("Invalid hook call") ||
+      errorMsg.includes("ReactCurrentDispatcher") ||
+      errorMsg.includes("null (reading");
 
-    if (isChunkError) {
-      const hasReloaded = sessionStorage.getItem("portal_reload_on_error");
-      if (!hasReloaded) {
-        sessionStorage.setItem("portal_reload_on_error", "true");
+    if (isTransientError) {
+      const reloadCount = parseInt(sessionStorage.getItem("portal_reload_count") || "0", 10);
+      if (reloadCount < 2) {
+        sessionStorage.setItem("portal_reload_count", (reloadCount + 1).toString());
         window.location.reload();
+        return;
       }
     }
   }
 
   render() {
     if (this.state.hasError) {
-      const isChunkError =
-        this.state.error?.message.includes(
-          "Failed to fetch dynamically imported module"
-        ) ||
-        this.state.error?.message.includes("Loading chunk") ||
-        this.state.error?.message.includes("Importing a module script failed");
+      const errorMsg = this.state.error?.message || this.state.error?.toString() || "";
+      const isTransientError =
+        errorMsg.includes("Failed to fetch dynamically imported module") ||
+        errorMsg.includes("Loading chunk") ||
+        errorMsg.includes("Importing a module script failed") ||
+        errorMsg.includes("useContext") ||
+        errorMsg.includes("useState") ||
+        errorMsg.includes("useEffect") ||
+        errorMsg.includes("Invalid hook call") ||
+        errorMsg.includes("ReactCurrentDispatcher") ||
+        errorMsg.includes("null (reading");
 
       return (
         <div
@@ -48,11 +61,11 @@ export class PortalErrorBoundary extends React.Component<
           <h1
             style={{ color: "#e11d48", fontSize: "24px", fontWeight: "bold" }}
           >
-            Portal Crash Detected
+            Portal Recovery Mode
           </h1>
           <p style={{ color: "#64748b", marginTop: "10px" }}>
-            {isChunkError
-              ? "A new version of the portal is available. We're refreshing your page..."
+            {isTransientError
+              ? "Refreshing portal components..."
               : "Something went wrong while loading this page."}
           </p>
           <div
@@ -67,11 +80,12 @@ export class PortalErrorBoundary extends React.Component<
             }}
           >
             <pre style={{ margin: 0, fontSize: "12px", color: "#ef4444" }}>
-              {this.state.error?.message}
+              {errorMsg}
             </pre>
           </div>
           <button
             onClick={() => {
+              sessionStorage.removeItem("portal_reload_count");
               sessionStorage.removeItem("portal_reload_on_error");
               window.location.reload();
             }}
