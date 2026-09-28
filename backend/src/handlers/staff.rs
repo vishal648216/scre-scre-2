@@ -378,36 +378,58 @@ pub async fn transfer_staff(
 
     let staff_coll = db.collection::<Staff>("staff");
     let user_coll = db.collection::<User>("users");
+    let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
     let oid_opt = ObjectId::parse_str(&id).ok();
 
     let mut target_parent_oid = None;
     if let Ok(t_oid) = ObjectId::parse_str(&payload.target_center_id) {
         target_parent_oid = Some(t_oid);
+    } else {
+        let c_filter = doc! {
+            "$or": [
+                { "_id": &payload.target_center_id },
+                { "code": &payload.target_center_id },
+                { "name": &payload.target_center_name }
+            ]
+        };
+        if let Ok(Some(c)) = center_coll.find_one(c_filter, None).await {
+            if let Ok(c_oid) = c.get_object_id("_id") {
+                target_parent_oid = Some(c_oid);
+            }
+        }
     }
 
     let mut staff_name = id.clone();
     let mut transferred = false;
 
     // 1. Try staff collection
-    let staff_filter = if let Some(oid) = oid_opt {
-        doc! { "$or": [{ "_id": oid }, { "user_id": oid }] }
-    } else {
-        doc! { "$or": [{ "name": &id }, { "username": &id }, { "role_type": &id }] }
-    };
+    let mut staff_or = vec![
+        doc! { "_id": &id },
+        doc! { "user_id": &id },
+        doc! { "name": &id },
+        doc! { "username": &id },
+        doc! { "email": &id },
+        doc! { "phone": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        staff_or.push(doc! { "_id": oid });
+        staff_or.push(doc! { "user_id": oid });
+    }
+    let staff_filter = doc! { "$or": staff_or };
 
     if let Ok(Some(existing_staff)) = staff_coll.find_one(staff_filter.clone(), None).await {
         staff_name = existing_staff.name.clone();
         let target_centers = vec![payload.target_center_name.clone()];
         let mut update_doc = doc! {
-            "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
+            "assigned_centers": to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
             "updated_at": Utc::now().to_rfc3339()
         };
         if let Some(tp_oid) = target_parent_oid {
             update_doc.insert("parent_id", tp_oid);
         }
 
-        let _ = staff_coll.update_one(staff_filter, doc! { "$set": update_doc }, None).await;
+        let _ = staff_coll.update_one(staff_filter.clone(), doc! { "$set": update_doc }, None).await;
 
         if let Some(tp_oid) = target_parent_oid {
             let _ = user_coll.update_one(doc! { "_id": existing_staff.user_id }, doc! { "$set": { "parent_id": tp_oid } }, None).await;
@@ -415,12 +437,18 @@ pub async fn transfer_staff(
         transferred = true;
     }
 
-    // 2. Try users collection (for users with role staff)
-    let user_filter = if let Some(oid) = oid_opt {
-        doc! { "_id": oid }
-    } else {
-        doc! { "$or": [{ "username": &id }, { "full_name": &id }] }
-    };
+    // 2. Try users collection (for users with role staff or any matching user)
+    let mut user_or = vec![
+        doc! { "_id": &id },
+        doc! { "username": &id },
+        doc! { "full_name": &id },
+        doc! { "email": &id },
+        doc! { "phone": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        user_or.push(doc! { "_id": oid });
+    }
+    let user_filter = doc! { "$or": user_or };
 
     if let Ok(Some(existing_user)) = user_coll.find_one(user_filter.clone(), None).await {
         if staff_name == id {

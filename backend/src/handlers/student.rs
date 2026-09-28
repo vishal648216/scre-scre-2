@@ -3443,14 +3443,9 @@ pub async fn transfer_student(
 
     let user_coll = db.collection::<User>("users");
     let student_coll = db.collection::<mongodb::bson::Document>("students");
+    let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
     let oid_opt = ObjectId::parse_str(&id).ok();
-
-    let user_filter = if let Some(oid) = oid_opt {
-        doc! { "_id": oid, "role": "student" }
-    } else {
-        doc! { "$or": [{ "username": &id }, { "registration_number": &id }], "role": "student" }
-    };
 
     let target_code = payload.target_center_code.clone().unwrap_or_else(|| "HQ".to_string());
     let target_name = payload.target_center_name.clone().unwrap_or_else(|| "Target Center".to_string());
@@ -3459,6 +3454,35 @@ pub async fn transfer_student(
     if let Some(ref t_id) = payload.target_center_id {
         target_parent_oid = ObjectId::parse_str(t_id).ok();
     }
+    if target_parent_oid.is_none() {
+        let target_id_str = payload.target_center_id.as_deref().unwrap_or("");
+        let c_filter = doc! {
+            "$or": [
+                { "code": &target_code },
+                { "name": &target_name },
+                { "_id": target_id_str }
+            ]
+        };
+        if let Ok(Some(c)) = center_coll.find_one(c_filter, None).await {
+            if let Ok(c_oid) = c.get_object_id("_id") {
+                target_parent_oid = Some(c_oid);
+            }
+        }
+    }
+
+    let mut user_or = vec![
+        doc! { "_id": &id },
+        doc! { "username": &id },
+        doc! { "registration_number": &id },
+        doc! { "enrollment_number": &id },
+        doc! { "full_name": &id },
+        doc! { "email": &id },
+        doc! { "phone": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        user_or.push(doc! { "_id": oid });
+    }
+    let user_filter = doc! { "$or": user_or };
 
     let mut student_name = id.clone();
     let mut transferred = false;
@@ -3478,11 +3502,19 @@ pub async fn transfer_student(
     }
 
     // Also update student collection if separate document exists
-    let student_doc_filter = if let Some(oid) = oid_opt {
-        doc! { "$or": [{ "_id": oid }, { "user_id": oid }] }
-    } else {
-        doc! { "$or": [{ "username": &id }, { "registration_number": &id }] }
-    };
+    let mut student_doc_or = vec![
+        doc! { "_id": &id },
+        doc! { "user_id": &id },
+        doc! { "username": &id },
+        doc! { "registration_number": &id },
+        doc! { "enrollment_number": &id },
+        doc! { "name": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        student_doc_or.push(doc! { "_id": oid });
+        student_doc_or.push(doc! { "user_id": oid });
+    }
+    let student_doc_filter = doc! { "$or": student_doc_or };
 
     let mut s_set_doc = doc! {
         "center_code": &target_code,
@@ -3493,7 +3525,12 @@ pub async fn transfer_student(
         s_set_doc.insert("center_id", tp_oid);
         s_set_doc.insert("parent_id", tp_oid);
     }
-    let _ = student_coll.update_many(student_doc_filter, doc! { "$set": s_set_doc }, None).await;
+    let res = student_coll.update_many(student_doc_filter, doc! { "$set": s_set_doc }, None).await;
+    if let Ok(res_info) = res {
+        if res_info.matched_count > 0 {
+            transferred = true;
+        }
+    }
 
     if !transferred {
         return (

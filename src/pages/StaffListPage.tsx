@@ -223,8 +223,15 @@ const StaffListPage = () => {
     setTransferring(true);
 
     try {
-      const targetId = transferMember._id || transferMember.user_id || (transferMember as any).id || transferMember.username;
-      const res = await apiFetch(`/api/staff/${targetId}/transfer`, {
+      const extractId = (val: any): string => {
+        if (!val) return '';
+        if (typeof val === 'object') return val.$oid || val.toString() || '';
+        return String(val);
+      };
+      const rawId = transferMember._id || transferMember.user_id || (transferMember as any).id || transferMember.username;
+      const targetId = extractId(rawId);
+
+      const res = await apiFetch(`/api/staff/${encodeURIComponent(targetId)}/transfer`, {
         method: "POST",
         body: JSON.stringify({
           target_center_id: targetCenterId,

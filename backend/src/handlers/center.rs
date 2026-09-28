@@ -649,11 +649,16 @@ pub async fn transfer_center(
 
     let oid_opt = ObjectId::parse_str(&id).ok();
 
-    let center_filter = if let Some(oid) = oid_opt {
-        doc! { "_id": oid }
-    } else {
-        doc! { "$or": [{ "code": &id }, { "name": &id }] }
-    };
+    let mut center_or = vec![
+        doc! { "_id": &id },
+        doc! { "code": &id },
+        doc! { "name": &id },
+        doc! { "username": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        center_or.push(doc! { "_id": oid });
+    }
+    let center_filter = doc! { "$or": center_or };
 
     let existing = match center_coll.find_one(center_filter.clone(), None).await {
         Ok(Some(c)) => c,
@@ -688,7 +693,7 @@ pub async fn transfer_center(
 
     let c_code = existing.code.clone();
     let _ = user_coll.update_many(
-        doc! { "role": "center", "$or": [{ "center_code": &c_code }, { "username": &c_code }] },
+        doc! { "$or": [{ "center_code": &c_code }, { "username": &c_code }, { "code": &c_code }] },
         doc! { "$set": { "updated_at": Utc::now().to_rfc3339() } },
         None,
     ).await;
