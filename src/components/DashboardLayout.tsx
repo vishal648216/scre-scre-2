@@ -1412,7 +1412,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                     : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                                 )}
                               >
-                                <subItem.icon className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" />
+                                {subItem.icon ? <subItem.icon className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" /> : <List className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" />}
                                 <span className="tracking-tight uppercase">{t(subItem.label)}</span>
                               </Link>
                             )
@@ -1432,7 +1432,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                               }}
                               className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-300 group/sub"
                             >
-                              <item.icon className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" />
+                              {item.icon ? <item.icon className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" /> : <LayoutDashboard className="w-4 h-4 group-hover/sub:scale-110 transition-transform opacity-70" />}
                               <span className="tracking-tight uppercase">{t("Launch")} {t(item.label)}</span>
                             </Link>
                           )}
@@ -1460,7 +1460,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                   onMouseMove={(e) => setTooltipFromElement(t(item.label), e.currentTarget)}
                                   onMouseLeave={() => setCollapsedHoverTooltip(null)}
                                 >
-                                  <item.icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                                  {item.icon ? <item.icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" /> : <LayoutDashboard className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />}
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent side="right" align="start" className="w-64 ml-2 rounded-2xl p-2 bg-white/90 dark:bg-black/90 backdrop-blur-xl border-border/40 shadow-2xl">
@@ -1475,7 +1475,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                         onClick={subItem.onClick}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-primary transition-all"
                                       >
-                                        <subItem.icon className="w-4 h-4" />
+                                        {subItem.icon ? <subItem.icon className="w-4 h-4" /> : <List className="w-4 h-4" />}
                                         <span className="uppercase tracking-tight">{t(subItem.label)}</span>
                                       </button>
                                     ) : (
@@ -1483,7 +1483,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                         to={subItem.href || "#"}
                                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:text-primary transition-all"
                                       >
-                                        <subItem.icon className="w-4 h-4" />
+                                        {subItem.icon ? <subItem.icon className="w-4 h-4" /> : <List className="w-4 h-4" />}
                                         <span className="uppercase tracking-tight">{t(subItem.label)}</span>
                                       </Link>
                                     )}
@@ -1503,10 +1503,17 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                 )}
                               >
                                 <div className="flex items-center gap-3.5 z-10">
-                                  <item.icon className={cn(
-                                    "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
-                                    expandedMenus.includes(item.label) ? "text-primary" : "text-muted-foreground/70"
-                                  )} />
+                                  {item.icon ? (
+                                    <item.icon className={cn(
+                                      "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                                      expandedMenus.includes(item.label) ? "text-primary" : "text-muted-foreground/70"
+                                    )} />
+                                  ) : (
+                                    <LayoutDashboard className={cn(
+                                      "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                                      expandedMenus.includes(item.label) ? "text-primary" : "text-muted-foreground/70"
+                                    )} />
+                                  )}
                                   <span className="text-sm uppercase tracking-tight">{t(item.label)}</span>
                                 </div>
                                 {expandedMenus.includes(item.label) ? (
@@ -1531,7 +1538,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                           onClick={subItem.onClick}
                                           className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-white/70 dark:hover:bg-white/5 hover:shadow-sm transition-all duration-300 group"
                                         >
-                                          <subItem.icon className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" />
+                                          {subItem.icon ? <subItem.icon className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" /> : <List className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" />}
                                           <span className="tracking-tight">{t(subItem.label)}</span>
                                         </button>
                                       ) : (
@@ -1548,7 +1555,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                                             isRouteActive(subItem.href || "") ? "text-primary font-bold bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-white/70 dark:hover:bg-white/5"
                                           )}
                                         >
-                                          <subItem.icon className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" />
+                                          {subItem.icon ? <subItem.icon className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" /> : <List className="w-4 h-4 group-hover:scale-110 transition-transform opacity-70" />}
                                           <span className="tracking-tight">{t(subItem.label)}</span>
                                         </Link>
                                       )
@@ -1584,7 +1591,7 @@ const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => 
                             if (isCollapsed) setCollapsedHoverTooltip(null);
                           }}
                         >
-                          <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform opacity-70" />
+                          {item.icon ? <item.icon className="w-5 h-5 group-hover:scale-110 transition-transform opacity-70" /> : <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform opacity-70" />}
                           {!isCollapsed && <span className="text-sm font-semibold uppercase tracking-tight">{t(item.label)}</span>}
                         </Link>
                       )}

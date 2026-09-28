@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { X, LogIn, Loader2, User, Shield, Eye, EyeOff, ShieldAlert, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -196,7 +197,16 @@ const LoginPopup = ({ isOpen, onClose }: LoginPopupProps) => {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="login-password" className="text-[10px] font-black text-foreground uppercase tracking-[0.2em] ml-1">{t("Password")}</label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="login-password" className="text-[10px] font-black text-foreground uppercase tracking-[0.2em] ml-1">{t("Password")}</label>
+                <Link 
+                  to="/forgot-password" 
+                  onClick={onClose}
+                  className="text-[9px] font-black uppercase tracking-widest text-primary hover:underline"
+                >
+                  {t("Forgot Password?")}
+                </Link>
+              </div>
               <div className="relative group">
                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input

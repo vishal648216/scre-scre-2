@@ -192,6 +192,7 @@ const FranchiseSupportPage = lazy(() => import("./pages/FranchiseSupportPage"));
 const FranchiseInvestmentPage = lazy(() => import("./pages/FranchiseInvestmentPage"));
 const FranchiseApplyPage = lazy(() => import("./pages/FranchiseApplyPage"));
 const FranchiseLoginPage = lazy(() => import("./pages/FranchiseLoginPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ShopPage = lazy(() => import("./pages/ShopPage"));
 const StudentZonePage = lazy(() => import("./pages/StudentZonePage"));
 const GalleryPage = lazy(() => import("./pages/GalleryPage"));
@@ -338,6 +339,7 @@ const AppRoutes = () => {
       <Route path="/shop" element={<ShopPage />} />
       <Route path="/verification-letter" element={<VerificationLetterPage />} />
       <Route path="/franchise/login" element={<FranchiseLoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Dashboard Routes */}
       <Route

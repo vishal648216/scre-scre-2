@@ -1201,3 +1201,256 @@ pub async fn verify_magic_link(
     )
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordRequest {
+    pub identifier: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordWithOtpRequest {
+    pub identifier: String,
+    pub otp: String,
+    pub new_password: String,
+}
+
+pub async fn forgot_password_request_otp(
+    State(db): State<Database>,
+    headers: HeaderMap,
+    Json(payload): Json<ForgotPasswordRequest>,
+) -> (StatusCode, Json<AuthResponse>) {
+    let clean_id = payload.identifier.trim().to_lowercase();
+    if clean_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AuthResponse {
+                success: false,
+                message: "Please enter your Username, Email or Phone Number".to_string(),
+                otp: None,
+            }),
+        );
+    }
+
+    let users_coll = db.collection::<mongodb::bson::Document>("users");
+    let user_match = users_coll.find_one(
+        doc! {
+            "$or": [
+                { "username": &clean_id },
+                { "email": &clean_id },
+                { "phone": &clean_id },
+                { "enrollment_number": &clean_id },
+                { "roll_number": &clean_id }
+            ],
+            "is_deleted": false
+        },
+        None,
+    ).await;
+
+    let centers_coll = db.collection::<mongodb::bson::Document>("centers");
+    let center_match = centers_coll.find_one(
+        doc! {
+            "$or": [
+                { "code": &clean_id },
+                { "center_code": &clean_id },
+                { "email": &clean_id },
+                { "phone": &clean_id }
+            ]
+        },
+        None,
+    ).await;
+
+    let target_email = match (user_match, center_match) {
+        (Ok(Some(u)), _) => u.get_str("email").ok().map(|s| s.to_string()),
+        (_, Ok(Some(c))) => c.get_str("email").ok().map(|s| s.to_string()),
+        _ => None,
+    };
+
+    let recipient_email = target_email.unwrap_or_else(|| clean_id.clone());
+
+    let otp: String = rand::thread_rng().gen_range(100000..999999).to_string();
+    let otp_hash = match hash(&otp, DEFAULT_COST) {
+        Ok(h) => h,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    success: false,
+                    message: "Failed to generate security code".to_string(),
+                    otp: None,
+                }),
+            );
+        }
+    };
+
+    let expires_at = Utc::now() + ChronoDuration::minutes(15);
+    let otp_doc = EmailOtp {
+        id: None,
+        email: clean_id.clone(),
+        otp_hash,
+        expires_at,
+        verified: false,
+        created_at: Utc::now(),
+    };
+
+    let otps_coll = db.collection::<EmailOtp>("email_otps");
+    let _ = otps_coll.delete_many(doc! { "email": &clean_id }, None).await;
+    let _ = otps_coll.insert_one(otp_doc, None).await;
+
+    match send_otp_email(&recipient_email, &otp).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                success: true,
+                message: format!("Security code sent to your email! OTP: {}", otp),
+                otp: Some(otp),
+            }),
+        ),
+        Err(_) => (
+            StatusCode::OK,
+            Json(AuthResponse {
+                success: true,
+                message: format!("Security code generated! OTP: {}", otp),
+                otp: Some(otp),
+            }),
+        ),
+    }
+}
+
+pub async fn forgot_password_reset(
+    State(db): State<Database>,
+    Json(payload): Json<ResetPasswordWithOtpRequest>,
+) -> (StatusCode, Json<AuthResponse>) {
+    let clean_id = payload.identifier.trim().to_lowercase();
+    let clean_otp = payload.otp.trim();
+    let clean_pass = payload.new_password.trim();
+
+    if clean_id.is_empty() || clean_otp.is_empty() || clean_pass.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AuthResponse {
+                success: false,
+                message: "All fields are required".to_string(),
+                otp: None,
+            }),
+        );
+    }
+
+    if clean_pass.len() < 4 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AuthResponse {
+                success: false,
+                message: "Password must be at least 4 characters long".to_string(),
+                otp: None,
+            }),
+        );
+    }
+
+    let otps_coll = db.collection::<EmailOtp>("email_otps");
+    let otp_record = match otps_coll
+        .find_one(doc! { "email": &clean_id, "verified": false }, None)
+        .await
+    {
+        Ok(Some(r)) => r,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(AuthResponse {
+                    success: false,
+                    message: "No active verification code found for this account".to_string(),
+                    otp: None,
+                }),
+            );
+        }
+    };
+
+    if Utc::now() > otp_record.expires_at {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AuthResponse {
+                success: false,
+                message: "Verification code has expired. Please request a new code.".to_string(),
+                otp: None,
+            }),
+        );
+    }
+
+    if !verify(clean_otp, &otp_record.otp_hash).unwrap_or(false) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(AuthResponse {
+                success: false,
+                message: "Invalid verification code".to_string(),
+                otp: None,
+            }),
+        );
+    }
+
+    if let Some(id) = otp_record.id {
+        let _ = otps_coll.update_one(doc! { "_id": id }, doc! { "$set": { "verified": true } }, None).await;
+    }
+
+    let new_hash = match hash(clean_pass, DEFAULT_COST) {
+        Ok(h) => h,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    success: false,
+                    message: "Failed to process new password".to_string(),
+                    otp: None,
+                }),
+            );
+        }
+    };
+
+    let users_coll = db.collection::<mongodb::bson::Document>("users");
+    let _ = users_coll.update_many(
+        doc! {
+            "$or": [
+                { "username": &clean_id },
+                { "email": &clean_id },
+                { "phone": &clean_id },
+                { "enrollment_number": &clean_id },
+                { "roll_number": &clean_id }
+            ]
+        },
+        doc! {
+            "$set": {
+                "password_hash": &new_hash,
+                "raw_password": clean_pass,
+                "updated_at": Utc::now()
+            }
+        },
+        None,
+    ).await;
+
+    let centers_coll = db.collection::<mongodb::bson::Document>("centers");
+    let _ = centers_coll.update_many(
+        doc! {
+            "$or": [
+                { "code": &clean_id },
+                { "center_code": &clean_id },
+                { "email": &clean_id },
+                { "phone": &clean_id }
+            ]
+        },
+        doc! {
+            "$set": {
+                "password": clean_pass,
+                "updated_at": Utc::now()
+            }
+        },
+        None,
+    ).await;
+
+    (
+        StatusCode::OK,
+        Json(AuthResponse {
+            success: true,
+            message: "Password reset successfully! You can now log in with your new password.".to_string(),
+            otp: None,
+        }),
+    )
+}
+
+
