@@ -657,8 +657,13 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       icon: Paperclip,
       roles: ["admin", "superadmin", "center"],
       subItems: [
-        { icon: Award, label: "Generate Certificate", href: "/dashboard/attachments/generate/certificate" },
-        { icon: PenTool, label: "Certificate Designer", href: "/dashboard/attachments/certificate-designer" },
+        { icon: Award, label: "Issue Certificates & Marksheets", href: "/dashboard/attachments/generate/certificate" },
+        { icon: PenTool, label: "Canvas Template Designer", href: "/dashboard/attachments/certificate-designer" },
+        { icon: FileText, label: "Student & Staff ID Cards", href: "/dashboard/attachment/idcards" },
+        { icon: CheckSquare, label: "Document Requests & Approvals", href: "/dashboard/attachments/approvals", roles: ["admin", "superadmin"] },
+        { icon: Send, label: "Request Document", href: "/dashboard/students/requests", roles: ["center"] },
+        { icon: List, label: "Issued Documents Log", href: "/dashboard/attachments/certificates" },
+        { icon: ShieldCheck, label: "Verification Gateway", href: "/verification-letter" },
       ]
     },
     {
