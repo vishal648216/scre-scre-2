@@ -616,16 +616,33 @@ pub async fn reject_center_registration(
 
 #[derive(Debug, Deserialize)]
 pub struct CenterTransferPayload {
+    pub center_id: Option<String>,
     pub target_region_id: Option<String>,
     pub target_region_name: Option<String>,
     pub target_parent_id: Option<String>,
     pub transfer_reason: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CenterMergePayload {
+    pub source_center_id: String,
+    pub target_center_id: String,
+    pub merge_reason: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct CenterTransferResponse {
     pub success: bool,
     pub message: String,
+}
+
+pub async fn transfer_center_body(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CenterTransferPayload>,
+) -> (StatusCode, Json<CenterTransferResponse>) {
+    let id = payload.center_id.clone().unwrap_or_default();
+    transfer_center(State(db), claims, Path(id), Json(payload)).await
 }
 
 pub async fn transfer_center(
@@ -647,13 +664,22 @@ pub async fn transfer_center(
     let center_coll = db.collection::<Center>("centers");
     let user_coll = db.collection::<User>("users");
 
-    let oid_opt = ObjectId::parse_str(&id).ok();
+    let mut raw_id = id.trim_start_matches('@').to_string();
+    if (raw_id.is_empty() || raw_id == ":id" || raw_id == "transfer") && payload.center_id.is_some() {
+        raw_id = payload.center_id.as_deref().unwrap_or("").trim_start_matches('@').to_string();
+    }
+
+    let oid_opt = ObjectId::parse_str(&raw_id).or_else(|_| ObjectId::parse_str(&id)).ok();
 
     let mut center_or = vec![
         doc! { "_id": &id },
+        doc! { "_id": &raw_id },
         doc! { "code": &id },
+        doc! { "code": &raw_id },
         doc! { "name": &id },
+        doc! { "name": &raw_id },
         doc! { "username": &id },
+        doc! { "username": &raw_id },
     ];
     if let Some(oid) = oid_opt {
         center_or.push(doc! { "_id": oid });
@@ -703,6 +729,159 @@ pub async fn transfer_center(
         Json(CenterTransferResponse {
             success: true,
             message: format!("Center '{}' ({}) transferred / re-allocated successfully!", existing.name, existing.code),
+        }),
+    )
+}
+
+pub async fn merge_center(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CenterMergePayload>,
+) -> (StatusCode, Json<CenterTransferResponse>) {
+    if !require_admin(&claims) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CenterTransferResponse {
+                success: false,
+                message: "Forbidden: SuperAdmin/Admin access required".to_string(),
+            }),
+        );
+    }
+
+    let center_coll = db.collection::<Center>("centers");
+    let user_coll = db.collection::<User>("users");
+    let student_coll = db.collection::<mongodb::bson::Document>("students");
+    let staff_coll = db.collection::<mongodb::bson::Document>("staff");
+
+    let src_clean = payload.source_center_id.trim_start_matches('@').to_string();
+    let src_oid = ObjectId::parse_str(&src_clean).or_else(|_| ObjectId::parse_str(&payload.source_center_id)).ok();
+
+    let mut src_or = vec![
+        doc! { "_id": &payload.source_center_id },
+        doc! { "_id": &src_clean },
+        doc! { "code": &payload.source_center_id },
+        doc! { "code": &src_clean },
+        doc! { "name": &payload.source_center_id },
+        doc! { "name": &src_clean },
+    ];
+    if let Some(oid) = src_oid {
+        src_or.push(doc! { "_id": oid });
+    }
+    let src_center = match center_coll.find_one(doc! { "$or": src_or }, None).await {
+        Ok(Some(c)) => c,
+        _ => return (
+            StatusCode::NOT_FOUND,
+            Json(CenterTransferResponse {
+                success: false,
+                message: format!("Source center '{}' not found", payload.source_center_id),
+            }),
+        ),
+    };
+
+    let tgt_clean = payload.target_center_id.trim_start_matches('@').to_string();
+    let tgt_oid = ObjectId::parse_str(&tgt_clean).or_else(|_| ObjectId::parse_str(&payload.target_center_id)).ok();
+
+    let mut tgt_or = vec![
+        doc! { "_id": &payload.target_center_id },
+        doc! { "_id": &tgt_clean },
+        doc! { "code": &payload.target_center_id },
+        doc! { "code": &tgt_clean },
+        doc! { "name": &payload.target_center_id },
+        doc! { "name": &tgt_clean },
+    ];
+    if let Some(oid) = tgt_oid {
+        tgt_or.push(doc! { "_id": oid });
+    }
+    let tgt_center = match center_coll.find_one(doc! { "$or": tgt_or }, None).await {
+        Ok(Some(c)) => c,
+        _ => return (
+            StatusCode::NOT_FOUND,
+            Json(CenterTransferResponse {
+                success: false,
+                message: format!("Target center '{}' not found", payload.target_center_id),
+            }),
+        ),
+    };
+
+    let src_code = src_center.code.clone();
+    let tgt_code = tgt_center.code.clone();
+    let tgt_name = tgt_center.name.clone();
+    let tgt_parent_oid = tgt_center.id;
+
+    // 1. Move all students from source center to target center
+    let mut student_user_set = doc! {
+        "center_code": &tgt_code,
+        "center_name": &tgt_name,
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = tgt_parent_oid {
+        student_user_set.insert("parent_id", tp_oid);
+    }
+    let _ = user_coll.update_many(
+        doc! { "role": "student", "$or": [{ "center_code": &src_code }, { "parent_id": src_center.id }] },
+        doc! { "$set": student_user_set.clone() },
+        None,
+    ).await;
+
+    let mut student_doc_set = doc! {
+        "center_code": &tgt_code,
+        "center_name": &tgt_name,
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = tgt_parent_oid {
+        student_doc_set.insert("center_id", tp_oid);
+        student_doc_set.insert("parent_id", tp_oid);
+    }
+    let _ = student_coll.update_many(
+        doc! { "$or": [{ "center_code": &src_code }, { "center_id": src_center.id }, { "parent_id": src_center.id }] },
+        doc! { "$set": student_doc_set },
+        None,
+    ).await;
+
+    // 2. Move all staff from source center to target center
+    let target_centers = vec![tgt_name.clone()];
+    let mut staff_set = doc! {
+        "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = tgt_parent_oid {
+        staff_set.insert("parent_id", tp_oid);
+    }
+    let _ = staff_coll.update_many(
+        doc! { "$or": [{ "parent_id": src_center.id }, { "assigned_centers": &src_center.name }] },
+        doc! { "$set": staff_set },
+        None,
+    ).await;
+
+    if let Some(tp_oid) = tgt_parent_oid {
+        let _ = user_coll.update_many(
+            doc! { "role": "staff", "parent_id": src_center.id },
+            doc! { "$set": { "parent_id": tp_oid, "updated_at": Utc::now().to_rfc3339() } },
+            None,
+        ).await;
+    }
+
+    // 3. Mark source center status as Merged
+    let mut update_src_doc = doc! {
+        "status": "merged",
+        "active": false,
+        "merged_into_code": &tgt_code,
+        "merged_into_name": &tgt_name,
+        "updated_at": Utc::now().to_rfc3339()
+    };
+    if let Some(tp_oid) = tgt_parent_oid {
+        update_src_doc.insert("parent_id", tp_oid);
+    }
+    let _ = center_coll.update_one(doc! { "_id": src_center.id }, doc! { "$set": update_src_doc }, None).await;
+
+    (
+        StatusCode::OK,
+        Json(CenterTransferResponse {
+            success: true,
+            message: format!(
+                "Center '{}' ({}) successfully merged into '{}' ({})! All students and staff transferred.",
+                src_center.name, src_code, tgt_name, tgt_code
+            ),
         }),
     )
 }

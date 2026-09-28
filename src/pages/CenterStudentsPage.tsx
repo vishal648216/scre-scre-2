@@ -187,9 +187,11 @@ const CenterStudentsPage = () => {
     try {
       const rawSid = transferStudentItem._id || (transferStudentItem as any).id || (transferStudentItem as any).user_id || transferStudentItem.username || (transferStudentItem as any).registration_number;
       const sid = toId(rawSid);
-      const res = await apiFetch(`/api/students/${encodeURIComponent(sid)}/transfer`, {
+      const url = sid ? `/api/students/${encodeURIComponent(sid)}/transfer` : `/api/students/transfer`;
+      const res = await apiFetch(url, {
         method: "POST",
         body: JSON.stringify({
+          student_id: sid || transferStudentItem.username,
           target_center_id: targetCenterId,
           target_center_code: targetCenterCode,
           target_center_name: targetCenterName,

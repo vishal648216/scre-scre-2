@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { School, Search, ShieldCheck, ShieldAlert, MapPin, Phone, Filter, Loader2, Plus, Edit, Trash2, X, Save, FileText, Image as ImageIcon, Clock, Landmark, Laptop, EyeOff, BookOpen, CheckCircle, XCircle, Eye, CheckCircle2, Building, User, Mail, Globe, Percent } from "lucide-react";
+import { School, Search, ShieldCheck, ShieldAlert, MapPin, Phone, Filter, Loader2, Plus, Edit, Trash2, X, Save, FileText, Image as ImageIcon, Clock, Landmark, Laptop, EyeOff, BookOpen, CheckCircle, XCircle, Eye, CheckCircle2, Building, User, Mail, Globe, Percent, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -137,6 +137,73 @@ const CenterListPage = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otpValue, setOtpValue] = useState("");
+
+  // Transfer / Merge Center Modal State
+  const [transferCenterItem, setTransferCenterItem] = useState<Center | null>(null);
+  const [transferMode, setTransferMode] = useState<"reallocate" | "merge">("reallocate");
+  const [targetRegionName, setTargetRegionName] = useState("");
+  const [targetParentId, setTargetParentId] = useState("");
+  const [targetMergeCenterId, setTargetMergeCenterId] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [transferringCenter, setTransferringCenter] = useState(false);
+
+  const openTransferCenterModal = (c: Center) => {
+    setTransferCenterItem(c);
+    setTransferMode("reallocate");
+    setTargetRegionName(c.state || c.location?.state || "surat");
+    setTargetParentId("");
+    setTargetMergeCenterId("");
+    setTransferReason("Administrative Center Re-allocation");
+  };
+
+  const handleCenterTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferCenterItem) return;
+    setTransferringCenter(true);
+
+    try {
+      const cid = toId(transferCenterItem._id) || transferCenterItem.code;
+      let res;
+      if (transferMode === "reallocate") {
+        res = await apiFetch(`/api/centers/${encodeURIComponent(cid)}/transfer`, {
+          method: "POST",
+          body: JSON.stringify({
+            center_id: cid,
+            target_region_name: targetRegionName,
+            target_parent_id: targetParentId || undefined,
+            transfer_reason: transferReason
+          })
+        });
+      } else {
+        if (!targetMergeCenterId) {
+          toast.error(t("Please select a target center to merge into."));
+          setTransferringCenter(false);
+          return;
+        }
+        res = await apiFetch(`/api/centers/merge`, {
+          method: "POST",
+          body: JSON.stringify({
+            source_center_id: cid,
+            target_center_id: targetMergeCenterId,
+            merge_reason: transferReason
+          })
+        });
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        toast.success(data.message || t("Center transferred / merged successfully!"));
+        setTransferCenterItem(null);
+        fetchCenters();
+      } else {
+        toast.error(data.message || t("Failed to execute transfer / merge"));
+      }
+    } catch {
+      toast.error(t("Network error during transfer / merge"));
+    } finally {
+      setTransferringCenter(false);
+    }
+  };
 
   const fetchCenters = async () => {
     setLoading(true);
@@ -883,6 +950,13 @@ const CenterListPage = () => {
                               className="p-2 border border-border hover:border-primary hover:text-primary transition-all rounded-none"
                             >
                               <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openTransferCenterModal(center)}
+                              className="p-2 border border-border hover:border-purple-500 hover:text-purple-500 transition-all rounded-none"
+                              title={t("Transfer / Merge Center Branch")}
+                            >
+                              <ArrowRightLeft className="w-4 h-4 text-purple-400" />
                             </button>
                             <button
                               onClick={() => handleDelete(center._id)}
@@ -2580,6 +2654,143 @@ const CenterListPage = () => {
                 Download PDF
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* CENTER TRANSFER & MERGE MODAL */}
+        <Dialog open={!!transferCenterItem} onOpenChange={(open) => !open && setTransferCenterItem(null)}>
+          <DialogContent className="max-w-md bg-slate-950 text-white border-purple-500/40 rounded-3xl p-6 shadow-2xl z-[20000]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-purple-300">
+                <ArrowRightLeft className="w-5 h-5 text-purple-400" />
+                {t("Transfer / Merge Center Branch")}
+              </DialogTitle>
+              <p className="text-xs text-slate-400">
+                {transferCenterItem?.name} ({transferCenterItem?.code})
+              </p>
+            </DialogHeader>
+
+            <div className="flex border-b border-slate-800 my-2">
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all border-b-2",
+                  transferMode === "reallocate"
+                    ? "border-purple-500 text-purple-300"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                )}
+                onClick={() => setTransferMode("reallocate")}
+              >
+                {t("1. Transfer Location")}
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all border-b-2",
+                  transferMode === "merge"
+                    ? "border-purple-500 text-purple-300"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                )}
+                onClick={() => setTransferMode("merge")}
+              >
+                {t("2. Merge into Center")}
+              </button>
+            </div>
+
+            <form onSubmit={handleCenterTransferSubmit} className="space-y-4 text-xs mt-2">
+              {transferMode === "reallocate" ? (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      {t("Target Region / State Name *")}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
+                      value={targetRegionName}
+                      onChange={(e) => setTargetRegionName(e.target.value)}
+                      placeholder="e.g. Gujarat / Maharashtra / Delhi"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      {t("Target Parent Center (Optional HQ/Regional Node)")}
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
+                      value={targetParentId}
+                      onChange={(e) => setTargetParentId(e.target.value)}
+                    >
+                      <option value="">{t("HQ Direct / Independent Node")}</option>
+                      {centers
+                        .filter((c) => c._id !== transferCenterItem?._id && c.code !== transferCenterItem?.code)
+                        .map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name} ({c.code})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    {t("Target Center to Merge Into *")}
+                  </label>
+                  <select
+                    required
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
+                    value={targetMergeCenterId}
+                    onChange={(e) => setTargetMergeCenterId(e.target.value)}
+                  >
+                    <option value="">{t("Select Destination Center...")}</option>
+                    {centers
+                      .filter((c) => c._id !== transferCenterItem?._id && c.code !== transferCenterItem?.code)
+                      .map((c) => (
+                        <option key={c._id} value={c._id || c.code}>
+                          {c.name} ({c.code})
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[10px] text-amber-400/90 mt-1">
+                    ⚠️ {t("All students and staff of this center will be automatically transferred to the target center.")}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {t("Remarks / Justification")}
+                </label>
+                <textarea
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none resize-none"
+                  value={transferReason}
+                  onChange={(e) => setTransferReason(e.target.value)}
+                  placeholder="Enter transfer notes or administrative reason..."
+                />
+              </div>
+
+              <DialogFooter className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTransferCenterItem(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase"
+                >
+                  {t("Cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={transferringCenter}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-purple-500/25"
+                >
+                  {transferringCenter ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                  {transferMode === "reallocate" ? t("Confirm Location Transfer") : t("Confirm Center Merge")}
+                </button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

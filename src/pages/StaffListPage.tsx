@@ -231,9 +231,11 @@ const StaffListPage = () => {
       const rawId = transferMember._id || transferMember.user_id || (transferMember as any).id || transferMember.username;
       const targetId = extractId(rawId);
 
-      const res = await apiFetch(`/api/staff/${encodeURIComponent(targetId)}/transfer`, {
+      const url = targetId ? `/api/staff/${encodeURIComponent(targetId)}/transfer` : `/api/staff/transfer`;
+      const res = await apiFetch(url, {
         method: "POST",
         body: JSON.stringify({
+          staff_id: targetId || transferMember.username,
           target_center_id: targetCenterId,
           target_center_name: targetCenterName,
           transfer_reason: transferReason

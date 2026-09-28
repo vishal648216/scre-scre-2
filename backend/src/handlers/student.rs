@@ -3413,6 +3413,7 @@ pub async fn public_verify_student(
 
 #[derive(Debug, Deserialize)]
 pub struct StudentTransferPayload {
+    pub student_id: Option<String>,
     pub target_center_id: Option<String>,
     pub target_center_code: Option<String>,
     pub target_center_name: Option<String>,
@@ -3423,6 +3424,15 @@ pub struct StudentTransferPayload {
 pub struct StudentTransferResponse {
     pub success: bool,
     pub message: String,
+}
+
+pub async fn transfer_student_body(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<StudentTransferPayload>,
+) -> (StatusCode, Json<StudentTransferResponse>) {
+    let id = payload.student_id.clone().unwrap_or_default();
+    transfer_student(State(db), claims, Path(id), Json(payload)).await
 }
 
 pub async fn transfer_student(
@@ -3445,7 +3455,10 @@ pub async fn transfer_student(
     let student_coll = db.collection::<mongodb::bson::Document>("students");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
-    let clean_id = id.trim_start_matches('@').to_string();
+    let mut clean_id = id.trim_start_matches('@').to_string();
+    if (clean_id.is_empty() || clean_id == ":id" || clean_id == "transfer") && payload.student_id.is_some() {
+        clean_id = payload.student_id.as_deref().unwrap_or("").trim_start_matches('@').to_string();
+    }
     let oid_opt = ObjectId::parse_str(&clean_id).or_else(|_| ObjectId::parse_str(&id)).ok();
 
     let target_code = payload.target_center_code.clone().unwrap_or_else(|| "HQ".to_string());

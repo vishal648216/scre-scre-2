@@ -355,9 +355,19 @@ pub async fn get_staff_list(
 
 #[derive(Debug, Deserialize)]
 pub struct StaffTransferPayload {
+    pub staff_id: Option<String>,
     pub target_center_id: String,
     pub target_center_name: String,
     pub transfer_reason: Option<String>,
+}
+
+pub async fn transfer_staff_body(
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<StaffTransferPayload>,
+) -> (StatusCode, Json<StaffResponse>) {
+    let id = payload.staff_id.clone().unwrap_or_default();
+    transfer_staff(State(db), claims, Path(id), Json(payload)).await
 }
 
 pub async fn transfer_staff(
@@ -380,7 +390,11 @@ pub async fn transfer_staff(
     let user_coll = db.collection::<User>("users");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
-    let clean_id = id.trim_start_matches('@').to_string();
+    let mut clean_id = id.trim_start_matches('@').to_string();
+    if (clean_id.is_empty() || clean_id == ":id" || clean_id == "transfer") && payload.staff_id.is_some() {
+        clean_id = payload.staff_id.as_deref().unwrap_or("").trim_start_matches('@').to_string();
+    }
+
     let oid_opt = ObjectId::parse_str(&clean_id).or_else(|_| ObjectId::parse_str(&id)).ok();
 
     let mut target_parent_oid = None;
