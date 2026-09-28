@@ -569,11 +569,20 @@ pub async fn get_all_users(
     let mut users = Vec::new();
     while let Some(result) = cursor.next().await {
         if let Ok(user) = result {
+            let full_name = user.full_name
+                .or_else(|| {
+                    let combined = format!("{} {}", user.first_name.as_deref().unwrap_or(""), user.last_name.as_deref().unwrap_or("")).trim().to_string();
+                    if combined.is_empty() { None } else { Some(combined) }
+                })
+                .unwrap_or_else(|| user.username.clone());
+
+            let email = user.email.or_else(|| Some(format!("{}@scre.edu.in", user.username.to_lowercase())));
+
             users.push(UserListItem {
                 id: user.id.unwrap_or_default().to_hex(),
                 username: user.username,
-                full_name: user.full_name,
-                email: user.email,
+                full_name: Some(full_name),
+                email,
                 phone: user.phone,
                 password: user.raw_password.clone(),
                 raw_password: user.raw_password,

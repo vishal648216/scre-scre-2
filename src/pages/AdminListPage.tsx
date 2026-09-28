@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Users, UserCheck, UserMinus, Search, Shield, ShieldOff, Clock, Filter, 
-  Loader2, Trash2, Edit, Eye, Download, Key, Mail, Phone, CheckCircle2, XCircle, X
+  Loader2, Trash2, Edit, Eye, EyeOff, Download, Key, Mail, Phone, CheckCircle2, XCircle, X
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -157,9 +157,10 @@ const AdminListPage = () => {
   const openEditModal = (admin: AdminUser) => {
     setEditingAdmin(admin);
     const isAct = admin.active !== undefined ? admin.active : admin.status === "Active";
+    const existingName = admin.full_name || `${admin.first_name || ""} ${admin.last_name || ""}`.trim();
     setEditForm({
       username: admin.username || "",
-      full_name: admin.full_name || `${admin.first_name || ""} ${admin.last_name || ""}`.trim(),
+      full_name: existingName || admin.username || "",
       email: admin.email || "",
       phone: admin.phone || "",
       role: admin.role?.toLowerCase() || "admin",
