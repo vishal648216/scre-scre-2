@@ -380,7 +380,8 @@ pub async fn transfer_staff(
     let user_coll = db.collection::<User>("users");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
-    let oid_opt = ObjectId::parse_str(&id).ok();
+    let clean_id = id.trim_start_matches('@').to_string();
+    let oid_opt = ObjectId::parse_str(&clean_id).or_else(|_| ObjectId::parse_str(&id)).ok();
 
     let mut target_parent_oid = None;
     if let Ok(t_oid) = ObjectId::parse_str(&payload.target_center_id) {
@@ -400,15 +401,19 @@ pub async fn transfer_staff(
         }
     }
 
-    let mut staff_name = id.clone();
+    let mut staff_name = clean_id.clone();
     let mut transferred = false;
 
     // 1. Try staff collection
     let mut staff_or = vec![
         doc! { "_id": &id },
+        doc! { "_id": &clean_id },
         doc! { "user_id": &id },
+        doc! { "user_id": &clean_id },
         doc! { "name": &id },
+        doc! { "name": &clean_id },
         doc! { "username": &id },
+        doc! { "username": &clean_id },
         doc! { "email": &id },
         doc! { "phone": &id },
     ];
@@ -440,8 +445,11 @@ pub async fn transfer_staff(
     // 2. Try users collection (for users with role staff or any matching user)
     let mut user_or = vec![
         doc! { "_id": &id },
+        doc! { "_id": &clean_id },
         doc! { "username": &id },
+        doc! { "username": &clean_id },
         doc! { "full_name": &id },
+        doc! { "full_name": &clean_id },
         doc! { "email": &id },
         doc! { "phone": &id },
     ];
@@ -451,7 +459,7 @@ pub async fn transfer_staff(
     let user_filter = doc! { "$or": user_or };
 
     if let Ok(Some(existing_user)) = user_coll.find_one(user_filter.clone(), None).await {
-        if staff_name == id {
+        if staff_name == id || staff_name == clean_id {
             staff_name = existing_user.full_name.clone().unwrap_or(existing_user.username.clone());
         }
         if let Some(tp_oid) = target_parent_oid {

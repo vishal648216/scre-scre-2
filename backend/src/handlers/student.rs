@@ -3445,7 +3445,8 @@ pub async fn transfer_student(
     let student_coll = db.collection::<mongodb::bson::Document>("students");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
-    let oid_opt = ObjectId::parse_str(&id).ok();
+    let clean_id = id.trim_start_matches('@').to_string();
+    let oid_opt = ObjectId::parse_str(&clean_id).or_else(|_| ObjectId::parse_str(&id)).ok();
 
     let target_code = payload.target_center_code.clone().unwrap_or_else(|| "HQ".to_string());
     let target_name = payload.target_center_name.clone().unwrap_or_else(|| "Target Center".to_string());
@@ -3472,10 +3473,15 @@ pub async fn transfer_student(
 
     let mut user_or = vec![
         doc! { "_id": &id },
+        doc! { "_id": &clean_id },
         doc! { "username": &id },
+        doc! { "username": &clean_id },
         doc! { "registration_number": &id },
+        doc! { "registration_number": &clean_id },
         doc! { "enrollment_number": &id },
+        doc! { "enrollment_number": &clean_id },
         doc! { "full_name": &id },
+        doc! { "full_name": &clean_id },
         doc! { "email": &id },
         doc! { "phone": &id },
     ];
@@ -3484,7 +3490,7 @@ pub async fn transfer_student(
     }
     let user_filter = doc! { "$or": user_or };
 
-    let mut student_name = id.clone();
+    let mut student_name = clean_id.clone();
     let mut transferred = false;
 
     if let Ok(Some(u)) = user_coll.find_one(user_filter.clone(), None).await {
@@ -3504,11 +3510,17 @@ pub async fn transfer_student(
     // Also update student collection if separate document exists
     let mut student_doc_or = vec![
         doc! { "_id": &id },
+        doc! { "_id": &clean_id },
         doc! { "user_id": &id },
+        doc! { "user_id": &clean_id },
         doc! { "username": &id },
+        doc! { "username": &clean_id },
         doc! { "registration_number": &id },
+        doc! { "registration_number": &clean_id },
         doc! { "enrollment_number": &id },
+        doc! { "enrollment_number": &clean_id },
         doc! { "name": &id },
+        doc! { "name": &clean_id },
     ];
     if let Some(oid) = oid_opt {
         student_doc_or.push(doc! { "_id": oid });

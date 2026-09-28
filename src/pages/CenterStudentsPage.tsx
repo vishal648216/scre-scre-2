@@ -36,11 +36,19 @@ interface CenterBranch {
 }
 
 const toId = (v: unknown): string => {
-  if (typeof v === "string") return v;
-  if (v && typeof v === "object" && "$oid" in (v as object)) return (v as { $oid: string }).$oid;
-  if (v && typeof v === "object" && "_id" in (v as object)) return toId((v as any)._id);
-  if (v && typeof v === "object") return JSON.stringify(v);
-  return String(v ?? "");
+  if (!v) return "";
+  if (typeof v === "string") return v.replace(/^@/, "");
+  if (typeof v === "object") {
+    const obj = v as any;
+    if (obj.$oid) return String(obj.$oid).replace(/^@/, "");
+    if (obj._id) return toId(obj._id);
+    if (obj.id) return toId(obj.id);
+    if (obj.user_id) return toId(obj.user_id);
+    if (obj.toString && typeof obj.toString === "function" && obj.toString() !== "[object Object]") {
+      return obj.toString().replace(/^@/, "");
+    }
+  }
+  return String(v ?? "").replace(/^@/, "");
 };
 
 const CenterStudentsPage = () => {
@@ -213,8 +221,9 @@ const CenterStudentsPage = () => {
         // Map id to _id, full_name to fullName for frontend consistency
         const mapped = data.map((s: any) => ({
           ...s,
-          _id: s.id,
-          fullName: s.fullName || s.full_name
+          _id: s._id || s.id || s.user_id,
+          id: s.id || s._id || s.user_id,
+          fullName: s.fullName || s.full_name || s.name
         }));
         setStudents(mapped);
       }
