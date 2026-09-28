@@ -386,8 +386,8 @@ pub async fn transfer_staff(
         );
     }
 
-    let staff_coll = db.collection::<Staff>("staff");
-    let user_coll = db.collection::<User>("users");
+    let staff_coll = db.collection::<mongodb::bson::Document>("staff");
+    let user_coll = db.collection::<mongodb::bson::Document>("users");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
     let mut clean_id = id.trim_start_matches('@').to_string();
@@ -438,7 +438,7 @@ pub async fn transfer_staff(
     let staff_filter = doc! { "$or": staff_or };
 
     if let Ok(Some(existing_staff)) = staff_coll.find_one(staff_filter.clone(), None).await {
-        staff_name = existing_staff.name.clone();
+        staff_name = existing_staff.get_str("name").unwrap_or(&clean_id).to_string();
         let target_centers = vec![payload.target_center_name.clone()];
         let mut update_doc = doc! {
             "assigned_centers": to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
@@ -451,7 +451,9 @@ pub async fn transfer_staff(
         let _ = staff_coll.update_one(staff_filter.clone(), doc! { "$set": update_doc }, None).await;
 
         if let Some(tp_oid) = target_parent_oid {
-            let _ = user_coll.update_one(doc! { "_id": existing_staff.user_id }, doc! { "$set": { "parent_id": tp_oid } }, None).await;
+            if let Ok(u_oid) = existing_staff.get_object_id("user_id") {
+                let _ = user_coll.update_one(doc! { "_id": u_oid }, doc! { "$set": { "parent_id": tp_oid } }, None).await;
+            }
         }
         transferred = true;
     }
@@ -474,7 +476,7 @@ pub async fn transfer_staff(
 
     if let Ok(Some(existing_user)) = user_coll.find_one(user_filter.clone(), None).await {
         if staff_name == id || staff_name == clean_id {
-            staff_name = existing_user.full_name.clone().unwrap_or(existing_user.username.clone());
+            staff_name = existing_user.get_str("full_name").or_else(|_| existing_user.get_str("username")).unwrap_or(&clean_id).to_string();
         }
         if let Some(tp_oid) = target_parent_oid {
             let _ = user_coll.update_one(user_filter, doc! { "$set": { "parent_id": tp_oid } }, None).await;

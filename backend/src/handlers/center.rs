@@ -661,8 +661,8 @@ pub async fn transfer_center(
         );
     }
 
-    let center_coll = db.collection::<Center>("centers");
-    let user_coll = db.collection::<User>("users");
+    let center_coll = db.collection::<mongodb::bson::Document>("centers");
+    let user_coll = db.collection::<mongodb::bson::Document>("users");
 
     let mut raw_id = id.trim_start_matches('@').to_string();
     if (raw_id.is_empty() || raw_id == ":id" || raw_id == "transfer") && payload.center_id.is_some() {
@@ -697,6 +697,9 @@ pub async fn transfer_center(
         ),
     };
 
+    let center_name = existing.get_str("name").unwrap_or("Center").to_string();
+    let center_code = existing.get_str("code").unwrap_or("").to_string();
+
     let mut target_parent_oid = None;
     if let Some(ref tp_id) = payload.target_parent_id {
         target_parent_oid = ObjectId::parse_str(tp_id).ok();
@@ -717,18 +720,19 @@ pub async fn transfer_center(
 
     let _ = center_coll.update_one(center_filter, doc! { "$set": set_doc }, None).await;
 
-    let c_code = existing.code.clone();
-    let _ = user_coll.update_many(
-        doc! { "$or": [{ "center_code": &c_code }, { "username": &c_code }, { "code": &c_code }] },
-        doc! { "$set": { "updated_at": Utc::now().to_rfc3339() } },
-        None,
-    ).await;
+    if !center_code.is_empty() {
+        let _ = user_coll.update_many(
+            doc! { "$or": [{ "center_code": &center_code }, { "username": &center_code }, { "code": &center_code }] },
+            doc! { "$set": { "updated_at": Utc::now().to_rfc3339() } },
+            None,
+        ).await;
+    }
 
     (
         StatusCode::OK,
         Json(CenterTransferResponse {
             success: true,
-            message: format!("Center '{}' ({}) transferred / re-allocated successfully!", existing.name, existing.code),
+            message: format!("Center '{}' ({}) transferred / re-allocated successfully!", center_name, center_code),
         }),
     )
 }
@@ -748,8 +752,8 @@ pub async fn merge_center(
         );
     }
 
-    let center_coll = db.collection::<Center>("centers");
-    let user_coll = db.collection::<User>("users");
+    let center_coll = db.collection::<mongodb::bson::Document>("centers");
+    let user_coll = db.collection::<mongodb::bson::Document>("users");
     let student_coll = db.collection::<mongodb::bson::Document>("students");
     let staff_coll = db.collection::<mongodb::bson::Document>("staff");
 
@@ -803,10 +807,13 @@ pub async fn merge_center(
         ),
     };
 
-    let src_code = src_center.code.clone();
-    let tgt_code = tgt_center.code.clone();
-    let tgt_name = tgt_center.name.clone();
-    let tgt_parent_oid = tgt_center.id;
+    let src_id = src_center.get_object_id("_id").ok();
+    let src_code = src_center.get_str("code").unwrap_or("").to_string();
+    let src_name = src_center.get_str("name").unwrap_or("Source Center").to_string();
+
+    let tgt_id = tgt_center.get_object_id("_id").ok();
+    let tgt_code = tgt_center.get_str("code").unwrap_or("").to_string();
+    let tgt_name = tgt_center.get_str("name").unwrap_or("Target Center").to_string();
 
     // 1. Move all students from source center to target center
     let mut student_user_set = doc! {
@@ -814,12 +821,17 @@ pub async fn merge_center(
         "center_name": &tgt_name,
         "updated_at": Utc::now().to_rfc3339()
     };
-    if let Some(tp_oid) = tgt_parent_oid {
+    if let Some(tp_oid) = tgt_id {
         student_user_set.insert("parent_id", tp_oid);
     }
+
+    let mut student_or = vec![doc! { "center_code": &src_code }];
+    if let Some(s_oid) = src_id {
+        student_or.push(doc! { "parent_id": s_oid });
+    }
     let _ = user_coll.update_many(
-        doc! { "role": "student", "$or": [{ "center_code": &src_code }, { "parent_id": src_center.id }] },
-        doc! { "$set": student_user_set.clone() },
+        doc! { "role": "student", "$or": student_or },
+        doc! { "$set": student_user_set },
         None,
     ).await;
 
@@ -828,12 +840,17 @@ pub async fn merge_center(
         "center_name": &tgt_name,
         "updated_at": Utc::now().to_rfc3339()
     };
-    if let Some(tp_oid) = tgt_parent_oid {
+    if let Some(tp_oid) = tgt_id {
         student_doc_set.insert("center_id", tp_oid);
         student_doc_set.insert("parent_id", tp_oid);
     }
+    let mut student_doc_or = vec![doc! { "center_code": &src_code }];
+    if let Some(s_oid) = src_id {
+        student_doc_or.push(doc! { "center_id": s_oid });
+        student_doc_or.push(doc! { "parent_id": s_oid });
+    }
     let _ = student_coll.update_many(
-        doc! { "$or": [{ "center_code": &src_code }, { "center_id": src_center.id }, { "parent_id": src_center.id }] },
+        doc! { "$or": student_doc_or },
         doc! { "$set": student_doc_set },
         None,
     ).await;
@@ -844,21 +861,27 @@ pub async fn merge_center(
         "assigned_centers": mongodb::bson::to_bson(&target_centers).unwrap_or(mongodb::bson::Bson::Array(vec![])),
         "updated_at": Utc::now().to_rfc3339()
     };
-    if let Some(tp_oid) = tgt_parent_oid {
+    if let Some(tp_oid) = tgt_id {
         staff_set.insert("parent_id", tp_oid);
     }
+    let mut staff_or = vec![doc! { "assigned_centers": &src_name }];
+    if let Some(s_oid) = src_id {
+        staff_or.push(doc! { "parent_id": s_oid });
+    }
     let _ = staff_coll.update_many(
-        doc! { "$or": [{ "parent_id": src_center.id }, { "assigned_centers": &src_center.name }] },
+        doc! { "$or": staff_or },
         doc! { "$set": staff_set },
         None,
     ).await;
 
-    if let Some(tp_oid) = tgt_parent_oid {
-        let _ = user_coll.update_many(
-            doc! { "role": "staff", "parent_id": src_center.id },
-            doc! { "$set": { "parent_id": tp_oid, "updated_at": Utc::now().to_rfc3339() } },
-            None,
-        ).await;
+    if let Some(tp_oid) = tgt_id {
+        if let Some(s_oid) = src_id {
+            let _ = user_coll.update_many(
+                doc! { "role": "staff", "parent_id": s_oid },
+                doc! { "$set": { "parent_id": tp_oid, "updated_at": Utc::now().to_rfc3339() } },
+                None,
+            ).await;
+        }
     }
 
     // 3. Mark source center status as Merged
@@ -869,10 +892,12 @@ pub async fn merge_center(
         "merged_into_name": &tgt_name,
         "updated_at": Utc::now().to_rfc3339()
     };
-    if let Some(tp_oid) = tgt_parent_oid {
+    if let Some(tp_oid) = tgt_id {
         update_src_doc.insert("parent_id", tp_oid);
     }
-    let _ = center_coll.update_one(doc! { "_id": src_center.id }, doc! { "$set": update_src_doc }, None).await;
+    if let Some(s_oid) = src_id {
+        let _ = center_coll.update_one(doc! { "_id": s_oid }, doc! { "$set": update_src_doc }, None).await;
+    }
 
     (
         StatusCode::OK,
@@ -880,7 +905,7 @@ pub async fn merge_center(
             success: true,
             message: format!(
                 "Center '{}' ({}) successfully merged into '{}' ({})! All students and staff transferred.",
-                src_center.name, src_code, tgt_name, tgt_code
+                src_name, src_code, tgt_name, tgt_code
             ),
         }),
     )

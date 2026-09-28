@@ -3451,7 +3451,7 @@ pub async fn transfer_student(
         );
     }
 
-    let user_coll = db.collection::<User>("users");
+    let user_coll = db.collection::<mongodb::bson::Document>("users");
     let student_coll = db.collection::<mongodb::bson::Document>("students");
     let center_coll = db.collection::<mongodb::bson::Document>("centers");
 
@@ -3507,7 +3507,7 @@ pub async fn transfer_student(
     let mut transferred = false;
 
     if let Ok(Some(u)) = user_coll.find_one(user_filter.clone(), None).await {
-        student_name = u.full_name.clone().unwrap_or_else(|| u.username.clone());
+        student_name = u.get_str("full_name").or_else(|_| u.get_str("username")).unwrap_or(&clean_id).to_string();
         let mut set_doc = doc! {
             "center_code": &target_code,
             "center_name": &target_name,
