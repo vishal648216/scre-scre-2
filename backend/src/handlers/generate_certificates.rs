@@ -6634,3 +6634,66 @@ pub async fn admin_download_student_document(
     // #endregion
     Ok(Redirect::to(&redirect_url).into_response())
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ToggleRevokePayload {
+    pub status: Option<String>,
+}
+
+pub async fn toggle_revoke_certificate(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<ToggleRevokePayload>,
+) -> (StatusCode, Json<V2Msg>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(V2Msg {
+                success: false,
+                message: "Forbidden".to_string(),
+            }),
+        );
+    }
+
+    let cert_coll = db.collection::<mongodb::bson::Document>("certificates");
+    let oid_opt = ObjectId::parse_str(&id).ok();
+
+    let mut filter_or = vec![
+        doc! { "_id": &id },
+        doc! { "certificate_no": &id },
+        doc! { "certificate_number": &id },
+    ];
+    if let Some(oid) = oid_opt {
+        filter_or.push(doc! { "_id": oid });
+    }
+
+    let new_status = payload.status.unwrap_or_else(|| "revoked".to_string());
+    let is_revoked = new_status == "revoked";
+
+    let update = doc! {
+        "$set": {
+            "status": &new_status,
+            "is_revoked": is_revoked,
+            "updated_at": Utc::now().to_rfc3339(),
+            "revoked_by": &claims.sub,
+        }
+    };
+
+    match cert_coll.update_one(doc! { "$or": filter_or }, update, None).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(V2Msg {
+                success: true,
+                message: format!("Document status updated to {}", new_status),
+            }),
+        ),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(V2Msg {
+                success: false,
+                message: "Failed to update document status".to_string(),
+            }),
+        ),
+    }
+}

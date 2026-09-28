@@ -508,6 +508,7 @@ pub async fn run_server() {
         .route("/api/certificates/download-bulk", post(handlers::certificate::download_bulk_certificates))
         .route("/api/certificates/download/:id", get(handlers::certificate::download_certificate))
         .route("/api/certificates/:id", delete(handlers::certificate::delete_certificate))
+        .route("/api/certificates/:id/toggle-revoke", post(handlers::generate_certificates::toggle_revoke_certificate))
         .route("/api/certificates/verify/:reg_no", get(handlers::certificate::public_verify_certificate))
         .route("/api/certificates/:id/apply-sign-stamp", patch(handlers::certificate::apply_sign_stamp))
         .route("/api/certificates/apply-sign-stamp-bulk", patch(handlers::certificate::apply_sign_stamp_bulk))
