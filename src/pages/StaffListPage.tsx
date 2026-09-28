@@ -22,6 +22,8 @@ import {
   Building2,
   Download,
   Eye,
+  EyeOff,
+  Key,
   FileSpreadsheet,
   Award,
   DollarSign,
@@ -60,6 +62,8 @@ interface StaffMember {
   email?: string;
   phone?: string;
   status: string;
+  password?: string;
+  raw_password?: string;
   basic_salary?: number;
   allowances?: number;
   deductions?: number;
@@ -95,6 +99,7 @@ const StaffListPage = () => {
   const [studentsCount, setStudentsCount] = useState<number>(0);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -164,6 +169,8 @@ const StaffListPage = () => {
           designation: s.designation || (s.role_type ? s.role_type.toUpperCase() : "Staff"),
           role_type: s.role_type || "teacher",
           status: s.status || "active",
+          password: s.password || s.raw_password,
+          raw_password: s.raw_password || s.password,
           email: s.email || (s.username ? `${s.username}@scre.in` : "staff@scre.in"),
           phone: s.phone || s.mobile || "N/A",
           basic_salary: Number(s.basic_salary ?? s.salary ?? 35000),
@@ -738,6 +745,38 @@ const StaffListPage = () => {
                   <div>
                     <span className="text-slate-500 text-[10px] uppercase font-bold block">Status</span>
                     <span className="font-bold text-emerald-400 uppercase">{viewMember.status || "active"}</span>
+                  </div>
+                  <div className="col-span-2 pt-2 border-t border-slate-800">
+                    <span className="text-amber-400 text-[10px] uppercase font-bold flex items-center gap-1">
+                      <Key className="w-3.5 h-3.5" /> Account Password
+                    </span>
+                    <div className="flex items-center justify-between mt-1 bg-slate-900/90 px-3 py-2 rounded-xl border border-amber-500/20">
+                      <span className="font-mono font-bold text-white tracking-wider">
+                        {showStaffPassword ? (viewMember.raw_password || viewMember.password || "No plain password saved") : "••••••••••••"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowStaffPassword(!showStaffPassword)}
+                          className="text-slate-400 hover:text-white"
+                          title="Toggle View Password"
+                        >
+                          {showStaffPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        {(viewMember.raw_password || viewMember.password) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(viewMember.raw_password || viewMember.password || "");
+                              toast.success("Staff password copied to clipboard!");
+                            }}
+                            className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[9px] font-bold uppercase"
+                          >
+                            Copy
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

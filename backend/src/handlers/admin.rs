@@ -534,10 +534,15 @@ pub async fn get_admin_dashboard_data(
 pub struct UserListItem {
     pub id: String,
     pub username: String,
+    pub full_name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
     pub password: Option<String>,
+    pub raw_password: Option<String>,
     pub role: UserRole,
     pub joined: String,
     pub status: String,
+    pub active: bool,
 }
 
 pub async fn get_all_users(
@@ -549,28 +554,29 @@ pub async fn get_all_users(
         return (StatusCode::FORBIDDEN, Json(Vec::new()));
     }
 
-    // We ALWAYS hide superadmin role from this list to maintain "God" status
-    // (not visible for assignment or management by anyone)
     let collection = db.collection::<User>("users");
-    let filter = doc! { "role": { "$ne": "superadmin" } };
+    let filter = if claims.role == UserRole::SuperAdmin {
+        doc! { "role": { "$in": ["admin", "superadmin", "subadmin"] }, "is_deleted": false }
+    } else {
+        doc! { "role": { "$in": ["admin", "subadmin"] }, "is_deleted": false }
+    };
 
-    let mut cursor = collection
-        .find(filter, None)
-        .await
-        .expect("Failed to fetch users");
+    let mut cursor = match collection.find(filter, None).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::new())),
+    };
 
     let mut users = Vec::new();
     while let Some(result) = cursor.next().await {
         if let Ok(user) = result {
-            // Extra safety check: never return superadmin in this list
-            if user.role == UserRole::SuperAdmin {
-                continue;
-            }
-
             users.push(UserListItem {
-                id: user.id.unwrap().to_hex(),
+                id: user.id.unwrap_or_default().to_hex(),
                 username: user.username,
-                password: user.raw_password,
+                full_name: user.full_name,
+                email: user.email,
+                phone: user.phone,
+                password: user.raw_password.clone(),
+                raw_password: user.raw_password,
                 role: user.role,
                 joined: user.created_at.format("%b %Y").to_string(),
                 status: if user.active {
@@ -578,6 +584,7 @@ pub async fn get_all_users(
                 } else {
                     "Inactive".to_string()
                 },
+                active: user.active,
             });
         }
     }

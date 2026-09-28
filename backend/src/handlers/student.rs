@@ -1595,6 +1595,8 @@ pub async fn public_register_student(
 pub struct PublicStudent {
     pub id: String,
     pub username: String,
+    pub password: Option<String>,
+    pub raw_password: Option<String>,
     pub role: UserRole,
     pub parent_id: Option<String>,
     pub full_name: Option<String>,
@@ -1684,6 +1686,8 @@ impl From<User> for PublicStudent {
         PublicStudent {
             id: u.id.unwrap_or_default().to_hex(),
             username: u.username,
+            password: u.raw_password.clone(),
+            raw_password: u.raw_password.clone(),
             role: u.role,
             parent_id: u.parent_id.map(|oid| oid.to_hex()),
             full_name: u.full_name,
@@ -1938,6 +1942,8 @@ pub async fn list_students(
                 let public_student = PublicStudent {
                     id: student_id.to_hex(),
                     username: student.username,
+                    password: student.raw_password.clone(),
+                    raw_password: student.raw_password,
                     role: student.role,
                     parent_id: student.parent_id.map(|oid| oid.to_hex()),
                     full_name: student.full_name,

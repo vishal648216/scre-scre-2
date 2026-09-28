@@ -353,6 +353,7 @@ const EditStudentPage = () => {
               sessionEndDate: student.sessionEndDate || "",
               username: student.username || "",
               password: "",
+              rawPassword: student.rawPassword || student.raw_password || student.password || "",
               additionalDocuments: Array.isArray(parsedDocs.additional_documents) ? parsedDocs.additional_documents : [],
               customUnits: Array.isArray(parsedDocs.custom_units) ? parsedDocs.custom_units : [],
               currentUnit: student.currentUnit || "",
@@ -1652,15 +1653,37 @@ const EditStudentPage = () => {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Set New Password")} *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Password & Security")}</label>
+                      {(formData.rawPassword || (formData as any).raw_password) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.rawPassword || (formData as any).raw_password || "");
+                            toast.success(t("Student password copied to clipboard!"));
+                          }}
+                          className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:underline"
+                        >
+                          {t("Copy Password")}
+                        </button>
+                      )}
+                    </div>
+                    {formData.rawPassword && (
+                      <div className="p-2.5 rounded bg-muted/40 border border-border flex items-center justify-between text-xs mb-2">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("Current Saved Password")}:</span>
+                        <span className="font-mono font-bold text-foreground tracking-wider">
+                          {showPassword ? formData.rawPassword : "••••••••••••"}
+                        </span>
+                      </div>
+                    )}
                     <div className="relative">
                       <input
                         name="password"
                         type={showPassword ? "text" : "password"}
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all pr-12"
+                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all pr-12 font-mono"
                         value={formData.password}
                         onChange={handleChange}
-                        placeholder={t("Leave blank to keep current password")}
+                        placeholder={t("Enter new password to change, or leave blank...")}
                         autoComplete="new-password"
                       />
                       <button

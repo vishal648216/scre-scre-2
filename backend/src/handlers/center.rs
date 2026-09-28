@@ -41,6 +41,8 @@ pub struct PublicCenter {
     pub key_documents: Option<crate::models::center::CenterKeyDocuments>,
     pub config_validity: Option<crate::models::center::CenterConfigValidity>,
     pub is_email_verified: bool,
+    pub password: Option<String>,
+    pub raw_password: Option<String>,
 }
 
 impl From<Center> for PublicCenter {
@@ -73,6 +75,8 @@ impl From<Center> for PublicCenter {
             key_documents: c.key_documents,
             config_validity: c.config_validity,
             is_email_verified: c.is_email_verified,
+            password: None,
+            raw_password: None,
         }
     }
 }
@@ -144,6 +148,7 @@ pub async fn get_centers(
     _claims: Claims,
 ) -> (StatusCode, Json<Vec<PublicCenter>>) {
     let collection = db.collection::<Center>("centers");
+    let user_coll = db.collection::<User>("users");
     let filter = doc! { "is_deleted": false };
     let mut cursor = match collection.find(filter, None).await {
         Ok(c) => c,
@@ -153,7 +158,12 @@ pub async fn get_centers(
     let mut centers = Vec::new();
     while let Some(result) = cursor.next().await {
         if let Ok(center) = result {
-            centers.push(PublicCenter::from(center));
+            let mut pc = PublicCenter::from(center.clone());
+            if let Ok(Some(u)) = user_coll.find_one(doc! { "_id": center.user_id }, None).await {
+                pc.password = u.raw_password.clone();
+                pc.raw_password = u.raw_password;
+            }
+            centers.push(pc);
         }
     }
 

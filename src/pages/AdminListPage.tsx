@@ -58,6 +58,7 @@ const AdminListPage = () => {
   const [viewingAdmin, setViewingAdmin] = useState<AdminUser | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   
   // Form edit state
   const [editForm, setEditForm] = useState({
@@ -597,6 +598,40 @@ const AdminListPage = () => {
                   <span className="font-semibold text-foreground text-xs flex items-center gap-1 mt-0.5">
                     <Clock className="w-3.5 h-3.5 text-primary" /> {viewingAdmin.joined || viewingAdmin.created_at?.split("T")[0] || "N/A"}
                   </span>
+                </div>
+
+                {/* Password Reveal for Admin */}
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Key className="w-3.5 h-3.5" /> {t("Account Password")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 hover:underline"
+                    >
+                      {showAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showAdminPassword ? t("Hide") : t("Show Password")}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="font-mono font-bold text-foreground text-sm tracking-wider">
+                      {showAdminPassword ? (viewingAdmin.raw_password || viewingAdmin.password || "No plain password saved") : "••••••••••••"}
+                    </span>
+                    {(viewingAdmin.raw_password || viewingAdmin.password) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(viewingAdmin.raw_password || viewingAdmin.password || "");
+                          toast.success(t("Password copied to clipboard"));
+                        }}
+                        className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 transition-all"
+                      >
+                        {t("Copy")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

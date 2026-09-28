@@ -297,6 +297,8 @@ pub async fn get_staff_list(
                 if let Ok(Some(user)) = user_coll.find_one(doc! { "_id": uid }, None).await {
                     if let Some(obj) = val.as_object_mut() {
                         obj.insert("username".to_string(), serde_json::json!(user.username));
+                        obj.insert("password".to_string(), serde_json::json!(user.raw_password));
+                        obj.insert("raw_password".to_string(), serde_json::json!(user.raw_password));
                     }
                 }
             }
@@ -321,6 +323,8 @@ pub async fn get_staff_list(
                             "parent_id": u.parent_id,
                             "name": u.full_name.clone().unwrap_or_else(|| u.username.clone()),
                             "username": u.username,
+                            "password": u.raw_password,
+                            "raw_password": u.raw_password,
                             "designation": u.sub_admin_role_name.clone().unwrap_or_else(|| "Staff Member".to_string()),
                             "role_type": "teacher",
                             "email": u.email,
