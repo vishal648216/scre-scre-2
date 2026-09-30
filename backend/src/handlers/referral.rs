@@ -790,6 +790,10 @@ pub async fn credit_center_referral_reward(
             flat_amount: 1000.0,
             percentage_rate: 5.0,
             franchise_base_fee: 20000.0,
+            is_system_enabled: Some(true),
+            enable_for_students: Some(true),
+            enable_for_centers: Some(true),
+            enable_for_staff: Some(true),
             created_at: Utc::now(),
             updated_at: Utc::now(),
         });

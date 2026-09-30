@@ -503,6 +503,13 @@ pub async fn run_server() {
         // --- LIVE CLASSES ---
         .route("/api/live-classes", get(handlers::live_class::list_live_classes).post(handlers::live_class::create_live_class))
         .route("/api/live-classes/:id", put(handlers::live_class::update_live_class).delete(handlers::live_class::delete_live_class))
+        // --- TRANSPORT SYSTEM ---
+        .route("/api/transport/buses", get(handlers::transport::list_buses).post(handlers::transport::create_bus))
+        .route("/api/transport/buses/:id", delete(handlers::transport::delete_bus))
+        .route("/api/transport/routes", get(handlers::transport::list_routes).post(handlers::transport::create_route))
+        .route("/api/transport/routes/:id", delete(handlers::transport::delete_route))
+        .route("/api/transport/passes/me", get(handlers::transport::get_my_pass))
+        .route("/api/transport/requests", post(handlers::transport::create_request))
         .route("/api/attendance/bulk", post(handlers::attendance::bulk_upsert_attendance))
         .route("/api/certificates", post(handlers::certificate::issue_certificate).get(handlers::certificate::get_certificates))
         .route("/api/certificates/download-bulk", post(handlers::certificate::download_bulk_certificates))
