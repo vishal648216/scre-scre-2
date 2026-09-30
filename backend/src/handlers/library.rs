@@ -25,6 +25,7 @@ pub struct LibraryResponse<T> {
 pub struct BookFilter {
     pub category: Option<String>,
     pub course_id: Option<String>,
+    pub center_id: Option<String>,
     pub search: Option<String>,
 }
 
@@ -48,16 +49,39 @@ pub async fn get_books(
         }
     }
 
+    if let Some(c_str) = filter.center_id {
+        if !c_str.is_empty() && c_str != "all" {
+            if let Ok(c_oid) = ObjectId::parse_str(&c_str) {
+                query_doc.insert(
+                    "$or",
+                    vec![
+                        doc! { "center_id": c_oid },
+                        doc! { "center_id": { "$exists": false } },
+                        doc! { "center_id": null },
+                    ],
+                );
+            }
+        }
+    }
+
     if let Some(s) = filter.search {
         if !s.is_empty() {
-            query_doc.insert(
-                "$or",
-                vec![
+            let search_doc = doc! {
+                "$or": vec![
                     doc! { "title": { "$regex": &s, "$options": "i" } },
                     doc! { "author": { "$regex": &s, "$options": "i" } },
                     doc! { "category": { "$regex": &s, "$options": "i" } },
-                ],
-            );
+                    doc! { "publisher": { "$regex": &s, "$options": "i" } },
+                    doc! { "isbn": { "$regex": &s, "$options": "i" } },
+                ]
+            };
+            if query_doc.contains_key("$or") {
+                query_doc = doc! {
+                    "$and": vec![query_doc, search_doc]
+                };
+            } else {
+                query_doc.extend(search_doc);
+            }
         }
     }
 
@@ -87,12 +111,49 @@ pub async fn get_books(
     }
 }
 
+#[derive(Deserialize)]
+pub struct AdminBookFilter {
+    pub center_id: Option<String>,
+    pub category: Option<String>,
+    pub search: Option<String>,
+}
+
 // GET /api/library/admin/books (includes unpublished)
 pub async fn get_all_books_admin(
     State(db): State<Database>,
+    Query(filter): Query<AdminBookFilter>,
 ) -> impl IntoResponse {
     let coll = db.collection::<Book>("library_books");
-    match coll.find(doc! {}, None).await {
+    let mut query_doc = doc! {};
+
+    if let Some(c_str) = filter.center_id {
+        if !c_str.is_empty() && c_str != "all" {
+            if let Ok(c_oid) = ObjectId::parse_str(&c_str) {
+                query_doc.insert("center_id", c_oid);
+            }
+        }
+    }
+
+    if let Some(cat) = filter.category {
+        if !cat.is_empty() && cat != "all" {
+            query_doc.insert("category", cat);
+        }
+    }
+
+    if let Some(s) = filter.search {
+        if !s.is_empty() {
+            query_doc.insert(
+                "$or",
+                vec![
+                    doc! { "title": { "$regex": &s, "$options": "i" } },
+                    doc! { "author": { "$regex": &s, "$options": "i" } },
+                    doc! { "category": { "$regex": &s, "$options": "i" } },
+                ],
+            );
+        }
+    }
+
+    match coll.find(query_doc, None).await {
         Ok(mut cursor) => {
             let mut books = Vec::new();
             while let Some(Ok(book)) = cursor.next().await {
@@ -617,12 +678,44 @@ pub async fn convert_reservation_to_issue(
     issue_book(State(db), Json(payload)).await.into_response()
 }
 
+#[derive(Deserialize)]
+pub struct IssueFilter {
+    pub center_id: Option<String>,
+    pub status: Option<String>,
+    pub student_id: Option<String>,
+}
+
 // GET /api/library/issues - List all issued books
 pub async fn get_book_issues(
     State(db): State<Database>,
+    Query(filter): Query<IssueFilter>,
 ) -> impl IntoResponse {
     let coll = db.collection::<mongodb::bson::Document>("library_book_issues");
-    match coll.find(None, None).await {
+    let mut query_doc = doc! {};
+
+    if let Some(c_str) = filter.center_id {
+        if !c_str.is_empty() && c_str != "all" {
+            if let Ok(c_oid) = ObjectId::parse_str(&c_str) {
+                query_doc.insert("center_id", c_oid);
+            }
+        }
+    }
+
+    if let Some(st_str) = filter.status {
+        if !st_str.is_empty() && st_str != "all" {
+            query_doc.insert("status", st_str);
+        }
+    }
+
+    if let Some(st_id) = filter.student_id {
+        if !st_id.is_empty() {
+            if let Ok(st_oid) = ObjectId::parse_str(&st_id) {
+                query_doc.insert("student_id", st_oid);
+            }
+        }
+    }
+
+    match coll.find(query_doc, None).await {
         Ok(mut cursor) => {
             let mut list = Vec::new();
             while let Some(Ok(doc)) = cursor.next().await {
@@ -753,12 +846,35 @@ pub async fn reserve_book(
     }
 }
 
+#[derive(Deserialize)]
+pub struct ReservationFilter {
+    pub center_id: Option<String>,
+    pub status: Option<String>,
+}
+
 // GET /api/library/reservations
 pub async fn get_reservations(
     State(db): State<Database>,
+    Query(filter): Query<ReservationFilter>,
 ) -> impl IntoResponse {
     let coll = db.collection::<mongodb::bson::Document>("library_reservations");
-    match coll.find(None, None).await {
+    let mut query_doc = doc! {};
+
+    if let Some(c_str) = filter.center_id {
+        if !c_str.is_empty() && c_str != "all" {
+            if let Ok(c_oid) = ObjectId::parse_str(&c_str) {
+                query_doc.insert("center_id", c_oid);
+            }
+        }
+    }
+
+    if let Some(st_str) = filter.status {
+        if !st_str.is_empty() && st_str != "all" {
+            query_doc.insert("status", st_str);
+        }
+    }
+
+    match coll.find(query_doc, None).await {
         Ok(mut cursor) => {
             let mut list = Vec::new();
             while let Some(Ok(doc)) = cursor.next().await {

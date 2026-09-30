@@ -156,12 +156,31 @@ export default function LibraryManagementPage() {
   const [issues, setIssues] = useState<BookIssue[]>([]);
   const [reservations, setReservations] = useState<BookReservation[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
+  // User Profile & Multi-tenant Scoping
+  const userProfile = React.useMemo(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isSuperAdmin = userProfile?.role === "superadmin" || userProfile?.role === "admin";
+  const userCenterId = userProfile?.center_id || userProfile?.centerId || "";
+
   // Search & Filters
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [centerFilter, setCenterFilter] = useState("all");
+  const [centerFilter, setCenterFilter] = useState(userCenterId || "all");
   const [issueStatusFilter, setIssueStatusFilter] = useState("all");
+
+  useEffect(() => {
+    if (!isSuperAdmin && userCenterId) {
+      setCenterFilter(userCenterId);
+    }
+  }, [isSuperAdmin, userCenterId]);
 
   // Book Modal State
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
@@ -189,7 +208,7 @@ export default function LibraryManagementPage() {
     available_copies: 5,
     shelf_location: "Rack A / Shelf 1",
     fine_per_day: 10,
-    center_id: "all",
+    center_id: userCenterId || "all",
     center_name: "Main Central Library",
     is_published: true,
   });
@@ -254,12 +273,14 @@ export default function LibraryManagementPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const centerQuery = centerFilter && centerFilter !== "all" ? `?center_id=${centerFilter}` : "";
+
       const [bRes, sRes, cRes, iRes, rRes] = await Promise.all([
-        apiFetch("/api/library/admin/books").then((r) => r.json()).catch(() => ({ success: false, data: [] })),
+        apiFetch(`/api/library/admin/books${centerQuery}`).then((r) => r.json()).catch(() => ({ success: false, data: [] })),
         apiFetch("/api/students").then((r) => r.json()).catch(() => ({ success: false, data: [] })),
         apiFetch("/api/public/centers").then((r) => r.json()).catch(() => ({ success: false, data: [] })),
-        apiFetch("/api/library/issues").then((r) => r.json()).catch(() => ({ success: false, data: [] })),
-        apiFetch("/api/library/reservations").then((r) => r.json()).catch(() => ({ success: false, data: [] })),
+        apiFetch(`/api/library/issues${centerQuery}`).then((r) => r.json()).catch(() => ({ success: false, data: [] })),
+        apiFetch(`/api/library/reservations${centerQuery}`).then((r) => r.json()).catch(() => ({ success: false, data: [] })),
       ]);
 
       if (bRes && (bRes.success || Array.isArray(bRes.data))) setBooks(flattenBson(bRes.data || []));
@@ -281,7 +302,7 @@ export default function LibraryManagementPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [centerFilter]);
 
   // Update selected student object when student ID changes
   useEffect(() => {
