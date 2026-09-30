@@ -38,6 +38,7 @@ pub mod id_card;
 pub mod inquiry;
 pub mod intern;
 pub mod intern_attendance;
+pub mod intern_draft;
 pub mod intern_task;
 pub mod locations;
 pub mod maintenance;

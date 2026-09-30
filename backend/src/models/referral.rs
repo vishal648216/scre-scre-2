@@ -46,7 +46,7 @@ pub struct ReferralBonus {
 pub struct ReferralSettings {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub target_role: String, // "student" or "center"
+    pub target_role: String, // "student" or "center" or "global"
     pub levels: Vec<ReferralLevel>,
     #[serde(default)]
     pub instructions: Vec<String>,
@@ -66,11 +66,21 @@ pub struct ReferralSettings {
     pub percentage_rate: f64, // e.g. 5.0 (%)
     #[serde(default = "default_franchise_base_fee")]
     pub franchise_base_fee: f64, // e.g. 20000.0
+    #[serde(default = "default_true_opt")]
+    pub is_system_enabled: Option<bool>,
+    #[serde(default = "default_true_opt")]
+    pub enable_for_students: Option<bool>,
+    #[serde(default = "default_true_opt")]
+    pub enable_for_centers: Option<bool>,
+    #[serde(default = "default_true_opt")]
+    pub enable_for_staff: Option<bool>,
     #[serde(with = "crate::models::serde_helpers::flexible_datetime")]
     pub created_at: DateTime<Utc>,
     #[serde(with = "crate::models::serde_helpers::flexible_datetime")]
     pub updated_at: DateTime<Utc>,
 }
+
+fn default_true_opt() -> Option<bool> { Some(true) }
 
 fn default_payout_model() -> String { "flat".to_string() }
 fn default_flat_amount() -> f64 { 1000.0 }

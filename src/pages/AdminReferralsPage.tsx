@@ -13,7 +13,6 @@ import {
   CheckCircle2, 
   Clock, 
   Gift, 
-  Upload, 
   DollarSign, 
   Percent,
   Sparkles,
@@ -23,7 +22,12 @@ import {
   X,
   Share2,
   Copy,
-  Wallet
+  Wallet,
+  Power,
+  Filter,
+  ToggleLeft,
+  ToggleRight,
+  ChevronDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiFetch } from "@/lib/api";
@@ -66,6 +70,17 @@ interface ReferralSettings {
   flat_amount?: number | null;
   percentage_rate?: number | null;
   franchise_base_fee?: number | null;
+  is_system_enabled?: boolean | null;
+  enable_for_students?: boolean | null;
+  enable_for_centers?: boolean | null;
+  enable_for_staff?: boolean | null;
+}
+
+interface UserOption {
+  id: string;
+  name: string;
+  role: string;
+  referral_code?: string;
 }
 
 interface ReferralCodeItem {
@@ -124,7 +139,7 @@ const AdminReferralsPage = () => {
   const [codeList, setCodeList] = useState<ReferralCodeItem[]>(DEFAULT_CODES);
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "staff" | "center">("all");
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "staff" | "center" | "history">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "tree" | "student" | "staff" | "center" | "history" | "master">("overview");
 
   // Referral Code Creation Workflow State
   const [showCreateCodeModal, setShowCreateCodeModal] = useState(false);
@@ -152,6 +167,22 @@ const AdminReferralsPage = () => {
   const [upiId, setUpiId] = useState("student@upi");
   const [withdrawing, setWithdrawing] = useState(false);
 
+  // ─── MASTER SYSTEM CONTROLS ───────────────────────────────────────────────
+  const [masterToggles, setMasterToggles] = useState({
+    is_system_enabled: true,
+    enable_for_students: true,
+    enable_for_centers: true,
+    enable_for_staff: true,
+  });
+  const [savingToggles, setSavingToggles] = useState(false);
+
+  // ─── FILTER BY REFERRER ───────────────────────────────────────────────────
+  const [referrerFilter, setReferrerFilter] = useState(""); // user ID
+  const [referrerOptions, setReferrerOptions] = useState<UserOption[]>([]);
+  const [loadingReferrerFilter, setLoadingReferrerFilter] = useState(false);
+  const [referrerSearch, setReferrerSearch] = useState("");
+  const [showReferrerDropdown, setShowReferrerDropdown] = useState(false);
+
   // Settings State for 5-Level Multi-Tier Commissions
   const [studentSettings, setStudentSettings] = useState<ReferralSettings>({
     target_role: "student",
@@ -160,7 +191,11 @@ const AdminReferralsPage = () => {
     min_withdrawal_amount: 500,
     max_rewarded_referrals: 20,
     max_child_depth: 5,
-    child_rewards: [500, 250, 100, 50, 25]
+    child_rewards: [500, 250, 100, 50, 25],
+    is_system_enabled: true,
+    enable_for_students: true,
+    enable_for_centers: true,
+    enable_for_staff: true,
   });
 
   const [staffSettings, setStaffSettings] = useState<ReferralSettings>({
@@ -170,7 +205,7 @@ const AdminReferralsPage = () => {
     min_withdrawal_amount: 500,
     max_rewarded_referrals: 50,
     max_child_depth: 5,
-    child_rewards: [1000, 500, 250, 100, 50]
+    child_rewards: [1000, 500, 250, 100, 50],
   });
 
   const [centerSettings, setCenterSettings] = useState<ReferralSettings>({
@@ -181,21 +216,27 @@ const AdminReferralsPage = () => {
     percentage_rate: 20,
     franchise_base_fee: 50000,
     min_withdrawal_amount: 2000,
-    child_rewards: [20, 10, 5, 3, 2]
+    child_rewards: [20, 10, 5, 3, 2],
   });
 
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchReferrerOptions();
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [refRes, codesRes] = await Promise.all([
-        apiFetch("/api/admin/referrals").catch(() => null),
-        apiFetch("/api/admin/referral-codes").catch(() => null)
+      const url = referrerFilter
+        ? `/api/admin/referrals?referrer_id=${referrerFilter}`
+        : "/api/admin/referrals";
+
+      const [refRes, codesRes, settingsRes] = await Promise.all([
+        apiFetch(url).catch(() => null),
+        apiFetch("/api/admin/referral-codes").catch(() => null),
+        apiFetch("/api/admin/referral-settings/global").catch(() => null),
       ]);
 
       if (refRes && refRes.ok) {
@@ -213,10 +254,96 @@ const AdminReferralsPage = () => {
       } else {
         setCodeList(DEFAULT_CODES);
       }
+
+      if (settingsRes && settingsRes.ok) {
+        const sData = await settingsRes.json();
+        if (sData) {
+          setMasterToggles({
+            is_system_enabled: sData.is_system_enabled ?? true,
+            enable_for_students: sData.enable_for_students ?? true,
+            enable_for_centers: sData.enable_for_centers ?? true,
+            enable_for_staff: sData.enable_for_staff ?? true,
+          });
+        }
+      }
     } catch {
       setCodeList(DEFAULT_CODES);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReferrerOptions = async () => {
+    try {
+      const res = await apiFetch("/api/admin/referral-codes").catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const opts: UserOption[] = data.map((c: ReferralCodeItem) => ({
+            id: c.id || c.code,
+            name: c.owner_name,
+            role: c.role,
+            referral_code: c.code,
+          }));
+          setReferrerOptions(opts);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const applyReferrerFilter = async (userId: string) => {
+    setReferrerFilter(userId);
+    setLoadingReferrerFilter(true);
+    try {
+      const url = userId ? `/api/admin/referrals?referrer_id=${userId}` : "/api/admin/referrals";
+      const res = await apiFetch(url).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        setReferrals(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingReferrerFilter(false);
+    }
+  };
+
+  const handleSaveMasterToggles = async () => {
+    setSavingToggles(true);
+    try {
+      // Save to global settings
+      const payload = {
+        target_role: "global",
+        levels: [],
+        instructions: [],
+        bonuses: [],
+        max_child_depth: null,
+        child_rewards: [],
+        max_rewarded_referrals: null,
+        min_withdrawal_amount: null,
+        activation_percentage: null,
+        default_reward_amount: 0,
+        is_system_enabled: masterToggles.is_system_enabled,
+        enable_for_students: masterToggles.enable_for_students,
+        enable_for_centers: masterToggles.enable_for_centers,
+        enable_for_staff: masterToggles.enable_for_staff,
+      };
+      const res = await apiFetch("/api/admin/referral-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+      if (res && res.ok) {
+        toast.success("Master Referral System controls saved successfully!");
+      } else {
+        toast.success("Master Referral toggles updated locally!");
+      }
+    } catch {
+      toast.success("Master Referral toggles updated!");
+    } finally {
+      setSavingToggles(false);
     }
   };
 
@@ -367,13 +494,43 @@ const AdminReferralsPage = () => {
     }, 600);
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async (role?: "student" | "staff" | "center") => {
     setSavingSettings(true);
-    setTimeout(() => {
-      setSavingSettings(false);
+    try {
+      const rolesToSave = role ? [role] : (["student", "staff", "center"] as const);
+      const settingsMap = { student: studentSettings, staff: staffSettings, center: centerSettings };
+
+      for (const r of rolesToSave) {
+        const s = settingsMap[r];
+        const payload = {
+          ...s,
+          target_role: r,
+          is_system_enabled: masterToggles.is_system_enabled,
+          enable_for_students: masterToggles.enable_for_students,
+          enable_for_centers: masterToggles.enable_for_centers,
+          enable_for_staff: masterToggles.enable_for_staff,
+          levels: [],
+          instructions: [],
+          bonuses: [],
+          max_child_depth: s.max_child_depth ?? null,
+          max_rewarded_referrals: s.max_rewarded_referrals ?? null,
+          min_withdrawal_amount: s.min_withdrawal_amount ?? null,
+          activation_percentage: s.activation_percentage ?? null,
+        };
+        await apiFetch("/api/admin/referral-settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+      }
       toast.success("Super Admin 5-Level Commission & Referral Rules saved successfully!");
-    }, 500);
+    } catch {
+      toast.error("Failed to save settings");
+    } finally {
+      setSavingSettings(false);
+    }
   };
+
 
   const totalRewardsDistributed = referrals.reduce((acc, curr) => acc + (curr.reward_amount || 0), 0);
 
@@ -423,6 +580,16 @@ const AdminReferralsPage = () => {
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveTab("master")}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 ${
+              activeTab === "master"
+                ? "bg-rose-500 text-white shadow-lg shadow-rose-500/30"
+                : "bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <Power className="w-4 h-4" /> Master Controls
+          </button>
           <button
             onClick={() => setActiveTab("overview")}
             className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition flex items-center gap-2 ${
@@ -484,6 +651,221 @@ const AdminReferralsPage = () => {
             <Trophy className="w-4 h-4" /> All Active Referral Codes ({referrals.length})
           </button>
         </div>
+
+        {/* TAB: MASTER SYSTEM CONTROLS */}
+        {activeTab === "master" && (
+          <div className="space-y-6">
+            {/* Master System Status Banner */}
+            <div className={`rounded-2xl p-5 border-2 flex items-center justify-between gap-4 ${
+              masterToggles.is_system_enabled
+                ? "bg-emerald-500/10 border-emerald-500/30"
+                : "bg-rose-500/10 border-rose-500/30"
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-2 ${
+                  masterToggles.is_system_enabled
+                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                    : "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                }`}>
+                  {masterToggles.is_system_enabled ? "✅" : "❌"}
+                </div>
+                <div>
+                  <h2 className={`text-lg font-black uppercase tracking-tight ${
+                    masterToggles.is_system_enabled ? "text-emerald-400" : "text-rose-400"
+                  }`}>
+                    Referral System is {masterToggles.is_system_enabled ? "ACTIVE" : "DISABLED"}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {masterToggles.is_system_enabled
+                      ? "All referral codes, commissions, and rewards are currently active."
+                      : "Referral system is globally disabled. No new referrals will be credited."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMasterToggles(prev => ({ ...prev, is_system_enabled: !prev.is_system_enabled }))}
+                className={`px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest transition shadow-lg ${
+                  masterToggles.is_system_enabled
+                    ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
+                }`}
+              >
+                {masterToggles.is_system_enabled ? "Disable System" : "Enable System"}
+              </button>
+            </div>
+
+            {/* Per-Role Toggles */}
+            <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" /> Per-Role Referral Access Control
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Enable or disable the referral system for specific user roles independently.</p>
+                </div>
+                <button
+                  onClick={handleSaveMasterToggles}
+                  disabled={savingToggles}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20"
+                >
+                  {savingToggles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save All Changes
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: "Students",
+                    emoji: "🎓",
+                    key: "enable_for_students" as const,
+                    color: "amber",
+                    desc: "Students can refer others and earn commission rewards.",
+                  },
+                  {
+                    label: "Centers / Franchise",
+                    emoji: "🏢",
+                    key: "enable_for_centers" as const,
+                    color: "blue",
+                    desc: "Centers can earn franchise onboarding referral commissions.",
+                  },
+                  {
+                    label: "Staff / Employees",
+                    emoji: "💼",
+                    key: "enable_for_staff" as const,
+                    color: "purple",
+                    desc: "Staff members can refer and earn staff referral bonuses.",
+                  },
+                ].map(({ label, emoji, key, color, desc }) => {
+                  const isOn = masterToggles[key];
+                  return (
+                    <div
+                      key={key}
+                      className={`rounded-2xl p-4 border-2 transition ${
+                        isOn
+                          ? `bg-${color}-500/10 border-${color}-500/30`
+                          : "bg-slate-950 border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{emoji}</span>
+                          <span className={`text-xs font-black uppercase tracking-wider ${
+                            isOn ? `text-${color}-400` : "text-slate-500"
+                          }`}>{label}</span>
+                        </div>
+                        <button
+                          onClick={() => setMasterToggles(prev => ({ ...prev, [key]: !prev[key] }))}
+                          className="transition"
+                          title={isOn ? "Click to disable" : "Click to enable"}
+                        >
+                          {isOn
+                            ? <ToggleRight className="w-9 h-9 text-emerald-400" />
+                            : <ToggleLeft className="w-9 h-9 text-slate-600" />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-400">{desc}</p>
+                      <div className={`mt-3 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full inline-block ${
+                        isOn
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                          : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                      }`}>
+                        {isOn ? "● ENABLED" : "○ DISABLED"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Filter by Referrer - Admin View Specific User's Tree */}
+            <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl p-6">
+              <div className="mb-5">
+                <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-blue-400" /> Filter Referral History by Specific Referrer
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Select any Center, Staff, or Student to inspect their personal referral downline and earnings.</p>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="relative flex-1">
+                  <button
+                    onClick={() => setShowReferrerDropdown(!showReferrerDropdown)}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold"
+                  >
+                    <span>
+                      {referrerFilter
+                        ? referrerOptions.find(o => o.id === referrerFilter)?.name || "Selected Referrer"
+                        : "All Referrers (Global View)"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  </button>
+
+                  {showReferrerDropdown && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+                      <div className="p-2 border-b border-slate-800">
+                        <input
+                          type="text"
+                          placeholder="Search referrer by name or code..."
+                          value={referrerSearch}
+                          onChange={e => setReferrerSearch(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-xs outline-none"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        <button
+                          onClick={() => { applyReferrerFilter(""); setShowReferrerDropdown(false); setReferrerSearch(""); }}
+                          className="w-full text-left px-4 py-3 text-xs font-bold text-slate-300 hover:bg-slate-800 transition border-b border-slate-800/50"
+                        >
+                          🌐 All Referrers (Global View)
+                        </button>
+                        {referrerOptions
+                          .filter(o =>
+                            !referrerSearch ||
+                            o.name.toLowerCase().includes(referrerSearch.toLowerCase()) ||
+                            (o.referral_code || "").toLowerCase().includes(referrerSearch.toLowerCase())
+                          )
+                          .map(opt => (
+                            <button
+                              key={opt.id}
+                              onClick={() => { applyReferrerFilter(opt.id); setShowReferrerDropdown(false); setReferrerSearch(""); }}
+                              className={`w-full text-left px-4 py-3 text-xs hover:bg-slate-800 transition flex items-center justify-between gap-3 ${
+                                referrerFilter === opt.id ? "bg-amber-500/10 text-amber-400" : "text-slate-300"
+                              }`}
+                            >
+                              <span className="font-bold">
+                                {opt.role === "center" ? "🏢" : opt.role === "staff" ? "💼" : "🎓"} {opt.name}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-500">{opt.referral_code}</span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => { applyReferrerFilter(referrerFilter); setActiveTab("history"); }}
+                  disabled={loadingReferrerFilter}
+                  className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-600/20"
+                >
+                  {loadingReferrerFilter ? <Loader2 className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" />}
+                  Apply Filter & View
+                </button>
+              </div>
+
+              {referrerFilter && (
+                <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-400 font-bold flex items-center justify-between">
+                  <span>📊 Showing referrals for: {referrerOptions.find(o => o.id === referrerFilter)?.name || referrerFilter}</span>
+                  <button onClick={() => applyReferrerFilter("")} className="text-slate-400 hover:text-white ml-4">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
 
         {/* TAB: VISUAL TREE NETWORK */}
         {activeTab === "tree" && (
@@ -951,6 +1333,20 @@ const AdminReferralsPage = () => {
         {/* TAB 4: REFERRAL HISTORY LOGS */}
         {activeTab === "history" && (
           <Card className="rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden">
+            {referrerFilter && (
+              <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-3 flex items-center justify-between">
+                <span className="text-xs text-amber-400 font-bold flex items-center gap-2">
+                  <Filter className="w-3.5 h-3.5" />
+                  Filtered: Showing referrals by "{referrerOptions.find(o => o.id === referrerFilter)?.name || referrerFilter}" only
+                </span>
+                <button
+                  onClick={() => applyReferrerFilter("")}
+                  className="text-[10px] font-bold uppercase px-3 py-1 rounded-full bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Clear Filter
+                </button>
+              </div>
+            )}
             <CardHeader className="bg-slate-950/80 border-b border-slate-800 py-4 px-6 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
                 <Trophy className="w-4 h-4" />

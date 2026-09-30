@@ -111,6 +111,8 @@ const StudentCourseMaterialsPage = lazy(() => import("./pages/StudentCourseMater
 const StudentLiveClassesPage = lazy(() => import("./pages/StudentLiveClassesPage"));
 const StudentPracticalsPage = lazy(() => import("./pages/StudentPracticalsPage"));
 const StudentRecordedClassesPage = lazy(() => import("./pages/StudentRecordedClassesPage"));
+const AdminVideoCoursesManagerPage = lazy(() => import("./pages/AdminVideoCoursesManagerPage"));
+const TransportManagementPage = lazy(() => import("./pages/TransportManagementPage"));
 const StudentMessagesPage = lazy(() => import("./pages/StudentMessagesPage"));
 const CenterAllottedCoursesPage = lazy(() => import("./pages/CenterAllottedCoursesPage"));
 const CenterStudentsPage = lazy(() => import("./pages/CenterStudentsPage"));
@@ -303,24 +305,24 @@ const PortalRouteWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings } = useQuery({
     queryKey: ["public-settings"],
     queryFn: async () => {
-      const res = await apiFetch("/api/public/system-settings");
-      return res.json();
+      try {
+        const res = await apiFetch("/api/public/system-settings");
+        if (res.ok) {
+          return await res.json();
+        }
+        return {};
+      } catch {
+        return {};
+      }
     },
+    retry: false,
+    staleTime: 60000,
   });
 
   const isBypassed = localStorage.getItem("maintenance_bypass") === "true";
-
-  if (isLoading) return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Initializing Portal...</p>
-      </div>
-    </div>
-  );
 
   if (settings?.maintenance_mode && !isBypassed) {
     return (
@@ -456,6 +458,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/exams/candidates-360" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminCandidate360Page /></ProtectedRoute>} />
       <Route path="/dashboard/exams/allot" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamAllotPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/alloted" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/live-monitor" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminAllotedExamsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/papers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><AdminExamListPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/results" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><AdminExamResultsPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/center-requests" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><AdminExamCenterRequestsPage /></ProtectedRoute>} />
@@ -621,23 +624,23 @@ const AppRoutes = () => {
       <Route path="/dashboard/attachments/certificate-designer/:id" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CertificateDesignerCanvasPage /></ProtectedRoute>} />
 
       {/* Center Role Specific Routes */}
-      <Route path="/dashboard/stats/today" element={<ProtectedRoute allowedRoles={["center"]}><CenterTodayStatsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/activity" element={<ProtectedRoute allowedRoles={["center"]}><CenterActivityPage /></ProtectedRoute>} />
+      <Route path="/dashboard/stats/today" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterTodayStatsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/activity" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterActivityPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/attendance/register" element={<ProtectedRoute allowedRoles={["center"]}><AttendanceRegisterPage /></ProtectedRoute>} />
-      <Route path="/dashboard/attendance/report" element={<ProtectedRoute allowedRoles={["center"]}><AttendanceReportPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exam-v2/center" element={<ProtectedRoute allowedRoles={["center"]}><CenterExamV2Page /></ProtectedRoute>} />
-      <Route path="/dashboard/center/exam-v2" element={<ProtectedRoute allowedRoles={["center"]}><CenterExamV2Page /></ProtectedRoute>} />
-      <Route path="/dashboard/exam-v2/marks-entry" element={<ProtectedRoute allowedRoles={["center"]}><CenterMarksEntryPage /></ProtectedRoute>} />
-      <Route path="/dashboard/exams/marks-entry" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterExamMarksEntryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/attendance/register" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><AttendanceRegisterPage /></ProtectedRoute>} />
+      <Route path="/dashboard/attendance/report" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><AttendanceReportPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exam-v2/center" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterExamV2Page /></ProtectedRoute>} />
+      <Route path="/dashboard/center/exam-v2" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterExamV2Page /></ProtectedRoute>} />
+      <Route path="/dashboard/exam-v2/marks-entry" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterMarksEntryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/exams/marks-entry" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterExamMarksEntryPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/reappear" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterReappearManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/exams/download-paper" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterDownloadPaperPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterStudentsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/students/add" element={<ProtectedRoute allowedRoles={["center"]}><AddStudentPage /></ProtectedRoute>} />
+      <Route path="/dashboard/students" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterStudentsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/students/add" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><AddStudentPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/edit/:id" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><EditStudentPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/bin" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><StudentRecycleBinPage /></ProtectedRoute>} />
-      <Route path="/dashboard/students/marksheets" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><StudentMarksheetsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/students/marksheets" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><StudentMarksheetsPage /></ProtectedRoute>} />
       <Route path="/dashboard/students/reports" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterStudentsPage /></ProtectedRoute>} />
 
       {/* Interns Routes */}
@@ -685,31 +688,36 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/dashboard/students/fees" element={<ProtectedRoute allowedRoles={["center"]}><StudentFeesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/students/fees" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><StudentFeesPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/students/requests" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterDocumentRequestPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/leads/:type" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><LeadsPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/live-classes/schedule" element={<ProtectedRoute allowedRoles={["center"]}><CenterLiveClassesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/live-classes/history" element={<ProtectedRoute allowedRoles={["center"]}><CenterLiveClassesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/live-classes/schedule" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterLiveClassesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/live-classes/history" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterLiveClassesPage /></ProtectedRoute>} />
+
+      <Route path="/dashboard/course-videos/upload" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><AdminVideoCoursesManagerPage /></ProtectedRoute>} />
+      <Route path="/dashboard/course-videos/manage" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><AdminVideoCoursesManagerPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/enquiries/new" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><AdminEnquiriesPage /></ProtectedRoute>} />
       <Route path="/dashboard/enquiries/followups" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><AdminEnquiriesPage /></ProtectedRoute>} />
       <Route path="/dashboard/enquiries/converted" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><AdminEnquiriesPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/courses/allotted" element={<ProtectedRoute allowedRoles={["center"]}><CenterAllottedCoursesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/courses/subjects" element={<ProtectedRoute allowedRoles={["center"]}><CenterSubjectsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/courses/sessions" element={<ProtectedRoute allowedRoles={["center"]}><CenterSessionsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/courses/materials" element={<ProtectedRoute allowedRoles={["center"]}><CenterCourseMaterialsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/courses/allotted" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterAllottedCoursesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/courses/subjects" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterSubjectsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/courses/sessions" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterSessionsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/courses/materials" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin"]}><CenterCourseMaterialsPage /></ProtectedRoute>} />
 
-      <Route path="/dashboard/practicals" element={<ProtectedRoute allowedRoles={["center"]}><CenterPracticalsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/practicals/create" element={<ProtectedRoute allowedRoles={["center"]}><CenterPracticalsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/practicals/submissions" element={<ProtectedRoute allowedRoles={["center"]}><CenterPracticalsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/practicals" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterPracticalsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/practicals/create" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterPracticalsPage /></ProtectedRoute>} />
+      <Route path="/dashboard/practicals/submissions" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff"]}><CenterPracticalsPage /></ProtectedRoute>} />
 
       <Route path="/dashboard/wallet/balance" element={<ProtectedRoute allowedRoles={["center"]}><CenterWalletPage /></ProtectedRoute>} />
       <Route path="/dashboard/wallet/transactions" element={<ProtectedRoute allowedRoles={["center"]}><CenterWalletPage /></ProtectedRoute>} />
       <Route path="/dashboard/wallet/history" element={<ProtectedRoute allowedRoles={["center"]}><CenterWalletPage /></ProtectedRoute>} />
+      <Route path="/dashboard/wallet/withdraw" element={<ProtectedRoute allowedRoles={["center"]}><CenterWalletPage /></ProtectedRoute>} />
+      <Route path="/dashboard/wallet/add" element={<ProtectedRoute allowedRoles={["center"]}><CenterWalletPage /></ProtectedRoute>} />
 
       <Route
         path="/dashboard/student"
@@ -725,11 +733,21 @@ const AppRoutes = () => {
       <Route path="/dashboard/student/courses" element={<ProtectedRoute allowedRoles={["student"]}><StudentCoursesPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/subjects" element={<ProtectedRoute allowedRoles={["student"]}><StudentSubjectsPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/materials" element={<ProtectedRoute allowedRoles={["student"]}><StudentCourseMaterialsPage /></ProtectedRoute>} />
-      <Route path="/dashboard/student/recorded" element={<ProtectedRoute allowedRoles={["student"]}><StudentRecordedClassesPage /></ProtectedRoute>} />
-      <Route path="/dashboard/student/library" element={<ProtectedRoute allowedRoles={["student"]}><StudentLibraryPage /></ProtectedRoute>} />
-      <Route path="/dashboard/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center"]}><LibraryManagementPage /></ProtectedRoute>} />
-      <Route path="/dashboard/admin/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin"]}><LibraryManagementPage /></ProtectedRoute>} />
-      <Route path="/dashboard/center/library" element={<ProtectedRoute allowedRoles={["center"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/recorded" element={<ProtectedRoute allowedRoles={["student", "admin", "superadmin", "center", "staff"]}><StudentRecordedClassesPage /></ProtectedRoute>} />
+      <Route path="/dashboard/student/library" element={<ProtectedRoute allowedRoles={["student", "staff", "admin", "superadmin", "center"]}><StudentLibraryPage /></ProtectedRoute>} />
+      <Route path="/dashboard/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/admin/library" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/center/library" element={<ProtectedRoute allowedRoles={["center", "admin", "superadmin", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/library/issue" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/library/cards" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/library/fines" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><LibraryManagementPage /></ProtectedRoute>} />
+
+      {/* Transport Management Routes */}
+      <Route path="/dashboard/transport" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><TransportManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/transport/routes" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><TransportManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/transport/passes" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><TransportManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/transport/drivers" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff", "student"]}><TransportManagementPage /></ProtectedRoute>} />
+      <Route path="/dashboard/transport/maintenance" element={<ProtectedRoute allowedRoles={["admin", "superadmin", "center", "staff"]}><TransportManagementPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/internships" element={<ProtectedRoute allowedRoles={["student"]}><StudentInternshipPortalPage /></ProtectedRoute>} />
       <Route path="/dashboard/student/resume-builder" element={<ProtectedRoute allowedRoles={["student", "intern"]}><StudentResumeBuilderPage /></ProtectedRoute>} />
       <Route path="/dashboard/intern/resume-builder" element={<ProtectedRoute allowedRoles={["intern", "student"]}><StudentResumeBuilderPage /></ProtectedRoute>} />

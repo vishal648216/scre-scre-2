@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { getServerNow } from "@/lib/time";
+import { apiFetch } from "@/lib/api";
 
 type AttendanceStatus = "present" | "absent" | "late" | "leave";
 
@@ -37,10 +38,7 @@ const AttendanceRegisterPage = () => {
 
   const fetchStudents = async () => {
     try {
-      const token = sessionStorage.getItem("token");
-      const response = await fetch("/api/students", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const response = await apiFetch("/api/students");
       const data = await response.json();
       if (response.ok) {
         setStudents(data);
@@ -55,10 +53,7 @@ const AttendanceRegisterPage = () => {
 
   const fetchExistingAttendance = async () => {
     try {
-      const token = sessionStorage.getItem("token");
-      const response = await fetch(`/api/attendance?start_date=${selectedDate}T00:00:00Z&end_date=${selectedDate}T23:59:59Z`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const response = await apiFetch(`/api/attendance?start_date=${selectedDate}T00:00:00Z&end_date=${selectedDate}T23:59:59Z`);
       const data = await response.json();
       if (response.ok) {
         const attendanceMap: Record<string, AttendanceStatus> = {};
@@ -78,26 +73,20 @@ const AttendanceRegisterPage = () => {
     
     // Immediately save to server
     try {
-      const token = sessionStorage.getItem("token");
       const record = { 
         student_id: studentId, 
         status, 
         date: `${selectedDate}T12:00:00Z` 
       };
       
-      const response = await fetch("/api/attendance/bulk", {
+      const response = await apiFetch("/api/attendance/bulk", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
         body: JSON.stringify({ records: [record] })
       });
 
       if (!response.ok) {
         const data = await response.json();
         toast.error(data.message || "Failed to save attendance");
-        // Revert local state if failed? Maybe better to just refresh
         fetchExistingAttendance();
       }
     } catch (error) {

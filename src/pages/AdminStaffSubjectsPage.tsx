@@ -50,7 +50,7 @@ const AdminStaffSubjectsPage = () => {
     try {
       const [staffRes, subRes, courseRes] = await Promise.all([
         apiFetch("/api/staff").catch(() => null),
-        apiFetch("/api/academics/subjects").catch(() => null),
+        apiFetch("/api/admin/subjects").catch(() => null),
         apiFetch("/api/courses").catch(() => null)
       ]);
 

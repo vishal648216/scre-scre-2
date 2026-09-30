@@ -95,6 +95,9 @@ const StudentDashboard = () => {
   const [batchInfo, setBatchInfo] = useState<any>(null);
   const [approvedMarksheet, setApprovedMarksheet] = useState<any>(null);
   const [permissions, setPermissions] = useState<any>(null);
+  const [enrolledCourse, setEnrolledCourse] = useState<any>(null);
+  const [courseSubjects, setCourseSubjects] = useState<any[]>([]);
+  const [liveSchedules, setLiveSchedules] = useState<any[]>([]);
 
   const [quickLinks, setQuickLinks] = useState<{ label: string; href: string; iconName: string }[]>(() => {
     const saved = localStorage.getItem("dashboard_quick_links_student");
@@ -253,15 +256,48 @@ const StudentDashboard = () => {
 
     const fetchMetrics = async () => {
       try {
-        const [metricsRes, examsRes, typingRes, v2ExamsRes, attendanceRes, blueprintsRes, batchesRes] = await Promise.all([
+        const [metricsRes, examsRes, typingRes, v2ExamsRes, attendanceRes, blueprintsRes, batchesRes, coursesAllotRes, liveRes] = await Promise.all([
           apiFetch("/api/student/metrics"),
           apiFetch(USE_EXAM_V2 ? "/api/exam-v2/papers" : "/api/exam/papers"),
           apiFetch("/api/typing/history"),
           apiFetch("/api/exam-v2/exams"),
           apiFetch("/api/attendance"),
           apiFetch("/api/exam/blueprints"),
-          apiFetch("/api/batches")
+          apiFetch("/api/batches"),
+          apiFetch("/api/courses/allot").catch(() => null),
+          apiFetch("/api/live-classes").catch(() => null)
         ]);
+
+        if (coursesAllotRes && coursesAllotRes.ok) {
+          const allotData = await coursesAllotRes.json();
+          if (Array.isArray(allotData) && allotData.length > 0) {
+            const course = allotData[0];
+            setEnrolledCourse(course);
+            const courseId = course._id || course.id;
+            if (courseId) {
+              const [mapRes, subsRes] = await Promise.all([
+                apiFetch(`/api/academic/course-subjects/${courseId}`).catch(() => null),
+                apiFetch("/api/admin/subjects").catch(() => null)
+              ]);
+              if (mapRes && mapRes.ok && subsRes && subsRes.ok) {
+                const maps = await mapRes.json();
+                const subsData = await subsRes.json();
+                const allSubs = Array.isArray(subsData) ? subsData : (subsData.items || []);
+                const joined = (maps || []).map((m: any) => {
+                  const s = allSubs.find((x: any) => String(x._id || x.id) === String(m.subject_id));
+                  return s ? { ...s, subject_order: m.subject_order } : null;
+                }).filter(Boolean);
+                setCourseSubjects(joined);
+              }
+            }
+          }
+        }
+
+        if (liveRes && liveRes.ok) {
+          const lData = await liveRes.json();
+          const items = Array.isArray(lData) ? lData : (lData.items || []);
+          setLiveSchedules(items);
+        }
 
         if (batchesRes.ok) {
           const batches = await batchesRes.json();
@@ -488,7 +524,9 @@ const StudentDashboard = () => {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">{t("Current Program")}</p>
-                <p className="text-sm font-black text-primary uppercase tracking-tight mt-0.5">{t("ADCA (Advanced Diploma)")}</p>
+                <p className="text-sm font-black text-primary uppercase tracking-tight mt-0.5">
+                  {enrolledCourse ? (enrolledCourse.course_name || enrolledCourse.name) : t("General Vocational Program")}
+                </p>
               </div>
             </div>
           </div>
@@ -799,11 +837,17 @@ const StudentDashboard = () => {
                   </Link>
                 </CardHeader>
                 <CardContent className="p-8 space-y-8">
-                  {[
+                  {(courseSubjects.length > 0 ? courseSubjects.slice(0, 5).map((sub, idx) => ({
+                    title: sub.subject_name || `Subject ${idx + 1}`,
+                    status: idx === 0 ? t("In Progress") : idx === 1 ? t("Upcoming") : t("Enrolled"),
+                    progress: idx === 0 ? 65 : 0,
+                    icon: idx === 0 ? Clock : BookOpen,
+                    color: idx === 0 ? "primary" : "muted"
+                  })) : [
                     { title: t("Advanced MS Office"), status: t("Completed"), progress: 100, icon: CheckCircle2, color: "emerald" },
                     { title: t("Web Technologies (HTML/CSS)"), status: t("In Progress"), progress: 65, icon: Clock, color: "primary" },
                     { title: t("Tally Prime & GST"), status: t("Upcoming"), progress: 0, icon: PlayCircle, color: "muted" },
-                  ].map((module) => (
+                  ]).map((module) => (
                     <div key={module.title} className="space-y-4 group">
                       <div className="flex justify-between items-end">
                         <div className="flex items-center gap-4">
@@ -891,10 +935,16 @@ const StudentDashboard = () => {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y divide-border/40">
-                    {[
-                      { date: "26", month: t("Feb"), title: t("JavaScript Basics"), time: "10:30 AM", room: t("Lab 2"), type: t("Lecture") },
-                      { date: "27", month: t("Feb"), title: t("Web Design Lab"), time: "02:00 PM", room: t("Lab 1"), type: t("Practical") },
-                    ].map((cls, i) => (
+                    {(liveSchedules.length > 0 ? liveSchedules.slice(0, 4).map((ls: any) => ({
+                      date: format(new Date(ls.start_time || Date.now()), "dd"),
+                      month: format(new Date(ls.start_time || Date.now()), "MMM"),
+                      title: ls.title || ls.subject_name || "Live Class Session",
+                      time: format(new Date(ls.start_time || Date.now()), "hh:mm a"),
+                      room: ls.meeting_platform || ls.teacher_name || "Virtual Room",
+                      type: ls.class_type || "Lecture"
+                    })) : [
+                      { date: format(new Date(), "dd"), month: format(new Date(), "MMM"), title: t("Interactive Class Session"), time: "10:30 AM", room: t("Virtual Hall 1"), type: t("Lecture") },
+                    ]).map((cls, i) => (
                       <div key={i} className="p-6 flex gap-5 hover:bg-muted/20 transition-all group">
                         <div className="flex flex-col items-center justify-center bg-white w-14 h-14 rounded-2xl border border-border/60 shadow-sm group-hover:border-primary/40 group-hover:shadow-md transition-all shrink-0">
                           <span className="text-sm font-black text-foreground leading-none">{cls.date}</span>

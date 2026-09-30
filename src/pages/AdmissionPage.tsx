@@ -98,6 +98,9 @@ const AdmissionPage = () => {
     otherDocUrl: "",
     coupon_code: "",
     referral_code: "",
+    requires_transport: "no",
+    transport_route: "",
+    transport_stop: "",
   });
 
   useEffect(() => {
@@ -1223,6 +1226,57 @@ const AdmissionPage = () => {
                                 </SelectContent>
                               </Select>
                             </div>
+                          </div>
+
+                          {/* Transport Facility Preference */}
+                          <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-amber-500" />
+                                {t("Campus Transport / Bus Facility")}
+                              </Label>
+                              <Select
+                                value={formData.requires_transport}
+                                onValueChange={(val) => handleInputChange('requires_transport', val)}
+                              >
+                                <SelectTrigger className="w-44 h-10 rounded-lg text-xs font-bold">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="no">No - Self Transport</SelectItem>
+                                  <SelectItem value="yes">Yes - Opt Bus Transport</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {formData.requires_transport === "yes" && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800 animate-in fade-in duration-300">
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] font-bold">{t("Select Bus Route")}</Label>
+                                  <Select
+                                    value={formData.transport_route}
+                                    onValueChange={(val) => handleInputChange('transport_route', val)}
+                                  >
+                                    <SelectTrigger className="h-10 rounded-lg text-xs font-medium">
+                                      <SelectValue placeholder="Select Route" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="r1">Route 1 - Main City Loop (₹1500/mo)</SelectItem>
+                                      <SelectItem value="r2">Route 2 - Suburb Link (₹1200/mo)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px] font-bold">{t("Pickup Stop Name")}</Label>
+                                  <Input
+                                    placeholder="e.g. Civil Lines Crossing"
+                                    className="h-10 rounded-lg text-xs"
+                                    value={formData.transport_stop}
+                                    onChange={(e) => handleInputChange('transport_stop', e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Batch Selection for Selected Center */}

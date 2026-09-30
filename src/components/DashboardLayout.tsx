@@ -83,6 +83,9 @@ import {
   Building,
   DollarSign,
   CalendarCheck,
+  Package,
+  Truck,
+  Tv,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -193,7 +196,10 @@ const hexToHSL = (hex: string) => {
 export const getDashboardMenuItems = (role: string, permissions: any, userId?: string) => {
   const USE_EXAM_V2_VAL = USE_EXAM_V2;
   const menuItems: MenuItem[] = [
-    // --- SHARED ADMIN/SUPERADMIN ITEMS ---
+
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // SUPERADMIN + ADMIN MENUS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       label: "Dashboard",
       icon: LayoutDashboard,
@@ -202,6 +208,180 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: LayoutDashboard, label: "Overview", href: "/dashboard" },
         { icon: TrendingUp, label: "Revenue Summary", href: "/dashboard/revenue" },
         { icon: BarChart3, label: "Center Statistics", href: "/dashboard/center-stats" },
+      ]
+    },
+    {
+      label: "Admins Management",
+      icon: Users,
+      roles: ["superadmin"],
+      subItems: [
+        { icon: PlusCircle, label: "Add New Admin", href: "/dashboard/admins/add" },
+        { icon: List, label: "Admin List", href: "/dashboard/admins" },
+      ]
+    },
+    {
+      label: "Centers",
+      icon: School,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "All Centers", href: "/dashboard/centers" },
+        { icon: PlusCircle, label: "Add New Center", href: "/dashboard/centers/add", roles: ["superadmin"] },
+        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/centers/requests" },
+        { icon: IndianRupee, label: "Franchise Fees", href: "/dashboard/centers/fees" },
+        { icon: Wallet, label: "Center Wallets", href: "/dashboard/centers/wallets" },
+        { icon: MapPin, label: "Manage Locations", href: "/dashboard/locations" },
+        { icon: HardDrive, label: "Recycle Bin", href: "/dashboard/admin/bin" },
+      ]
+    },
+    {
+      label: "Students",
+      icon: GraduationCap,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "All Students", href: "/dashboard/students" },
+        { icon: PlusCircle, label: "Add Student", href: "/dashboard/students/add" },
+        { icon: CheckSquare, label: "Approvals", href: "/dashboard/students/approvals" },
+        { icon: Trash2, label: "Recycle Bin", href: "/dashboard/students/bin" },
+        { icon: IndianRupee, label: "Student Fees", href: "/dashboard/admin/fees" },
+        { icon: FileSpreadsheet, label: "Student Marksheets", href: "/dashboard/students/marksheets" },
+        { icon: Send, label: "Document Requests", href: "/dashboard/students/requests" },
+        { icon: TrendingUp, label: "Enrollment Reports", href: "/dashboard/students/reports" },
+      ]
+    },
+    {
+      label: "Attendance",
+      icon: CheckSquare,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: ClipboardList, label: "Student Attendance Register", href: "/dashboard/attendance/register" },
+        { icon: FileSpreadsheet, label: "Monthly Attendance Report", href: "/dashboard/attendance/report" },
+        { icon: CalendarCheck, label: "Staff Attendance", href: "/dashboard/staff/attendance" },
+        { icon: CheckSquare, label: "Intern Attendance", href: "/dashboard/interns/attendance" },
+      ]
+    },
+    {
+      label: "Staff Management",
+      icon: Users,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: PlusCircle, label: "Add New Staff", href: "/dashboard/staff/add" },
+        { icon: List, label: "Staff List", href: "/dashboard/staff/list" },
+        { icon: ShieldCheck, label: "Roles & Permissions", href: "/dashboard/staff/roles" },
+        { icon: BookOpen, label: "Subject Allotment", href: "/dashboard/staff/subjects" },
+        { icon: Building, label: "Center Allotment", href: "/dashboard/staff/centers" },
+        { icon: DollarSign, label: "Salary & Payroll", href: "/dashboard/staff/salary" },
+      ]
+    },
+    {
+      label: "Interns",
+      icon: Briefcase,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "All Interns", href: "/dashboard/interns" },
+        { icon: PlusCircle, label: "Add Intern", href: "/dashboard/interns/add" },
+        { icon: ListTodo, label: "Intern Tasks", href: "/dashboard/intern/tasks" },
+        { icon: Mail, label: "Internship Enquiries", href: "/dashboard/interns/enquiries" },
+        { icon: FileText, label: "Joining & Offer Letters", href: "/dashboard/interns/letters" },
+        { icon: Briefcase, label: "Postings & Categories", href: "/dashboard/internships/manage" },
+        { icon: Building2, label: "Colleges & IT Partners", href: "/dashboard/interns/colleges" },
+      ]
+    },
+    {
+      label: "Academics",
+      icon: BookOpen,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: Layers, label: "Course Categories", href: "/dashboard/academics/categories" },
+        { icon: BookOpen, label: "Courses", href: "/dashboard/academics/courses" },
+        { icon: Library, label: "Subjects", href: "/dashboard/academics/subjects" },
+        { icon: LinkIcon, label: "Subject Mapping", href: "/dashboard/academics/mapping" },
+        { icon: Calendar, label: "Batches & Sessions", href: "/dashboard/academics/sessions" },
+        { icon: Calendar, label: "Center Batches", href: "/dashboard/center/batches" },
+        { icon: FileText, label: "Study Material", href: "/dashboard/academics/study-material" },
+        { icon: ClipboardList, label: "Exam Blueprints", href: "/dashboard/academics/blueprints" },
+        { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: MessageSquare, label: "Question Feedback", href: "/dashboard/academics/question-feedback" },
+      ]
+    },
+    {
+      label: "Course Videos & Lectures",
+      icon: Tv,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: PlusCircle, label: "Upload Course Video / YouTube", href: "/dashboard/course-videos/upload" },
+        { icon: List, label: "Video Courses Directory", href: "/dashboard/course-videos/manage" },
+        { icon: BookOpen, label: "Student Video Hub Portal", href: "/dashboard/student/recorded" },
+      ]
+    },
+    {
+      label: "Live Classes",
+      icon: Video,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: ClipboardList, label: "Schedule & Manage Classes", href: "/dashboard/live-classes/schedule" },
+        { icon: History, label: "Class History & Recordings", href: "/dashboard/live-classes/history" },
+        { icon: Video, label: "Join Live Stream", href: "/dashboard/student/live/join" },
+      ]
+    },
+    {
+      label: "Practicals",
+      icon: FlaskConical,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "All Practicals", href: "/dashboard/practicals" },
+        { icon: PlusCircle, label: "Create Practical Task", href: "/dashboard/practicals/create" },
+        { icon: Download, label: "Practical Submissions", href: "/dashboard/practicals/submissions" },
+      ]
+    },
+    {
+      label: "Exams",
+      icon: FlaskConical,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: PenTool, label: "Paper Builder Studio", href: "/dashboard/exams/builder" },
+        { icon: Users, label: "360° Candidate Intelligence", href: "/dashboard/exams/candidates-360" },
+        { icon: PlusCircle, label: "Schedule & Allot Exam", href: "/dashboard/exams/allot" },
+        { icon: List, label: "Alloted Exams & Admit Cards", href: "/dashboard/exams/alloted" },
+        { icon: Video, label: "Live CBT Monitor", href: "/dashboard/exams/live-monitor" },
+        { icon: ClipboardCheck, label: "Evaluation & Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: Award, label: "Results & Marksheets", href: "/dashboard/exams/results" },
+        { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
+        { icon: CheckSquare, label: "Exam Attendance", href: "/dashboard/exams/attendance" },
+        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests" },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+        ...(USE_EXAM_V2_VAL
+          ? [
+            { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" },
+            { icon: CheckSquare, label: "Marks Approval V2", href: "/dashboard/exam-v2/marks-approval" }
+          ] as const
+          : []),
+      ]
+    },
+    {
+      label: "Finance",
+      icon: IndianRupee,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: Wallet, label: "Wallet Management", href: "/dashboard/finance/wallet" },
+        { icon: History, label: "Transactions", href: "/dashboard/finance/transactions" },
+        { icon: FileSpreadsheet, label: "Expense Ledger", href: "/dashboard/finance/expenses" },
+        { icon: Trophy, label: "Referral Tracking & Earn", href: "/dashboard/finance/referrals" },
+        { icon: FileSpreadsheet, label: "Commission Reports", href: "/dashboard/finance/commissions" },
+        { icon: CreditCard, label: "Franchise Payments", href: "/dashboard/finance/payments" },
+      ]
+    },
+    {
+      label: "Typing Master",
+      icon: Keyboard,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: Languages, label: "Languages", href: "/dashboard/typing/languages" },
+        { icon: BookOpen, label: "Lessons", href: "/dashboard/typing/lessons" },
+        { icon: BarChart3, label: "Typing Analytics", href: "/dashboard/typing/analytics" },
+        { icon: BookCheck, label: "Tests & Allotment", href: "/dashboard/typing/tests" },
+        { icon: FileText, label: "Global Reports", href: "/dashboard/typing/reports" },
+        { icon: Zap, label: "Practice Now", href: "/dashboard/typing/practice" },
       ]
     },
     {
@@ -216,6 +396,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: MessageSquare, label: "Student Leads", href: "/dashboard/leads/student" },
         { icon: Handshake, label: "Franchise Leads", href: "/dashboard/leads/franchise" },
         { icon: Mail, label: "General Leads", href: "/dashboard/leads/general" },
+        { icon: Star, label: "Student Reviews & Ratings", href: "/dashboard/crm/reviews" },
         { icon: HelpCircle, label: "Support Tickets", href: "/dashboard/support" },
         { icon: Bell, label: "Broadcast Announcements", href: "/dashboard/broadcast" },
       ]
@@ -237,24 +418,108 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: HelpCircle, label: "FAQ", href: "/dashboard/cms/faq" },
         { icon: ShieldCheck, label: "ID Card Templates", href: "/dashboard/cms/idcard_templates" },
         { icon: BookOpen, label: "Director Message", href: "/dashboard/cms/director_message" },
-        { icon: Users, label: "Students", href: "/dashboard/cms/students" },
+        { icon: Users, label: "Students Showcase", href: "/dashboard/cms/students" },
         { icon: GraduationCap, label: "Universities", href: "/dashboard/cms/universities" },
         { icon: Handshake, label: "Hero Partners", href: "/dashboard/cms/hero_partners" },
         { icon: BookOpen, label: "Blogs", href: "/dashboard/cms/blogs" },
+        { icon: Layers, label: "Blog Categories", href: "/dashboard/cms/blog-categories" },
         { icon: FileText, label: "News", href: "/dashboard/cms/news" },
         { icon: ShoppingBag, label: "Student Shop", href: "/dashboard/cms/shop" },
       ]
     },
     {
-      label: "Admins Management",
-      icon: Users,
-      roles: ["superadmin"],
+      label: "Attachments",
+      icon: Paperclip,
+      roles: ["admin", "superadmin"],
       subItems: [
-        { icon: PlusCircle, label: "Add New Admin", href: "/dashboard/admins/add" },
-        { icon: List, label: "Admin List", href: "/dashboard/admins" },
+        { icon: Award, label: "Issue Certificates & Marksheets", href: "/dashboard/attachments/generate/certificate" },
+        { icon: PenTool, label: "Canvas Template Designer", href: "/dashboard/attachments/certificate-designer" },
+        { icon: FileText, label: "Student & Staff ID Cards", href: "/dashboard/attachment/idcards" },
+        { icon: CheckSquare, label: "Document Requests & Approvals", href: "/dashboard/attachments/approvals" },
+        { icon: List, label: "Issued Documents Log", href: "/dashboard/attachments/certificates" },
+        { icon: ShieldCheck, label: "Verification Gateway", href: "/verification-letter" },
       ]
     },
-    // --- CENTER SPECIFIC DASHBOARD ---
+    {
+      label: "System",
+      icon: Settings,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: Settings, label: "System Settings", href: "/dashboard/system/settings" },
+        { icon: Users, label: "Global User Accounts", href: "/dashboard/users" },
+        { icon: CreditCard, label: "SaaS Subscriptions & Billing", href: "/dashboard/subscription" },
+        { icon: ShieldCheck, label: "Role Permissions", href: "/dashboard/system/roles" },
+        { icon: History, label: "Activity Logs", href: "/dashboard/system/logs" },
+        { icon: Globe, label: "Translation Usage", href: "/dashboard/system/translation-usage" },
+        { icon: Bell, label: "Announcements Management", href: "/dashboard/system/notifications" },
+        { icon: MessageSquare, label: "Notification Gateway (SMS/WhatsApp)", href: "/dashboard/system/notifications-gateway" },
+        { icon: Database, label: "Database Backup & Diagnostics", href: "/dashboard/system/backup-diagnostics" },
+        { icon: HardDrive, label: "Disk & Storage", href: "/dashboard/disk-usage" },
+        { icon: AlertTriangle, label: "Maintenance", href: "/dashboard/system/maintenance", roles: ["superadmin"] },
+      ]
+    },
+    {
+      label: "Inventory Management",
+      icon: Package,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "Stock & Inventory Items", href: "/dashboard/inventory" },
+        { icon: Users, label: "Suppliers & Vendors", href: "/dashboard/inventory/suppliers" },
+        { icon: CheckSquare, label: "Asset Allocation Log", href: "/dashboard/inventory/assets" },
+        { icon: FileSpreadsheet, label: "Purchase Orders", href: "/dashboard/inventory/orders" },
+      ]
+    },
+    {
+      label: "Transport Management",
+      icon: Truck,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: List, label: "Fleet & Vehicles List", href: "/dashboard/transport" },
+        { icon: Users, label: "Drivers & Transport Staff", href: "/dashboard/transport/drivers" },
+        { icon: MapPin, label: "Routes & Bus Stops", href: "/dashboard/transport/routes" },
+        { icon: IdCard, label: "Student Transport Passes", href: "/dashboard/transport/passes" },
+        { icon: FileSpreadsheet, label: "Fuel & Maintenance Ledger", href: "/dashboard/transport/maintenance" },
+      ]
+    },
+    {
+      label: "Library Management",
+      icon: BookOpen,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: Library, label: "Book Directory & Catalog", href: "/dashboard/admin/library" },
+        { icon: CheckSquare, label: "Book Issue & Return Ledger", href: "/dashboard/library/issue" },
+        { icon: IdCard, label: "Student Library Cards", href: "/dashboard/library/cards" },
+        { icon: IndianRupee, label: "Fine & Penalty Ledger", href: "/dashboard/library/fines" },
+        { icon: BookMarked, label: "Digital E-Books Library", href: "/dashboard/student/library" },
+      ]
+    },
+    {
+      label: "Reports & Intelligence",
+      icon: BarChart3,
+      roles: ["admin", "superadmin"],
+      subItems: [
+        { icon: TrendingUp, label: "Revenue & Earnings Report", href: "/dashboard/revenue" },
+        { icon: BarChart3, label: "Center Performance Stats", href: "/dashboard/center-stats" },
+        { icon: TrendingUp, label: "Student Enrollment Reports", href: "/dashboard/students/reports" },
+        { icon: FileSpreadsheet, label: "Attendance Monthly Reports", href: "/dashboard/attendance/report" },
+        { icon: Award, label: "Exam Results & Marksheets Report", href: "/dashboard/exams/results" },
+        { icon: FileText, label: "Typing Speed & Global Reports", href: "/dashboard/typing/reports" },
+        { icon: FileSpreadsheet, label: "Franchise Commission Reports", href: "/dashboard/finance/commissions" },
+        { icon: FileSpreadsheet, label: "Expense Ledger Reports", href: "/dashboard/finance/expenses" },
+        { icon: History, label: "System Activity & Audit Logs", href: "/dashboard/system/logs" },
+        { icon: Globe, label: "Translation Usage Analytics", href: "/dashboard/system/translation-usage" },
+      ]
+    },
+    {
+      label: "ATS Resume Builder",
+      icon: FileText,
+      href: "/dashboard/student/resume-builder",
+      roles: ["admin", "superadmin"],
+    },
+
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // CENTER MENUS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       label: "Dashboard",
       icon: LayoutDashboard,
@@ -268,60 +533,6 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
-      label: "Attendance",
-      icon: CheckSquare,
-      roles: ["center"],
-      subItems: [
-        { icon: ClipboardList, label: "Attendance Register", href: "/dashboard/attendance/register" },
-        { icon: FileSpreadsheet, label: "Monthly Report", href: "/dashboard/attendance/report" },
-      ]
-    },
-    {
-      label: "Centers",
-      icon: School,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: List, label: "All Centers", href: "/dashboard/centers" },
-        { icon: PlusCircle, label: "Add New Center", href: "/dashboard/centers/add", roles: ["superadmin"] },
-        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/centers/requests", roles: ["admin", "superadmin"] },
-        { icon: IndianRupee, label: "Franchise Fees", href: "/dashboard/centers/fees", roles: ["admin", "superadmin"] },
-        { icon: Wallet, label: "Center Wallets", href: "/dashboard/centers/wallets", roles: ["admin", "superadmin"] },
-        { icon: MapPin, label: "Manage Locations", href: "/dashboard/locations" },
-        { icon: HardDrive, label: "Recycle Bin", href: "/dashboard/admin/bin" },
-      ]
-    },
-    {
-      label: "Students",
-      icon: GraduationCap,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: List, label: "All Students", href: "/dashboard/students" },
-        { icon: CheckSquare, label: "Approvals", href: "/dashboard/students/approvals", roles: ["admin", "superadmin"] },
-        { icon: Trash2, label: "Recycle Bin", href: "/dashboard/students/bin" },
-        { icon: IndianRupee, label: "Student Fees", href: "/dashboard/admin/fees", roles: ["admin", "superadmin"] },
-        { icon: FileSpreadsheet, label: "Student Marksheets", href: "/dashboard/students/marksheets", roles: ["admin", "superadmin"] },
-        { icon: Send, label: "Document Requests", href: "/dashboard/students/requests", roles: ["admin", "superadmin"] },
-        { icon: TrendingUp, label: "Enrollment Reports", href: "/dashboard/students/reports", roles: ["admin", "superadmin"] },
-      ]
-    },
-    // --- INTERNS MANAGEMENT ---
-    {
-      label: "Interns",
-      icon: Briefcase,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: List, label: "All Interns", href: "/dashboard/interns" },
-        { icon: PlusCircle, label: "Add Intern", href: "/dashboard/interns/add" },
-        { icon: Mail, label: "Internship Enquiries", href: "/dashboard/interns/enquiries" },
-        { icon: FileText, label: "Joining & Offer Letters", href: "/dashboard/interns/letters" },
-        { icon: CheckSquare, label: "Attendance & Stipends", href: "/dashboard/interns/attendance" },
-        { icon: Briefcase, label: "Postings & Categories", href: "/dashboard/internships/manage" },
-        { icon: Building2, label: "Colleges & IT Partners", href: "/dashboard/interns/colleges" },
-      ]
-    },
-
-    // --- CENTER SPECIFIC STUDENTS ---
-    {
       label: "Students",
       icon: GraduationCap,
       roles: ["center"],
@@ -331,9 +542,58 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Trash2, label: "Recycle Bin", href: "/dashboard/students/bin" },
         { icon: IndianRupee, label: "Student Fees", href: "/dashboard/students/fees" },
         { icon: FileSpreadsheet, label: "Student Marksheets", href: "/dashboard/students/marksheets" },
-        { icon: FileSpreadsheet, label: "Issue marksheets", href: "/dashboard/attachments/generate/marksheet" },
-        { icon: Award, label: "Issue Certificates", href: "/dashboard/attachments/generate/certificate" },
         { icon: Send, label: "Document Requests", href: "/dashboard/students/requests" },
+      ]
+    },
+    {
+      label: "Attendance",
+      icon: CheckSquare,
+      roles: ["center"],
+      subItems: [
+        { icon: ClipboardList, label: "Attendance Register", href: "/dashboard/attendance/register" },
+        { icon: FileSpreadsheet, label: "Monthly Report", href: "/dashboard/attendance/report" },
+      ]
+    },
+    {
+      label: "Courses",
+      icon: BookOpen,
+      roles: ["center"],
+      subItems: [
+        { icon: Layers, label: "Allotted Courses", href: "/dashboard/courses/allotted" },
+        { icon: Library, label: "Course Subjects", href: "/dashboard/courses/subjects" },
+        { icon: Calendar, label: "Batches", href: "/dashboard/center/batches" },
+        { icon: Calendar, label: "Sessions", href: "/dashboard/courses/sessions" },
+        { icon: FileText, label: "Course Materials", href: "/dashboard/courses/materials" },
+        { icon: BookMarked, label: "Digital Library", href: "/dashboard/center/library" },
+      ]
+    },
+    {
+      label: "Exams",
+      icon: FlaskConical,
+      roles: ["center"],
+      subItems: [
+        { icon: PenTool, label: "Paper Builder Studio", href: "/dashboard/exams/builder" },
+        { icon: Users, label: "360Â° Candidate Intelligence", href: "/dashboard/exams/candidates-360" },
+        { icon: PlusCircle, label: "Schedule & Allot Exam", href: "/dashboard/exams/allot" },
+        { icon: List, label: "Alloted Exams & Admit Cards", href: "/dashboard/exams/alloted" },
+        { icon: Video, label: "Live CBT Monitor", href: "/dashboard/exams/live-monitor" },
+        { icon: ClipboardCheck, label: "Evaluation & Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: Award, label: "Results & Marksheets", href: "/dashboard/exams/results" },
+        { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
+        { icon: CheckSquare, label: "Exam Attendance", href: "/dashboard/exams/attendance" },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: FlaskConical, label: "Mock Tests & CBT", href: "/dashboard/academics/mock-tests" },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+      ]
+    },
+    {
+      label: "Course Videos & Lectures",
+      icon: Tv,
+      roles: ["center"],
+      subItems: [
+        { icon: PlusCircle, label: "Upload Course Video / YouTube", href: "/dashboard/course-videos/upload" },
+        { icon: List, label: "Video Courses Directory", href: "/dashboard/course-videos/manage" },
+        { icon: BookOpen, label: "Student Video Hub Portal", href: "/dashboard/student/recorded" },
       ]
     },
     {
@@ -343,6 +603,106 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       subItems: [
         { icon: ClipboardList, label: "Schedule Class", href: "/dashboard/live-classes/schedule" },
         { icon: History, label: "Class History", href: "/dashboard/live-classes/history" },
+      ]
+    },
+    {
+      label: "Practicals",
+      icon: FlaskConical,
+      roles: ["center"],
+      subItems: [
+        { icon: List, label: "All Practicals", href: "/dashboard/practicals" },
+        { icon: PlusCircle, label: "Create Practical", href: "/dashboard/practicals/create" },
+        { icon: Download, label: "Submissions", href: "/dashboard/practicals/submissions" },
+      ]
+    },
+    {
+      label: "Staff Management",
+      icon: Users,
+      roles: ["center"],
+      subItems: [
+        { icon: PlusCircle, label: "Add New Staff", href: "/dashboard/staff/add" },
+        { icon: List, label: "Staff List", href: "/dashboard/staff/list" },
+        { icon: ShieldCheck, label: "Roles & Permissions", href: "/dashboard/staff/roles" },
+        { icon: CalendarCheck, label: "Staff Attendance", href: "/dashboard/staff/attendance" },
+        { icon: BookOpen, label: "Subject Allotment", href: "/dashboard/staff/subjects" },
+        { icon: Building, label: "Center Allotment", href: "/dashboard/staff/centers" },
+        { icon: DollarSign, label: "Salary & Payroll", href: "/dashboard/staff/salary" },
+      ]
+    },
+    {
+      label: "Internships",
+      icon: Briefcase,
+      roles: ["center"],
+      subItems: [
+        { icon: List, label: "All Interns", href: "/dashboard/interns" },
+        { icon: PlusCircle, label: "Add Intern", href: "/dashboard/interns/add" },
+        { icon: Briefcase, label: "Internship Postings", href: "/dashboard/center/internships" },
+        { icon: CheckSquare, label: "Intern Attendance", href: "/dashboard/interns/attendance" },
+      ]
+    },
+    {
+      label: "Inventory",
+      icon: Package,
+      roles: ["center"],
+      subItems: [
+        { icon: List, label: "Stock Items", href: "/dashboard/inventory" },
+        { icon: Users, label: "Suppliers", href: "/dashboard/inventory/suppliers" },
+        { icon: CheckSquare, label: "Asset Log", href: "/dashboard/inventory/assets" },
+        { icon: FileSpreadsheet, label: "Purchase Orders", href: "/dashboard/inventory/orders" },
+      ]
+    },
+    {
+      label: "Transport",
+      icon: Truck,
+      roles: ["center"],
+      subItems: [
+        { icon: List, label: "Fleet List", href: "/dashboard/transport" },
+        { icon: MapPin, label: "Routes & Stops", href: "/dashboard/transport/routes" },
+        { icon: IdCard, label: "Student Passes", href: "/dashboard/transport/passes" },
+      ]
+    },
+    {
+      label: "Library",
+      icon: BookOpen,
+      roles: ["center"],
+      subItems: [
+        { icon: Library, label: "Book Directory", href: "/dashboard/admin/library" },
+        { icon: CheckSquare, label: "Book Issue & Return", href: "/dashboard/library/issue" },
+        { icon: IdCard, label: "Student Library Cards", href: "/dashboard/library/cards" },
+      ]
+    },
+    {
+      label: "Attachments",
+      icon: Paperclip,
+      roles: ["center"],
+      subItems: [
+        { icon: Award, label: "Issue Certificates & Marksheets", href: "/dashboard/attachments/generate/certificate" },
+        { icon: PenTool, label: "Canvas Template Designer", href: "/dashboard/attachments/certificate-designer" },
+        { icon: FileText, label: "Student & Staff ID Cards", href: "/dashboard/attachment/idcards" },
+        { icon: Send, label: "Request Document", href: "/dashboard/students/requests" },
+        { icon: List, label: "Issued Documents Log", href: "/dashboard/attachments/certificates" },
+        { icon: ShieldCheck, label: "Verification Gateway", href: "/verification-letter" },
+      ]
+    },
+    {
+      label: "Typing Master",
+      icon: Keyboard,
+      roles: ["center"],
+      subItems: [
+        { icon: FileText, label: "Student Reports", href: "/dashboard/typing/center-reports" },
+        { icon: Trophy, label: "Center Leaderboard", href: "/dashboard/typing/leaderboard" },
+        { icon: Zap, label: "Practice Now", href: "/dashboard/typing/practice" },
+      ]
+    },
+    {
+      label: "Wallet",
+      icon: Wallet,
+      roles: ["center"],
+      subItems: [
+        { icon: IndianRupee, label: "My Balance", href: "/dashboard/wallet/balance" },
+        { icon: Trophy, label: "Refer & Earn", href: "/dashboard/refer-and-earn" },
+        { icon: History, label: "Transactions", href: "/dashboard/wallet/transactions" },
+        { icon: FileText, label: "Payment History", href: "/dashboard/wallet/history" },
       ]
     },
     {
@@ -360,156 +720,15 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
-      label: "Academics",
-      icon: BookOpen,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: Layers, label: "Course Categories", href: "/dashboard/academics/categories" },
-        { icon: BookOpen, label: "Courses", href: "/dashboard/academics/courses" },
-        { icon: Library, label: "Subjects", href: "/dashboard/academics/subjects" },
-        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
-        { icon: LinkIcon, label: "Subject Mapping", href: "/dashboard/academics/mapping" },
-        { icon: Calendar, label: "Sessions", href: "/dashboard/academics/sessions" },
-        { icon: FileText, label: "Study Material", href: "/dashboard/academics/study-material" },
-        { icon: BookMarked, label: "Digital Library", href: "/dashboard/admin/library" },
-        { icon: ClipboardList, label: "Exam Blueprints", href: "/dashboard/academics/blueprints" },
-        { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
-        ...(USE_EXAM_V2_VAL
-          ? [
-            { icon: Zap, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" },
-            { icon: CheckSquare, label: "Marks Approval", href: "/dashboard/exam-v2/marks-approval" }
-          ] as const
-          : []),
-        { icon: MessageSquare, label: "Question Feedback", href: "/dashboard/academics/question-feedback" },
-      ]
-    },
-    {
-      label: "Library Management",
-      icon: BookMarked,
-      roles: ["admin", "superadmin", "center", "student"],
-      subItems: [
-        { icon: BookOpen, label: "Digital Catalog", href: "/dashboard/library" },
-        { icon: ClipboardList, label: "Book Issues & Returns", href: "/dashboard/library?tab=issues" },
-        { icon: BookMarked, label: "My Borrowed Books", href: "/dashboard/student/library", roles: ["student"] },
-      ]
-    },
-    {
-      label: "Internships",
-      icon: Briefcase,
-      roles: ["admin", "superadmin", "center"],
-      subItems: [
-        { icon: Briefcase, label: "Internship Postings", href: "/dashboard/internships/manage" },
-      ]
-    },
-    {
-      label: "Pro ATS Resume Builder",
+      label: "ATS Resume Builder",
       icon: FileText,
       href: "/dashboard/student/resume-builder",
-      roles: ["admin", "superadmin", "center", "staff", "student"],
-    },
-    {
-      label: "Exams",
-      icon: FlaskConical,
-      roles: ["admin", "superadmin", "center", "staff"],
-      subItems: [
-        { icon: PenTool, label: "Paper Builder Studio", href: "/dashboard/exams/builder" },
-        { icon: Users, label: "360° Candidate Intelligence", href: "/dashboard/exams/candidates-360" },
-        { icon: PlusCircle, label: "Schedule & Allot Exam", href: "/dashboard/exams/allot" },
-        { icon: List, label: "Alloted Exams & Admit Cards", href: "/dashboard/exams/alloted" },
-        { icon: Video, label: "Live CBT Monitor", href: "/dashboard/exams/live-monitor" },
-        { icon: ClipboardCheck, label: "Evaluation & Marks Entry", href: "/dashboard/exams/marks-entry" },
-        { icon: Award, label: "Results & Marksheets", href: "/dashboard/exams/results" },
-        { icon: Users, label: "Reappear Management", href: "/dashboard/exams/reappear" },
-        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
-        { icon: FlaskConical, label: "Mock Tests & CBT", href: "/dashboard/academics/mock-tests" },
-        { icon: CheckSquare, label: "Center Requests", href: "/dashboard/exams/center-requests", roles: ["admin", "superadmin"] },
-        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
-        ...(USE_EXAM_V2_VAL ? [{ icon: Upload, label: "Exam Engine V2", href: "/dashboard/exam-v2/hub" } as const] : []),
-      ]
-    },
-    // --- CENTER SPECIFIC COURSES ---
-    {
-      label: "Courses",
-      icon: BookOpen,
       roles: ["center"],
-      subItems: [
-        { icon: Layers, label: "Allotted Courses", href: "/dashboard/courses/allotted" },
-        { icon: Library, label: "Course Subjects", href: "/dashboard/courses/subjects" },
-        { icon: Calendar, label: "Batches", href: "/dashboard/center/batches" },
-        { icon: Calendar, label: "Sessions", href: "/dashboard/courses/sessions" },
-        { icon: FileText, label: "Course Materials", href: "/dashboard/courses/materials" },
-        { icon: BookMarked, label: "Digital Library", href: "/dashboard/center/library" },
-      ]
     },
-    {
-      label: "Typing Master",
-      icon: Keyboard,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: Languages, label: "Languages", href: "/dashboard/typing/languages" },
-        { icon: BookOpen, label: "Lessons", href: "/dashboard/typing/lessons" },
-        { icon: BarChart3, label: "Typing Analytics", href: "/dashboard/typing/analytics" },
-        { icon: BookCheck, label: "Tests & Allotment", href: "/dashboard/typing/tests" },
-        { icon: FileText, label: "Global Reports", href: "/dashboard/typing/reports" },
-      ]
-    },
-    // --- CENTER SPECIFIC TYPING ---
-    {
-      label: "Typing Master",
-      icon: Keyboard,
-      roles: ["center"],
-      subItems: [
-        { icon: FileText, label: "Student Reports", href: "/dashboard/typing/center-reports" },
-        { icon: Trophy, label: "Center Leaderboard", href: "/dashboard/typing/leaderboard" },
-      ]
-    },
-    // --- STUDENT SPECIFIC TYPING ---
-    {
-      label: "Typing Master",
-      icon: Keyboard,
-      roles: ["student"],
-      subItems: [
-        { icon: Zap, label: "Practice Now", href: "/dashboard/student/typing" },
-        { icon: History, label: "My History", href: "/dashboard/student/typing/history" },
-        { icon: Trophy, label: "Leaderboard", href: "/dashboard/student/typing/leaderboard" },
-      ]
-    },
-    {
-      label: "Practicals",
-      icon: FlaskConical,
-      roles: ["center"],
-      subItems: [
-        { icon: List, label: "All Practicals", href: "/dashboard/practicals" },
-        { icon: PlusCircle, label: "Create Practical", href: "/dashboard/practicals/create" },
-        { icon: Download, label: "Submissions", href: "/dashboard/practicals/submissions" },
-      ]
-    },
-    {
-      label: "Finance",
-      icon: IndianRupee,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: Wallet, label: "Wallet Management", href: "/dashboard/finance/wallet" },
-        { icon: History, label: "Transactions", href: "/dashboard/finance/transactions" },
-        { icon: FileSpreadsheet, label: "Expense Ledger", href: "/dashboard/finance/expenses", roles: ["admin", "superadmin"] },
-        { icon: Trophy, label: "Referral Tracking", href: "/dashboard/finance/referrals", roles: ["admin", "superadmin"] },
-        { icon: FileSpreadsheet, label: "Commission Reports", href: "/dashboard/finance/commissions", roles: ["admin", "superadmin"] },
-        { icon: CreditCard, label: "Franchise Payments", href: "/dashboard/finance/payments", roles: ["admin", "superadmin"] },
-      ]
-    },
-    // --- CENTER SPECIFIC WALLET ---
-    {
-      label: "Wallet",
-      icon: Wallet,
-      roles: ["center"],
-      subItems: [
-        { icon: IndianRupee, label: "My Balance", href: "/dashboard/wallet/balance" },
-        { icon: Trophy, label: "Refer & Earn", href: "/dashboard/refer-and-earn" },
-        { icon: History, label: "Transactions", href: "/dashboard/wallet/transactions" },
-        { icon: FileText, label: "Payment History", href: "/dashboard/wallet/history" },
-      ]
-    },
-    // --- STUDENT SPECIFIC DASHBOARD ---
+
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STUDENT MENUS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       label: "Dashboard",
       icon: LayoutDashboard,
@@ -533,12 +752,12 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
-      label: "Internships",
-      icon: Briefcase,
+      label: "Attendance",
+      icon: CheckSquare,
       roles: ["student"],
       subItems: [
-        { icon: Briefcase, label: "Browse Internships", href: "/dashboard/student/internships" },
-        { icon: FileText, label: "Build ATS Resume", href: "/dashboard/student/resume-builder" },
+        { icon: ClipboardList, label: "My Attendance", href: "/dashboard/student/attendance" },
+        { icon: FileSpreadsheet, label: "Attendance Report", href: "/dashboard/student/attendance/report" },
       ]
     },
     {
@@ -562,25 +781,33 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
-      label: "Attendance",
-      icon: CheckSquare,
+      label: "Exams & Results",
+      icon: FlaskConical,
       roles: ["student"],
       subItems: [
-        { icon: ClipboardList, label: "My Attendance", href: "/dashboard/student/attendance" },
-        { icon: FileSpreadsheet, label: "Attendance Report", href: "/dashboard/student/attendance/report" },
-      ]
-    },
-
-    {
-      label: "My Examination & Resume",
-      icon: FileText,
-      roles: ["student"],
-      subItems: [
-        { icon: FileText, label: "Pro ATS Resume Builder", href: "/dashboard/student/resume-builder" },
         { icon: List, label: "Allotted Exams & Admit Cards", href: "/dashboard/student/exams" },
         { icon: FlaskConical, label: "Online CBT Exam", href: "/dashboard/academics/mock-tests" },
         ...(userId ? [{ icon: FileSpreadsheet, label: "My Marksheet", href: `/dashboard/student/marksheet/${userId}` } as const] : []),
         { icon: Award, label: "My Certificates", href: "/dashboard/student/certificates" },
+      ]
+    },
+    {
+      label: "Typing Master",
+      icon: Keyboard,
+      roles: ["student"],
+      subItems: [
+        { icon: Zap, label: "Practice Now", href: "/dashboard/student/typing" },
+        { icon: History, label: "My History", href: "/dashboard/student/typing/history" },
+        { icon: Trophy, label: "Leaderboard", href: "/dashboard/student/typing/leaderboard" },
+      ]
+    },
+    {
+      label: "Internships",
+      icon: Briefcase,
+      roles: ["student"],
+      subItems: [
+        { icon: Briefcase, label: "Browse Internships", href: "/dashboard/student/internships" },
+        { icon: FileText, label: "Build ATS Resume", href: "/dashboard/student/resume-builder" },
       ]
     },
     {
@@ -594,6 +821,28 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Library Management",
+      icon: BookOpen,
+      roles: ["student"],
+      subItems: [
+        { icon: BookMarked, label: "Digital E-Books Library", href: "/dashboard/student/library" },
+        { icon: Library, label: "Book Directory & Catalog", href: "/dashboard/admin/library" },
+        { icon: CheckSquare, label: "My Issued Books", href: "/dashboard/library/issue" },
+        { icon: IdCard, label: "My Library Card", href: "/dashboard/library/cards" },
+      ]
+    },
+    {
+      label: "Transport Management",
+      icon: Truck,
+      roles: ["student"],
+      subItems: [
+        { icon: MapPin, label: "Bus Routes & Stops", href: "/dashboard/transport/routes" },
+        { icon: IdCard, label: "My Transport Pass", href: "/dashboard/transport/passes" },
+        { icon: List, label: "Fleet & Vehicles List", href: "/dashboard/transport" },
+        { icon: Users, label: "Drivers & Staff Details", href: "/dashboard/transport/drivers" },
+      ]
+    },
+    {
       label: "Notifications",
       icon: Bell,
       roles: ["student"],
@@ -604,7 +853,154 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Star, label: "Review Us", href: "/dashboard/student/review" },
       ]
     },
-    // --- INTERN DASHBOARD ---
+
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STAFF MENUS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    {
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      roles: ["staff"],
+      subItems: [
+        { icon: LayoutDashboard, label: "Overview", href: "/dashboard/staff" },
+      ]
+    },
+    {
+      label: "Students",
+      icon: GraduationCap,
+      roles: ["staff"],
+      subItems: [
+        { icon: List, label: "All Students", href: "/dashboard/students" },
+        { icon: IndianRupee, label: "Student Fees", href: "/dashboard/students/fees" },
+        { icon: FileSpreadsheet, label: "Student Marksheets", href: "/dashboard/students/marksheets" },
+      ]
+    },
+    {
+      label: "Attendance",
+      icon: CheckSquare,
+      roles: ["staff"],
+      subItems: [
+        { icon: ClipboardList, label: "Attendance Register", href: "/dashboard/attendance/register" },
+        { icon: FileSpreadsheet, label: "Monthly Report", href: "/dashboard/attendance/report" },
+      ]
+    },
+    {
+      label: "Exams",
+      icon: FlaskConical,
+      roles: ["staff"],
+      subItems: [
+        { icon: PenTool, label: "Paper Builder Studio", href: "/dashboard/exams/builder" },
+        { icon: PlusCircle, label: "Schedule & Allot Exam", href: "/dashboard/exams/allot" },
+        { icon: List, label: "Alloted Exams", href: "/dashboard/exams/alloted" },
+        { icon: Video, label: "Live CBT Monitor", href: "/dashboard/exams/live-monitor" },
+        { icon: ClipboardCheck, label: "Evaluation & Marks Entry", href: "/dashboard/exams/marks-entry" },
+        { icon: Award, label: "Results & Marksheets", href: "/dashboard/exams/results" },
+        { icon: CheckSquare, label: "Exam Attendance", href: "/dashboard/exams/attendance" },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: FlaskConical, label: "Mock Tests", href: "/dashboard/academics/mock-tests" },
+        { icon: Download, label: "Download Paper", href: "/dashboard/exams/download-paper" },
+      ]
+    },
+    {
+      label: "Academics",
+      icon: BookOpen,
+      roles: ["staff"],
+      subItems: [
+        { icon: BookOpen, label: "Courses", href: "/dashboard/academics/courses" },
+        { icon: Library, label: "Subjects", href: "/dashboard/academics/subjects" },
+        { icon: FileText, label: "Study Material", href: "/dashboard/academics/study-material" },
+        { icon: BookMarked, label: "Digital Library", href: "/dashboard/library" },
+      ]
+    },
+    {
+      label: "Course Videos & Lectures",
+      icon: Tv,
+      roles: ["staff"],
+      subItems: [
+        { icon: PlusCircle, label: "Upload Course Video / YouTube", href: "/dashboard/course-videos/upload" },
+        { icon: List, label: "Video Courses Directory", href: "/dashboard/course-videos/manage" },
+        { icon: BookOpen, label: "Student Video Hub Portal", href: "/dashboard/student/recorded" },
+      ]
+    },
+    {
+      label: "Live Classes",
+      icon: Video,
+      roles: ["staff"],
+      subItems: [
+        { icon: ClipboardList, label: "Schedule Class", href: "/dashboard/live-classes/schedule" },
+        { icon: History, label: "Class History", href: "/dashboard/live-classes/history" },
+      ]
+    },
+    {
+      label: "Practicals",
+      icon: FlaskConical,
+      roles: ["staff"],
+      subItems: [
+        { icon: List, label: "All Practicals", href: "/dashboard/practicals" },
+        { icon: Download, label: "Submissions", href: "/dashboard/practicals/submissions" },
+      ]
+    },
+    {
+      label: "Inventory Assets",
+      icon: Package,
+      roles: ["staff"],
+      subItems: [
+        { icon: List, label: "Stock & Assets", href: "/dashboard/inventory" },
+      ]
+    },
+    {
+      label: "Library Management",
+      icon: BookOpen,
+      roles: ["staff"],
+      subItems: [
+        { icon: Library, label: "Book Directory & Catalog", href: "/dashboard/admin/library" },
+        { icon: CheckSquare, label: "Book Issue & Return Ledger", href: "/dashboard/library/issue" },
+        { icon: IdCard, label: "Student Library Cards", href: "/dashboard/library/cards" },
+        { icon: BookMarked, label: "Digital E-Books Library", href: "/dashboard/student/library" },
+        { icon: IndianRupee, label: "Fine & Penalty Ledger", href: "/dashboard/library/fines" },
+      ]
+    },
+    {
+      label: "Transport Management",
+      icon: Truck,
+      roles: ["staff"],
+      subItems: [
+        { icon: List, label: "Fleet & Vehicles List", href: "/dashboard/transport" },
+        { icon: MapPin, label: "Bus Routes & Stops", href: "/dashboard/transport/routes" },
+        { icon: IdCard, label: "Student Transport Passes", href: "/dashboard/transport/passes" },
+        { icon: Users, label: "Drivers & Transport Staff", href: "/dashboard/transport/drivers" },
+      ]
+    },
+    {
+      label: "Typing Master",
+      icon: Keyboard,
+      roles: ["staff"],
+      subItems: [
+        { icon: Zap, label: "Practice Now", href: "/dashboard/typing/practice" },
+        { icon: History, label: "My History", href: "/dashboard/typing/history" },
+        { icon: Trophy, label: "Leaderboard", href: "/dashboard/typing/leaderboard" },
+      ]
+    },
+    {
+      label: "Notifications",
+      icon: Bell,
+      roles: ["staff"],
+      subItems: [
+        { icon: Bell, label: "Announcements", href: "/dashboard/student/notifications" },
+        { icon: MessageSquare, label: "Messages", href: "/dashboard/student/messages" },
+        { icon: HelpCircle, label: "Support Tickets", href: "/dashboard/support" },
+      ]
+    },
+    {
+      label: "ATS Resume Builder",
+      icon: FileText,
+      href: "/dashboard/student/resume-builder",
+      roles: ["staff"],
+    },
+
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // INTERN MENUS
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     {
       label: "Dashboard",
       icon: LayoutDashboard,
@@ -623,10 +1019,10 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     },
     {
       label: "Tasks",
-      icon: List,
+      icon: ListTodo,
       roles: ["intern"],
       subItems: [
-        { icon: List, label: "My Tasks", href: "/dashboard/intern/tasks" },
+        { icon: ListTodo, label: "My Tasks", href: "/dashboard/intern/tasks" },
       ]
     },
     {
@@ -637,71 +1033,39 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
         { icon: Award, label: "My Certificates", href: "/dashboard/intern/certificates" },
       ]
     },
+    {
+      label: "ATS Resume Builder",
+      icon: FileText,
+      href: "/dashboard/intern/resume-builder",
+      roles: ["intern"],
+    },
 
-    {
-      label: "Staff Management",
-      icon: Users,
-      roles: ["admin", "superadmin", "center"],
-      subItems: [
-        { icon: PlusCircle, label: "Add New Staff", href: "/dashboard/staff/add" },
-        { icon: List, label: "Staff List", href: "/dashboard/staff/list" },
-        { icon: ShieldCheck, label: "Roles & Permissions", href: "/dashboard/staff/roles" },
-        { icon: CalendarCheck, label: "Staff Attendance", href: "/dashboard/staff/attendance" },
-        { icon: BookOpen, label: "Subject Allotment", href: "/dashboard/staff/subjects" },
-        { icon: Building, label: "Center Allotment", href: "/dashboard/staff/centers" },
-        { icon: DollarSign, label: "Salary & Payroll", href: "/dashboard/staff/salary" },
-      ]
-    },
-    {
-      label: "Attachments",
-      icon: Paperclip,
-      roles: ["admin", "superadmin", "center"],
-      subItems: [
-        { icon: Award, label: "Issue Certificates & Marksheets", href: "/dashboard/attachments/generate/certificate" },
-        { icon: PenTool, label: "Canvas Template Designer", href: "/dashboard/attachments/certificate-designer" },
-        { icon: FileText, label: "Student & Staff ID Cards", href: "/dashboard/attachment/idcards" },
-        { icon: CheckSquare, label: "Document Requests & Approvals", href: "/dashboard/attachments/approvals", roles: ["admin", "superadmin"] },
-        { icon: Send, label: "Request Document", href: "/dashboard/students/requests", roles: ["center"] },
-        { icon: List, label: "Issued Documents Log", href: "/dashboard/attachments/certificates" },
-        { icon: ShieldCheck, label: "Verification Gateway", href: "/verification-letter" },
-      ]
-    },
-    {
-      label: "System",
-      icon: Settings,
-      roles: ["admin", "superadmin"],
-      subItems: [
-        { icon: Settings, label: "System Settings", href: "/dashboard/system/settings" },
-        { icon: ShieldCheck, label: "Role Permissions", href: "/dashboard/system/roles" },
-        { icon: History, label: "Activity Logs", href: "/dashboard/system/logs", roles: ["admin", "superadmin"] },
-        { icon: Globe, label: "Translation Usage", href: "/dashboard/system/translation-usage", roles: ["admin", "superadmin"] },
-        { icon: Bell, label: "Announcements Management", href: "/dashboard/system/notifications", roles: ["admin", "superadmin"] },
-        { icon: MessageSquare, label: "Notification Gateway (SMS/WhatsApp)", href: "/dashboard/system/notifications-gateway", roles: ["admin", "superadmin"] },
-        { icon: Database, label: "Database Backup & Diagnostics", href: "/dashboard/system/backup-diagnostics", roles: ["admin", "superadmin"] },
-        { icon: HardDrive, label: "Disk & Storage", href: "/dashboard/disk-usage" },
-        { icon: AlertTriangle, label: "Maintenance", href: "/dashboard/system/maintenance", roles: ["superadmin"] },
-      ]
-    },
   ];
 
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // FILTER LOGIC
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   const filteredItems = menuItems.filter(item => {
+    // Step 1: Role gate â€” if item has roles, only show to those roles
     if (item.roles && !item.roles.includes(role)) return false;
 
-    // Staff permissions
+    // Step 2: Staff permission-based filtering (only for staff role)
     if (role === "staff" && permissions) {
       const allowed = (
+        item.label === "Dashboard" ||
+        item.label === "Typing Master" ||
+        item.label === "ATS Resume Builder" ||
+        item.label === "Notifications" ||
         (item.label === "Students" && permissions.can_manage_students) ||
         (item.label === "Attendance" && permissions.can_manage_attendance) ||
-        (item.label === "Finance" && permissions.can_manage_fees) ||
-        (item.label === "Academics" && permissions.can_manage_courses) ||
         (item.label === "Exams" && permissions.can_manage_exams) ||
-        (item.label === "Dashboard") ||
+        (item.label === "Academics" && permissions.can_manage_courses) ||
         (item.label === "Staff Management" && permissions.can_manage_staff)
       );
       if (!allowed) return false;
     }
 
-    // Sub-Admin role permissions
+    // Step 3: Sub-Admin (admin role with limited permissions)
     if (role === "admin" && permissions) {
       const p = permissions.permissions || permissions;
       if (p && typeof p === "object" && Object.keys(p).length > 0) {
@@ -742,6 +1106,8 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
     return item;
   });
 };
+
+
 
 const DashboardLayout = ({ children, role: propRole }: DashboardLayoutProps) => {
   const { t } = useTranslation();

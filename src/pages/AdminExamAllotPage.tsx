@@ -145,6 +145,8 @@ const AdminExamAllotPage = () => {
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [selectedCenterIds, setSelectedCenterIds] = useState<string[]>([]);
   const [centerCoordinators, setCenterCoordinators] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Auto exam dialog state
   const [autoExamDialogOpen, setAutoExamDialogOpen] = useState(false);
@@ -397,6 +399,15 @@ const AdminExamAllotPage = () => {
       return true;
     });
   }, [students, selectedCourse, selectedCategory, selectedCenterIds, centers, allCourses]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, selectedCourse, selectedCenterIds]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+  const paginatedStudents = useMemo(() => {
+    return filteredStudents.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredStudents, page, pageSize]);
 
   const updateSubjectAllotment = (subjectId: string, field: string, value: any) => {
     setAllotmentData(prev => ({
@@ -747,9 +758,9 @@ const AdminExamAllotPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/80 font-medium">
-                      {filteredStudents.slice(0, 15).map((st, idx) => {
+                      {paginatedStudents.map((st, idx) => {
                         const assignedSet = paperSetAllocation === "random" 
-                          ? `Set ${String.fromCharCode(65 + (idx % 3))}`
+                          ? `Set ${String.fromCharCode(65 + ((page - 1) * pageSize + idx) % 3)}`
                           : paperSetAllocation.replace("_", " ").toUpperCase();
                         const center = findCenterForStudent(toId(st.parent_id), centers);
 
@@ -776,6 +787,49 @@ const AdminExamAllotPage = () => {
                       })}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Candidate Roster Pagination Footer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-800 bg-slate-950 text-xs text-slate-300 font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold">Candidates Per Page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="bg-slate-900 border border-slate-700 text-slate-200 px-2 py-1 rounded-lg text-xs font-bold focus:border-blue-500 outline-none"
+                    >
+                      {[10, 25, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 text-xs ml-2">
+                      Showing {filteredStudents.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filteredStudents.length)} of {filteredStudents.length} candidates
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-lg text-xs font-bold uppercase disabled:opacity-40 hover:bg-slate-800 transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-bold uppercase tracking-wider px-2 text-blue-400">
+                      Page {page} of {totalPages}
+                    </span>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-lg text-xs font-bold uppercase disabled:opacity-40 hover:bg-slate-800 transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

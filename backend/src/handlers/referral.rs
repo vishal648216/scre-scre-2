@@ -187,16 +187,30 @@ pub async fn get_referral_stats(
     )
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdminReferralsQuery {
+    pub referrer_id: Option<String>,
+    pub search: Option<String>,
+}
+
 pub async fn get_all_referrals_admin(
     State(db): State<Database>,
     claims: Claims,
+    Query(query): Query<AdminReferralsQuery>,
 ) -> (StatusCode, Json<Vec<serde_json::Value>>) {
     if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
         return (StatusCode::FORBIDDEN, Json(vec![]));
     }
 
     let referral_coll = db.collection::<Referral>("referrals");
-    let mut cursor = match referral_coll.find(doc! {}, None).await {
+    let mut filter = doc! {};
+    if let Some(ref ref_id) = query.referrer_id {
+        if let Ok(oid) = ObjectId::parse_str(ref_id) {
+            filter.insert("referrer_id", oid);
+        }
+    }
+
+    let mut cursor = match referral_coll.find(filter, None).await {
         Ok(c) => c,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
     };
@@ -262,6 +276,14 @@ pub struct UpdateReferralSettingsRequest {
     pub percentage_rate: Option<f64>,
     #[serde(default)]
     pub franchise_base_fee: Option<f64>,
+    #[serde(default)]
+    pub is_system_enabled: Option<bool>,
+    #[serde(default)]
+    pub enable_for_students: Option<bool>,
+    #[serde(default)]
+    pub enable_for_centers: Option<bool>,
+    #[serde(default)]
+    pub enable_for_staff: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -329,6 +351,10 @@ pub async fn update_referral_settings(
         existing.flat_amount = flat_amount;
         existing.percentage_rate = percentage_rate;
         existing.franchise_base_fee = franchise_base_fee;
+        existing.is_system_enabled = payload.is_system_enabled;
+        existing.enable_for_students = payload.enable_for_students;
+        existing.enable_for_centers = payload.enable_for_centers;
+        existing.enable_for_staff = payload.enable_for_staff;
         existing.updated_at = now;
         existing
     } else {
@@ -348,6 +374,10 @@ pub async fn update_referral_settings(
             flat_amount,
             percentage_rate,
             franchise_base_fee,
+            is_system_enabled: payload.is_system_enabled,
+            enable_for_students: payload.enable_for_students,
+            enable_for_centers: payload.enable_for_centers,
+            enable_for_staff: payload.enable_for_staff,
             created_at: now,
             updated_at: now,
         }

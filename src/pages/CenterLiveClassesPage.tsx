@@ -55,6 +55,8 @@ interface Course {
 }
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string; icon: string }> = {
+  youtube: { label: "YouTube Video / Course", color: "bg-red-600", icon: "📺" },
+  video_file: { label: "Recorded Video MP4", color: "bg-amber-600", icon: "📼" },
   google_meet: { label: "Google Meet", color: "bg-blue-500", icon: "🎥" },
   zoom: { label: "Zoom", color: "bg-sky-500", icon: "📹" },
   other: { label: "Other", color: "bg-purple-500", icon: "🔗" },
@@ -430,6 +432,8 @@ export default function CenterLiveClassesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="youtube">📺 YouTube Video / Course</SelectItem>
+                    <SelectItem value="video_file">📼 Recorded Video MP4 / Link</SelectItem>
                     <SelectItem value="google_meet">🎥 Google Meet</SelectItem>
                     <SelectItem value="zoom">📹 Zoom</SelectItem>
                     <SelectItem value="other">🔗 Other</SelectItem>

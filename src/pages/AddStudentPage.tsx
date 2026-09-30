@@ -106,6 +106,10 @@ const ADD_STUDENT_INITIAL = {
   additionalDocuments: [] as { name: string; number: string; url: string }[],
   currentUnit: "",
   customUnits: [] as string[],
+  requires_transport: "no",
+  transport_route_id: "",
+  transport_stop_name: "",
+  transport_monthly_fee: "",
   total_fees: "",
   extra_charges: "",
   grand_total: "",
@@ -1164,6 +1168,106 @@ const AddStudentPage = () => {
                         onChange={handleChange}
                       />
                     </div>
+
+                    {/* Transport Facility Option */}
+                    {(() => {
+                      const isTransportEnabled = localStorage.getItem("transport_facility_enabled") !== "false";
+
+                      if (!isTransportEnabled) {
+                        return (
+                          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-none space-y-2 md:col-span-3">
+                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs uppercase">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span>{t("Campus Transport Facility Disabled")}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {t("Transport / Bus facility is currently disabled for this center. Turn ON transport system in center settings to enable vehicle allocation & student bus passes.")}
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="p-4 bg-muted/30 border border-border rounded-none space-y-4 md:col-span-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-black uppercase tracking-widest text-foreground flex items-center gap-2">
+                              <Truck className="w-4 h-4 text-amber-500" />
+                              {t("Do you require Transport / Campus Bus Facility?")}
+                            </label>
+                            <select
+                              name="requires_transport"
+                              className="px-3 py-1.5 rounded-none border border-border bg-background text-xs font-bold"
+                              value={formData.requires_transport}
+                              onChange={handleChange}
+                            >
+                              <option value="no">No - Self Transport</option>
+                              <option value="yes">Yes - Opt Bus Transport</option>
+                            </select>
+                          </div>
+
+                          {formData.requires_transport === "yes" && (
+                            <div className="space-y-3 pt-2 border-t border-border/50 animate-in fade-in duration-300">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest">{t("Select Bus Route")}</label>
+                                  <select
+                                    name="transport_route_id"
+                                    className="w-full px-3 py-2 rounded-none border border-border bg-background text-xs font-bold"
+                                    value={formData.transport_route_id}
+                                    onChange={(e) => {
+                                      handleChange(e);
+                                      if (e.target.value === "r1") {
+                                        setFormData((prev) => ({ ...prev, transport_route_id: "r1", transport_monthly_fee: "1500" }));
+                                      } else if (e.target.value === "r2") {
+                                        setFormData((prev) => ({ ...prev, transport_route_id: "r2", transport_monthly_fee: "1200" }));
+                                      }
+                                    }}
+                                  >
+                                    <option value="">Select Route</option>
+                                    <option value="r1">Route 1 - Main City Loop (₹1500/mo) • Bus UP-70-AB-1234</option>
+                                    <option value="r2">Route 2 - Suburb Link (₹1200/mo) • Traveler UP-70-CD-5678</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest">{t("Pickup Stop Name")}</label>
+                                  <input
+                                    name="transport_stop_name"
+                                    placeholder="e.g. Civil Lines Crossing"
+                                    className="w-full px-3 py-2 rounded-none border border-border bg-background text-xs font-bold"
+                                    value={formData.transport_stop_name}
+                                    onChange={handleChange}
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest">{t("Monthly Transport Fee (₹)")}</label>
+                                  <input
+                                    name="transport_monthly_fee"
+                                    readOnly
+                                    className="w-full px-3 py-2 rounded-none border border-border bg-muted text-xs font-bold text-emerald-600"
+                                    value={formData.transport_monthly_fee || "1500"}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Assigned Vehicle Preview Badge */}
+                              <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Truck className="w-4 h-4 text-amber-500" />
+                                  <span>
+                                    <strong>Assigned Bus:</strong> {formData.transport_route_id === "r2" ? "UP-70-CD-5678 (14-Seater Traveler)" : "UP-70-AB-1234 (32-Seater Bus)"} • Driver: Ramesh Singh (+91 9876543210)
+                                  </span>
+                                </div>
+                                <Badge className="bg-amber-500 text-slate-950 font-bold text-[10px] rounded-none">
+                                  Auto Bus Pass Generated
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {selectedCourseDetails && (selectedCourseDetails.has_course_structure_units || (selectedCourseDetails.unit_count && selectedCourseDetails.unit_count > 0)) && (
                       <div className="space-y-2 md:col-span-3">

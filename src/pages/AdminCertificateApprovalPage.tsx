@@ -219,7 +219,7 @@ const AdminCertificateApprovalPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Centers</SelectItem>
-                      {centers.map(c => (
+                      {centers.filter(c => toId(c._id).trim() !== "").map(c => (
                         <SelectItem key={toId(c._id)} value={toId(c._id)}>{c.name} ({c.code})</SelectItem>
                       ))}
                     </SelectContent>
@@ -340,7 +340,7 @@ const AdminCertificateApprovalPage = () => {
                     <SelectValue placeholder="Choose a certificate..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.filter(t => t.template_type !== 'marksheet').map((t) => (
+                    {templates.filter(t => t.template_type !== 'marksheet' && toId(t._id).trim() !== "").map((t) => (
                       <SelectItem key={toId(t._id)} value={toId(t._id)}>
                         {t.template_name}
                       </SelectItem>

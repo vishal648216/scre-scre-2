@@ -16,6 +16,12 @@ import {
   Trash2,
   Maximize2,
   Minimize2,
+  Sparkles,
+  Award,
+  BadgeCheck,
+  FileText,
+  ShieldCheck,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   Panel,
@@ -33,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const A4_PORTRAIT_WIDTH = 816; // 8.5in * 96dpi
 const A4_PORTRAIT_HEIGHT = 1056; // 11in * 96dpi
@@ -41,10 +48,10 @@ interface TemplateField {
   _id?: string;
   field_name: string;
   field_type: string;
-  x_position: number; // percentage (0-100)
-  y_position: number; // percentage (0-100)
-  width: number; // percentage (0-100)
-  height: number; // percentage (0-100)
+  x_position: number;
+  y_position: number;
+  width: number;
+  height: number;
   font_size: number;
   font_family: string;
   color: string;
@@ -111,6 +118,14 @@ const AVAILABLE_PLACEHOLDERS = [
   { key: "student_name", label: "Student Name" },
 ];
 
+const FRAME_THEMES = [
+  { id: "gold", name: "ISO Gold Honor Border", color: "#b45309", type: "certificate" },
+  { id: "blue", name: "Academic Blue Double Border", color: "#1d4ed8", type: "marksheet" },
+  { id: "idbadge", name: "CR80 ID Badge Frame", color: "#0284c7", type: "id_card" },
+  { id: "letterhead", name: "Official Letterhead Header", color: "#0f172a", type: "letter" },
+  { id: "rose", name: "Franchise License Emblem", color: "#be123c", type: "certificate" },
+];
+
 const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = ({ id }) => {
   const navigate = useNavigate();
   const { isSidebarHidden, setSidebarState } = useDashboardSidebar();
@@ -120,6 +135,7 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [selectedFrameTheme, setSelectedFrameTheme] = useState<string>("gold");
   const [adminSignature, setAdminSignature] = useState<string | null>(null);
   const [adminStamp, setAdminStamp] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -128,7 +144,6 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filter and sort placeholders
   const filteredPlaceholders = AVAILABLE_PLACEHOLDERS.filter((ph) => {
     const lowerSearch = searchTerm.toLowerCase();
     return (
@@ -212,6 +227,12 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
         else setSelectedCategory(null);
         if (data.course_id) setSelectedCourse(data.course_id);
         else setSelectedCourse(null);
+
+        // Auto select frame theme based on type
+        if (data.template_type === "marksheet") setSelectedFrameTheme("blue");
+        else if (data.template_type === "id_card") setSelectedFrameTheme("idbadge");
+        else if (data.template_type === "letter") setSelectedFrameTheme("letterhead");
+        else setSelectedFrameTheme("gold");
       }
 
       if (fieldsRes.ok) {
@@ -234,7 +255,6 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Save background image if changed
       if (template?._id) {
         const body: any = {
           template_name: template.template_name,
@@ -259,7 +279,6 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
         });
       }
 
-      // Save all fields
       const promises = fields.map((field) => {
         const fieldId = toId(field._id);
         if (fieldId) {
@@ -288,28 +307,6 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
       const reader = new FileReader();
       reader.onload = (event) => {
         setBackgroundImage(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAdminSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setAdminSignature(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAdminStampUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setAdminStamp(event.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -356,7 +353,6 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
 
       if (res.ok) {
         const data = await res.json();
-        // Add the new field to local state instead of reloading everything
         const createdField = {
           ...newField,
           _id: data.id
@@ -401,24 +397,26 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
   if (loading) {
     return (
       <div className="h-[calc(100vh-80px)] flex items-center justify-center">
-        <div className="text-muted-foreground">Loading certificate design...</div>
+        <div className="text-muted-foreground font-bold uppercase tracking-widest text-xs">Loading certificate design...</div>
       </div>
     );
   }
 
   return (
     <div className="h-[calc(220vh-80px)] flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* Top Action Bar */}
       <div className="p-4 border-b bg-white dark:bg-gray-800 flex items-center justify-between shrink-0">
         <Button
           variant="outline"
           onClick={() => navigate("/dashboard/attachments/certificate-designer")}
-          className="rounded-none gap-2"
+          className="rounded-none gap-2 font-bold uppercase text-xs tracking-wider"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Back to Presets
         </Button>
-        <h1 className="font-heading font-bold text-lg uppercase tracking-tight">
-          Certificate Design - {template?.template_name || id}
+        <h1 className="font-heading font-black text-lg uppercase tracking-tight text-foreground flex items-center gap-2">
+          <Award className="w-5 h-5 text-amber-500" />
+          Certificate Design — {template?.template_name || id}
         </h1>
         <div className="flex gap-2">
           <Button
@@ -430,7 +428,7 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
             {isSidebarHidden ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
           <Button
-            className="rounded-none gap-2"
+            className="rounded-none gap-2 font-bold uppercase text-xs"
             variant="outline"
             onClick={loadData}
             disabled={isSaving}
@@ -439,32 +437,32 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
             Reload
           </Button>
           <Button
-            className="rounded-none gap-2"
+            className="rounded-none gap-2 font-bold uppercase text-xs px-6 shadow-md"
             onClick={handleSave}
             disabled={isSaving}
           >
             <Save className="w-4 h-4" />
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : "Save Design"}
           </Button>
         </div>
       </div>
 
-      {/* New Header Row for Element Properties */}
+      {/* Selected Element Property Toolbar */}
       {selectedField && (
-        <div className="p-4 border-b bg-white dark:bg-gray-800 flex items-center gap-6 flex-wrap shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="p-4 border-b bg-muted/40 dark:bg-gray-800 flex items-center gap-6 flex-wrap shrink-0">
+          <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-primary">
             <Type className="w-4 h-4" />
-            <span className="font-medium">
+            <span>
               {AVAILABLE_PLACEHOLDERS.find((p) => p.key === selectedField.field_name)?.label ||
                 selectedField.field_name}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="text-xs text-muted-foreground">
+            <label className="text-xs text-muted-foreground font-medium">
               Font Size: {selectedField.font_size}px
             </label>
-            <div className="w-48">
+            <div className="w-44">
               <Slider
                 value={[selectedField.font_size]}
                 min={8}
@@ -477,45 +475,15 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant={selectedField.font_family === "Arial Bold" ? "default" : "outline"}
-              size="sm"
-              onClick={() =>
-                updateField(toId(selectedField._id), {
-                  font_family:
-                    selectedField.font_family === "Arial Bold" ? "Arial" : "Arial Bold",
-                })
-              }
-              className="rounded-none"
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-none"
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-none"
-            >
-              <Underline className="w-4 h-4" />
-            </Button>
-          </div>
-
           <div className="flex items-center gap-3">
-            <label className="text-xs text-muted-foreground">Color</label>
+            <label className="text-xs text-muted-foreground font-medium">Color</label>
             <input
               type="color"
               value={selectedField.color}
               onChange={(e) =>
                 updateField(toId(selectedField._id), { color: e.target.value })
               }
-              className="h-10 w-20 rounded-none"
+              className="h-9 w-16 rounded-none cursor-pointer border border-border"
             />
           </div>
 
@@ -523,186 +491,118 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
             variant="destructive"
             size="sm"
             onClick={() => deleteField(toId(selectedField._id))}
-            className="rounded-none ml-auto"
+            className="rounded-none ml-auto text-xs font-bold uppercase tracking-wider"
           >
             <Trash2 className="w-4 h-4 mr-1" />
+            Delete Element
           </Button>
         </div>
       )}
 
+      {/* Main Workspace Panels */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         <PanelGroup direction="horizontal" className="h-full min-h-0 w-full">
-          {/* Left Panel - Elements List */}
-          <Panel defaultSize={25} minSize={15} maxSize={40} className="bg-white dark:bg-gray-800 flex flex-col min-h-0">
+          
+          {/* Left Controls Panel */}
+          <Panel defaultSize={25} minSize={18} maxSize={40} className="bg-white dark:bg-gray-800 flex flex-col min-h-0 border-r border-border">
             <div className="p-4 flex-1 overflow-y-auto space-y-6">
+              
+              {/* Frame Theme Preset Switcher */}
               <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2 text-primary">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Visual Background Frame Theme
+                </h3>
+                <div className="space-y-2">
+                  {FRAME_THEMES.map((theme) => (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFrameTheme(theme.id);
+                        setBackgroundImage(null);
+                        toast.success(`Applied "${theme.name}" background frame!`);
+                      }}
+                      className={cn(
+                        "w-full text-left p-3 border text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-between",
+                        selectedFrameTheme === theme.id && !backgroundImage ? "bg-primary/10 border-primary text-primary" : "bg-card border-border hover:bg-muted"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: theme.color }} />
+                        <span>{theme.name}</span>
+                      </div>
+                      {selectedFrameTheme === theme.id && !backgroundImage && (
+                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/30">Active</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Elements List */}
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2 text-foreground">
                   <Type className="w-4 h-4" />
-                  Available Elements
+                  Available Placeholders
                 </h3>
                 <Input
                   placeholder="Search elements..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mb-3"
+                  className="mb-3 rounded-none text-xs"
                 />
-                <div className="space-y-2">
-                  {filteredPlaceholders.length > 0 ? (
-                    filteredPlaceholders.map((ph) => (
-                      <button
-                        key={ph.key}
-                        type="button"
-                        onClick={() => addField(ph.key, ph.label)}
-                        className="w-full text-left px-3 py-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
-                      >
-                        <div className="font-medium">{ph.label}</div>
-                        <div className="text-xs text-gray-500">{`{${ph.key}}`}</div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-4">
-                      No matching elements found
-                    </div>
-                  )}
+                <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                  {filteredPlaceholders.map((ph) => (
+                    <button
+                      key={ph.key}
+                      type="button"
+                      onClick={() => addField(ph.key, ph.label)}
+                      className="w-full text-left px-3 py-2 border rounded-none border-border/60 hover:bg-primary/5 hover:border-primary transition-all text-xs flex items-center justify-between group"
+                    >
+                      <span className="font-bold text-foreground group-hover:text-primary">{ph.label}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{`{${ph.key}}`}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* Background Upload */}
               <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Type className="w-4 h-4" />
-                  Admin Assets
+                <h3 className="text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2 text-foreground">
+                  <ImageIcon className="w-4 h-4" />
+                  Custom Background Image
                 </h3>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Admin Signature</label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAdminSignatureUpload}
-                      className="mt-1"
-                    />
-                  </div>
-                  {adminSignature && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setAdminSignature(null)}
-                      className="w-full rounded-none"
-                    >
-                      Remove Admin Signature
-                    </Button>
-                  )}
-                  <div className="mt-3">
-                    <label className="text-xs text-muted-foreground">Admin Stamp</label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAdminStampUpload}
-                      className="mt-1"
-                    />
-                  </div>
-                  {adminStamp && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setAdminStamp(null)}
-                      className="w-full rounded-none"
-                    >
-                      Remove Admin Stamp
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Type className="w-4 h-4" />
-                  Certificate Details
-                </h3>
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Template Name</label>
-                    <Input
-                      value={template?.template_name || ""}
-                      onChange={(e) => setTemplate(template ? { ...template, template_name: e.target.value } : null)}
-                      className="rounded-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Course Category</label>
-                    <Select
-                      value={selectedCategory || ""}
-                      onValueChange={(val) => {
-                        setSelectedCategory(val || null);
-                        setSelectedCourse(null);
-                      }}
-                    >
-                      <SelectTrigger className="rounded-none">
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Course</label>
-                    <Select
-                      value={selectedCourse || ""}
-                      onValueChange={(val) => setSelectedCourse(val || null)}
-                      disabled={!selectedCategory}
-                    >
-                      <SelectTrigger className="rounded-none">
-                        <SelectValue placeholder="Select Course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredCourses.map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.course_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
-                  Background
-                </h3>
-                <div className="space-y-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBackgroundUpload}
-                  />
-                </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBackgroundUpload}
+                  className="rounded-none text-xs"
+                />
                 {backgroundImage && (
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => setBackgroundImage(null)}
-                    className="w-full mt-2 rounded-none"
+                    className="w-full mt-2 rounded-none text-xs font-bold uppercase tracking-wider"
                   >
-                    Remove Background
+                    Remove Custom Image
                   </Button>
                 )}
               </div>
             </div>
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-col-resize" />
+          <PanelResizeHandle className="w-1 bg-border hover:bg-primary cursor-col-resize" />
 
-          {/* Main Canvas Area — scroll must be on an inner div; Panel sets overflow:hidden inline */}
+          {/* Main Visual Canvas Area */}
           <Panel className="min-h-0">
-            <div className="h-full min-h-0 w-full overflow-auto p-4 bg-gray-100 dark:bg-gray-900">
-              <div className="w-fit h-fit">
+            <div className="h-full min-h-0 w-full overflow-auto p-8 bg-slate-900 flex items-center justify-center">
+              <div className="w-fit h-fit shadow-2xl relative border-4 border-amber-500/20">
+                
+                {/* Visual Canvas Card */}
                 <div
-                  className="relative bg-white shadow-2xl overflow-hidden"
+                  className="relative bg-white shadow-2xl overflow-hidden transition-all"
                   style={{
                     width: canvasWidth,
                     height: canvasHeight,
@@ -712,13 +612,46 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
                     backgroundRepeat: "no-repeat",
                   }}
                 >
+                  {/* PRE-LOADED ELEGANT SVG CERTIFICATE & DOCUMENT FRAME BACKGROUND (Rendered if no custom image uploaded) */}
+                  {!backgroundImage && (
+                    <div className="absolute inset-0 pointer-events-none p-8 flex flex-col justify-between select-none">
+                      {/* Outer Frame Border */}
+                      <div className="w-full h-full border-[10px] border-double border-amber-600/80 p-6 flex flex-col justify-between relative bg-gradient-to-b from-amber-500/5 via-white to-amber-500/5">
+                        
+                        {/* Top Header Banner */}
+                        <div className="text-center pt-4 space-y-1">
+                          <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-700">
+                            SIR CHHOTU RAM EDUCATION PVT. LTD.
+                          </div>
+                          <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+                            GOVT. ACT REGISTERED & ISO 9001:2015 CERTIFIED INSTITUTION
+                          </div>
+                          <div className="w-32 h-0.5 bg-amber-600 mx-auto mt-2"></div>
+                        </div>
+
+                        {/* Center Watermark Crest */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                          <Award className="w-96 h-96 text-amber-900" />
+                        </div>
+
+                        {/* Bottom Footer Authority Line */}
+                        <div className="flex justify-between items-end pb-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 border-t border-amber-600/20 pt-4">
+                          <div>DIRECTOR & CONTROLLER</div>
+                          <div>VERIFIED OFFICIAL SEAL</div>
+                          <div>REGISTRATION DESK</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dynamic Draggable Placeholders */}
                   {fields.map((field) => {
-          const isImageField = field.field_type === "qr_code" ||
-            field.field_type === "center_sign" ||
-            field.field_type === "center_stamp" ||
-            field.field_type === "admin_sign" ||
-            field.field_type === "admin_stamp" ||
-            field.field_type === "result_table";
+                    const isImageField = field.field_type === "qr_code" ||
+                      field.field_type === "center_sign" ||
+                      field.field_type === "center_stamp" ||
+                      field.field_type === "admin_sign" ||
+                      field.field_type === "admin_stamp" ||
+                      field.field_type === "result_table";
 
                     const x = percentToPixels(field.x_position, true);
                     const y = percentToPixels(field.y_position, false);
@@ -730,10 +663,7 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
                           width: isImageField ? percentToPixels(field.width, true) : "auto",
                           height: isImageField ? percentToPixels(field.height, false) : "auto",
                         }}
-                        position={{
-                          x: x,
-                          y: y,
-                        }}
+                        position={{ x, y }}
                         onDragStop={(e, d) => {
                           updateField(toId(field._id), {
                             x_position: pixelsToPercent(d.x, true),
@@ -751,70 +681,61 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
                           }
                         }}
                         enableResizing={isImageField ? {
-                          top: true,
-                          right: true,
-                          bottom: true,
-                          left: true,
-                          topRight: true,
-                          bottomRight: true,
-                          bottomLeft: true,
-                          topLeft: true,
+                          top: true, right: true, bottom: true, left: true,
+                          topRight: true, bottomRight: true, bottomLeft: true, topLeft: true,
                         } : false}
                         bounds="parent"
                       >
                         <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFieldId(toId(field._id));
-                      }}
-                      className={`cursor-move p-1 flex items-center justify-center ${toId(selectedFieldId) === toId(field._id)
-                        ? "ring-2 ring-blue-500 ring-offset-1"
-                        : "hover:ring-1 hover:ring-gray-300"
-                        }`}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        fontSize: `${field.font_size}px`,
-                        fontFamily: field.font_family,
-                        color: field.color,
-                        textAlign: field.text_align as any,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {field.field_type === "qr_code" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 flex items-center justify-center text-xs text-gray-500">
-                          QR Code
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFieldId(toId(field._id));
+                          }}
+                          className={`cursor-move p-1 flex items-center justify-center ${
+                            toId(selectedFieldId) === toId(field._id)
+                              ? "ring-2 ring-primary ring-offset-2 bg-primary/10"
+                              : "hover:ring-1 hover:ring-amber-400"
+                          }`}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            fontSize: `${field.font_size}px`,
+                            fontFamily: field.font_family,
+                            color: field.color,
+                            textAlign: field.text_align as any,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {field.field_type === "qr_code" && (
+                            <div className="w-full h-full border-2 border-dashed border-amber-600 bg-amber-500/10 flex flex-col items-center justify-center text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                              <QrCode className="w-6 h-6 mb-1" /> QR Code
+                            </div>
+                          )}
+                          {field.field_type === "center_sign" && (
+                            <div className="w-full h-full border-2 border-dashed border-slate-400 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                              Center Signature
+                            </div>
+                          )}
+                          {field.field_type === "admin_sign" && (
+                            <div className="w-full h-full border-2 border-dashed border-slate-400 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                              Admin Signature
+                            </div>
+                          )}
+                          {field.field_type === "center_stamp" && (
+                            <div className="w-full h-full border-2 border-dashed border-amber-600 rounded-full flex items-center justify-center text-[9px] font-bold text-amber-700 uppercase">
+                              Official Seal
+                            </div>
+                          )}
+                          {field.field_type === "result_table" && (
+                            <div className="w-full h-full border-2 border-dashed border-blue-400 bg-blue-50/50 p-2 flex flex-col justify-center text-xs font-bold text-blue-700">
+                              <div>Subject Marks Breakdown Table</div>
+                              <div className="text-[9px] font-normal text-slate-500 mt-1">[Sub 1 | Sub 2 | Total | Grade]</div>
+                            </div>
+                          )}
+                          {field.field_type === "text" && (
+                            <span>{field.custom_text || `{${field.field_name}}`}</span>
+                          )}
                         </div>
-                      )}
-                      {field.field_type === "center_sign" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 flex items-center justify-center text-xs text-gray-500">
-                          Center Signature
-                        </div>
-                      )}
-                      {field.field_type === "center_stamp" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-500">
-                          Center Stamp
-                        </div>
-                      )}
-                      {field.field_type === "admin_sign" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 flex items-center justify-center text-xs text-gray-500">
-                          Admin Signature
-                        </div>
-                      )}
-                      {field.field_type === "admin_stamp" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-500">
-                          Admin Stamp
-                        </div>
-                      )}
-                      {field.field_type === "result_table" && (
-                        <div className="w-full h-full border-2 border-dashed border-gray-400 flex items-center justify-center text-xs text-gray-500">
-                          Result Table
-                        </div>
-                      )}
-                      {!isImageField && (
-                        `{${field.field_name}}`
-                      )}
-                    </div>
                       </Rnd>
                     );
                   })}
@@ -828,14 +749,11 @@ const CertificateDesignerCanvasContent: React.FC<{ id: string | undefined }> = (
   );
 };
 
-const CertificateDesignerCanvasPage: React.FC = () => {
-  const { id } = useParams();
-
+export default function CertificateDesignerCanvasPage() {
+  const { id } = useParams<{ id: string }>();
   return (
     <DashboardLayout>
       <CertificateDesignerCanvasContent id={id} />
     </DashboardLayout>
   );
-};
-
-export default CertificateDesignerCanvasPage;
+}

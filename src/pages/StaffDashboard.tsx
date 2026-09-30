@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, Clock, ShieldCheck, GraduationCap, School, TrendingUp, BookOpen, CheckSquare, IndianRupee, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { Link } from "react-router-dom";
 
 const StaffDashboard = () => {
   const [permissions, setPermissions] = useState<any>(null);
@@ -41,13 +42,70 @@ const StaffDashboard = () => {
   }
 
   const authorizedModules = [
-    { label: "Students", icon: GraduationCap, active: permissions?.can_manage_students, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Attendance", icon: CheckSquare, active: permissions?.can_manage_attendance, color: "text-green-500", bg: "bg-green-500/10" },
-    { label: "Finance", icon: IndianRupee, active: permissions?.can_manage_fees, color: "text-orange-500", bg: "bg-orange-500/10" },
-    { label: "Academics", icon: BookOpen, active: permissions?.can_manage_courses, color: "text-purple-500", bg: "bg-purple-500/10" },
-    { label: "Reports", icon: TrendingUp, active: permissions?.can_view_reports, color: "text-pink-500", bg: "bg-pink-500/10" },
-    { label: "Staff Management", icon: Users, active: permissions?.can_manage_staff, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-  ].filter(m => m.active);
+    {
+      label: "Students",
+      icon: GraduationCap,
+      active: permissions?.can_manage_students,
+      color: "text-blue-500",
+      bg: "bg-blue-500/10",
+      href: "/dashboard/students",
+      description: "Manage student records & info",
+    },
+    {
+      label: "Attendance",
+      icon: CheckSquare,
+      active: permissions?.can_manage_attendance,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+      href: "/dashboard/attendance/register",
+      description: "Mark & view attendance",
+    },
+    {
+      label: "Finance",
+      icon: IndianRupee,
+      active: permissions?.can_manage_fees,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10",
+      href: "/dashboard/students/fees",
+      description: "Fee collection & records",
+    },
+    {
+      label: "Academics",
+      icon: BookOpen,
+      active: permissions?.can_manage_courses,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+      href: "/dashboard/academics/courses",
+      description: "Courses & study material",
+    },
+    {
+      label: "Exams",
+      icon: School,
+      active: permissions?.can_manage_exams,
+      color: "text-pink-500",
+      bg: "bg-pink-500/10",
+      href: "/dashboard/exams/allot",
+      description: "Allot & manage exams",
+    },
+    {
+      label: "Reports",
+      icon: TrendingUp,
+      active: permissions?.can_view_reports,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+      href: "/dashboard/students/reports",
+      description: "View enrollment & reports",
+    },
+    {
+      label: "Staff Management",
+      icon: Users,
+      active: permissions?.can_manage_staff,
+      color: "text-yellow-500",
+      bg: "bg-yellow-500/10",
+      href: "/dashboard/staff/list",
+      description: "Staff list & management",
+    },
+  ].filter((m) => m.active);
 
   return (
     <DashboardLayout>
@@ -68,19 +126,22 @@ const StaffDashboard = () => {
         {authorizedModules.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {authorizedModules.map((module) => (
-              <Card key={module.label} className="rounded-none border-border shadow-md hover:border-primary/20 transition-all group">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 ${module.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <module.icon className={`w-6 h-6 ${module.color}`} />
+              <Link key={module.label} to={module.href} className="block group">
+                <Card className="rounded-none border-border shadow-md hover:border-primary/30 hover:shadow-primary/10 hover:shadow-lg transition-all cursor-pointer h-full">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 ${module.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                        <module.icon className={`w-6 h-6 ${module.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Authorized Access</p>
+                        <p className="text-xl font-black text-foreground group-hover:text-primary transition-colors">{module.label}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{module.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Authorized Access</p>
-                      <p className="text-xl font-black text-foreground">{module.label}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (

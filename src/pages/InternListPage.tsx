@@ -44,7 +44,13 @@ const InternListPage = () => {
   const [search, setSearch] = useState("");
   const [domainFilter, setDomainFilter] = useState("all");
   const [selectedIntern, setSelectedIntern] = useState<Intern | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const location = useLocation();
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, domainFilter]);
 
   const [user] = useState<{ username: string; role: string } | null>(() => {
     const storedUser = sessionStorage.getItem("user");
@@ -112,6 +118,9 @@ const InternListPage = () => {
 
     return matchesSearch && matchesDomain;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // KPI Computations
   const totalCount = interns.length;
@@ -247,93 +256,138 @@ const InternListPage = () => {
                 No intern records match your search criteria.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-slate-300">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/40 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
-                      <th className="px-5 py-3.5">Intern Name & Credentials</th>
-                      <th className="px-4 py-3.5">Domain</th>
-                      <th className="px-4 py-3.5">College & Qualification</th>
-                      <th className="px-4 py-3.5">Mode</th>
-                      <th className="px-4 py-3.5">Status</th>
-                      <th className="px-5 py-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-xs">
-                    {filtered.map((s) => {
-                      const sid = toId(s._id);
-                      return (
-                        <tr key={sid} className="hover:bg-slate-900/40 transition-colors">
-                          <td className="px-5 py-4">
-                            <div className="font-bold text-white text-sm">{s.fullName || s.username}</div>
-                            <div className="text-cyan-400/90 text-[11px]">{s.username || s.email}</div>
-                            {s.enrollment_number && (
-                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                Enrollment: <span className="text-slate-200 font-bold">{s.enrollment_number}</span>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-slate-300">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-slate-900/40 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+                        <th className="px-5 py-3.5">Intern Name & Credentials</th>
+                        <th className="px-4 py-3.5">Domain</th>
+                        <th className="px-4 py-3.5">College & Qualification</th>
+                        <th className="px-4 py-3.5">Mode</th>
+                        <th className="px-4 py-3.5">Status</th>
+                        <th className="px-5 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-xs">
+                      {paginated.map((s) => {
+                        const sid = toId(s._id);
+                        return (
+                          <tr key={sid} className="hover:bg-slate-900/40 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="font-bold text-white text-sm">{s.fullName || s.username}</div>
+                              <div className="text-cyan-400/90 text-[11px]">{s.username || s.email}</div>
+                              {s.enrollment_number && (
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                  Enrollment: <span className="text-slate-200 font-bold">{s.enrollment_number}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="inline-block px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-semibold rounded-lg text-[11px]">
+                                {s.internshipDomain}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="font-medium text-slate-200">{s.college || "College Not Specified"}</div>
+                              <div className="text-slate-400 text-[11px]">{s.highestQualification || "Qualification N/A"}</div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-[10px] font-bold text-slate-300 uppercase">
+                                {s.internshipMode}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span
+                                className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                                  s.active
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                    : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                }`}
+                              >
+                                {s.active ? "Active" : "Disabled"}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {/* View Profile Button */}
+                                <button
+                                  onClick={() => setSelectedIntern(s)}
+                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+
+                                {/* Edit Intern */}
+                                <Link
+                                  to={`/dashboard/interns/edit/${sid}`}
+                                  className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg transition-colors"
+                                  title="Edit Intern"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Link>
+
+                                {/* Delete Intern */}
+                                <button
+                                  onClick={() => deleteIntern(sid)}
+                                  className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors"
+                                  title="Delete Intern"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className="inline-block px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-semibold rounded-lg text-[11px]">
-                              {s.internshipDomain}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="font-medium text-slate-200">{s.college || "College Not Specified"}</div>
-                            <div className="text-slate-400 text-[11px]">{s.highestQualification || "Qualification N/A"}</div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-[10px] font-bold text-slate-300 uppercase">
-                              {s.internshipMode}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
-                                s.active
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                                  : "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                              }`}
-                            >
-                              {s.active ? "Active" : "Disabled"}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* View Profile Button */}
-                              <button
-                                onClick={() => setSelectedIntern(s)}
-                                className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-colors"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-                              {/* Edit Intern */}
-                              <Link
-                                to={`/dashboard/interns/edit/${sid}`}
-                                className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg transition-colors"
-                                title="Edit Intern"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Link>
-
-                              {/* Delete Intern */}
-                              <button
-                                onClick={() => deleteIntern(sid)}
-                                className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors"
-                                title="Delete Intern"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                {/* Table Pagination Footer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-800/80 bg-slate-900/40 text-xs text-slate-300 font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold">Rows Per Page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="bg-slate-900 border border-slate-700 text-slate-200 px-2 py-1 rounded-lg text-xs font-bold focus:border-cyan-500 outline-none"
+                    >
+                      {[10, 25, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 text-xs ml-2">
+                      Showing {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filtered.length)} of {filtered.length} interns
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-bold uppercase disabled:opacity-40 hover:bg-slate-700 transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-bold uppercase tracking-wider px-2 text-cyan-400">
+                      Page {page} of {totalPages}
+                    </span>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-xs font-bold uppercase disabled:opacity-40 hover:bg-slate-700 transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

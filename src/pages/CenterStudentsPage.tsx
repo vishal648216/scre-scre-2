@@ -57,6 +57,8 @@ const CenterStudentsPage = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [user, setUser] = useState<{ username: string, role: string } | null>(() => {
     const storedUser = sessionStorage.getItem("user");
@@ -269,11 +271,18 @@ const CenterStudentsPage = () => {
     }
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedCourse]);
+
   const filtered = students.filter(s =>
     ((s.fullName || "").toLowerCase().includes(search.toLowerCase()) ||
       s.username.toLowerCase().includes(search.toLowerCase())) &&
     (selectedCourse === "All" || s.course === selectedCourse)
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const courses = ["All", ...Array.from(new Set(students.map(s => s.course).filter(Boolean)))];
 
@@ -353,7 +362,7 @@ const CenterStudentsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="font-medium">
-                    {filtered.map(s => {
+                    {paginated.map(s => {
                       const sid = toId(s._id);
                       const docs = parseDocs(s.additional_docs);
                       const locationParts = [s.country, s.state, s.city].filter(Boolean).join(" / ");
@@ -451,6 +460,48 @@ const CenterStudentsPage = () => {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-muted/20 text-xs font-medium">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground uppercase text-[10px] font-bold">{t("Rows per page")}:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="bg-card border border-border px-2 py-1 text-xs font-bold focus:border-primary outline-none"
+                  >
+                    {[10, 25, 50, 100].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-muted-foreground text-[11px] ml-2">
+                    {t("Showing")} {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filtered.length)} {t("of")} {filtered.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
+                  >
+                    {t("Previous")}
+                  </button>
+                  <span className="text-xs font-bold uppercase tracking-wider px-2">
+                    {t("Page")} {page} {t("of")} {totalPages}
+                  </span>
+                  <button
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
+                  >
+                    {t("Next")}
+                  </button>
+                </div>
               </div>
             )}
           </CardContent>
