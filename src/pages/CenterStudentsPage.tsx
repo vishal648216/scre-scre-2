@@ -346,163 +346,165 @@ const CenterStudentsPage = () => {
             ) : filtered.length === 0 ? (
               <div className="p-12 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("No students found")}</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/10 text-muted-foreground uppercase text-[10px] font-black tracking-widest">
-                      <th className="px-6 py-4">{t("Name")}</th>
-                      <th className="px-6 py-4">{t("Username")}</th>
-                      <th className="px-6 py-4">{t("Course")}</th>
-                      <th className="px-6 py-4">{t("Personal Mobile")}</th>
-                      <th className="px-6 py-4">{t("Address")}</th>
-                      <th className="px-6 py-4">{t("Government ID")}</th>
-                      <th className="px-6 py-4">{t("Documents")}</th>
-                      <th className="px-6 py-4">{t("Status")}</th>
-                      <th className="px-6 py-4 text-right">{t("Actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="font-medium">
-                    {paginated.map(s => {
-                      const sid = toId(s._id);
-                      const docs = parseDocs(s.additional_docs);
-                      const locationParts = [s.country, s.state, s.city].filter(Boolean).join(" / ");
-                      const addressLine = [s.address, s.pincode].filter(Boolean).join(", ");
-                      const nationalId = s.national_id
-                        ? `${t(s.national_id_type || "Government ID")}: ${s.national_id}`
-                        : "—";
-                      return (
-                        <tr key={sid} className="border-b border-border last:border-0 hover:bg-primary/5 transition-colors">
-                          <td className="px-6 py-4">{t(s.fullName || "Not Provided")}</td>
-                          <td className="px-6 py-4">{s.username}</td>
-                          <td className="px-6 py-4">{t(s.course || "—")}</td>
-                          <td className="px-6 py-4">{s.phone || "—"}</td>
-                          <td className="px-6 py-4 text-xs">
-                            <div className="flex flex-col gap-1">
-                              <span>{locationParts || "—"}</span>
-                              {addressLine ? <span className="text-muted-foreground">{addressLine}</span> : null}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-xs">{nationalId}</td>
-                          <td className="px-6 py-4 text-xs">
-                            <div className="flex flex-col gap-1">
-                              {docs.tenth_dmc_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.tenth_dmc_url}>{t("10th DMC")}</a> : null}
-                              {docs.national_id_image_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.national_id_image_url}>{t("Government ID Image")}</a> : null}
-                              {s.signature_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={s.signature_url}>{t("Signature")}</a> : null}
-                              {!docs.tenth_dmc_url && !docs.national_id_image_url && !s.signature_url ? "—" : null}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={cn(
-                              "text-[10px] font-black uppercase tracking-widest px-2 py-1",
-                              s.active ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
-                            )}>
-                              {s.active ? t("Active") : t("Disabled")}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => downloadEnrollmentPdf(sid)}
-                                className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                                title={t("Enrollment Receipt")}
-                              >
-                                <FileText className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => downloadIdCardPdf(sid)}
-                                className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                                title={t("ID Card")}
-                              >
-                                <IdCard className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => downloadHallTicket(sid)}
-                                className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                                title={t("Hall Ticket")}
-                              >
-                                <Ticket className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => openStudentTransferModal(s)}
-                                className="p-2 hover:bg-purple-500/10 text-muted-foreground hover:text-purple-500 transition-all"
-                                title={t("Transfer Student")}
-                              >
-                                <ArrowRightLeft className="w-4 h-4" />
-                              </button>
-                              <Link
-                                to={`/dashboard/students/edit/${sid}`}
-                                className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                                title={t("Edit")}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                              <button
-                                onClick={() => toggleStatus(sid, s.active)}
-                                className={cn(
-                                  "p-2 transition-all",
-                                  s.active ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10"
-                                )}
-                                title={s.active ? t("Disable") : t("Enable")}
-                              >
-                                {s.active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                              </button>
-                              <button
-                                onClick={() => deleteStudent(sid)}
-                                className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                title={t("Delete")}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/10 text-muted-foreground uppercase text-[10px] font-black tracking-widest">
+                        <th className="px-6 py-4">{t("Name")}</th>
+                        <th className="px-6 py-4">{t("Username")}</th>
+                        <th className="px-6 py-4">{t("Course")}</th>
+                        <th className="px-6 py-4">{t("Personal Mobile")}</th>
+                        <th className="px-6 py-4">{t("Address")}</th>
+                        <th className="px-6 py-4">{t("Government ID")}</th>
+                        <th className="px-6 py-4">{t("Documents")}</th>
+                        <th className="px-6 py-4">{t("Status")}</th>
+                        <th className="px-6 py-4 text-right">{t("Actions")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-medium">
+                      {paginated.map(s => {
+                        const sid = toId(s._id);
+                        const docs = parseDocs(s.additional_docs);
+                        const locationParts = [s.country, s.state, s.city].filter(Boolean).join(" / ");
+                        const addressLine = [s.address, s.pincode].filter(Boolean).join(", ");
+                        const nationalId = s.national_id
+                          ? `${t(s.national_id_type || "Government ID")}: ${s.national_id}`
+                          : "—";
+                        return (
+                          <tr key={sid} className="border-b border-border last:border-0 hover:bg-primary/5 transition-colors">
+                            <td className="px-6 py-4">{t(s.fullName || "Not Provided")}</td>
+                            <td className="px-6 py-4">{s.username}</td>
+                            <td className="px-6 py-4">{t(s.course || "—")}</td>
+                            <td className="px-6 py-4">{s.phone || "—"}</td>
+                            <td className="px-6 py-4 text-xs">
+                              <div className="flex flex-col gap-1">
+                                <span>{locationParts || "—"}</span>
+                                {addressLine ? <span className="text-muted-foreground">{addressLine}</span> : null}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-xs">{nationalId}</td>
+                            <td className="px-6 py-4 text-xs">
+                              <div className="flex flex-col gap-1">
+                                {docs.tenth_dmc_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.tenth_dmc_url}>{t("10th DMC")}</a> : null}
+                                {docs.national_id_image_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={docs.national_id_image_url}>{t("Government ID Image")}</a> : null}
+                                {s.signature_url ? <a className="text-primary underline" target="_blank" rel="noreferrer" href={s.signature_url}>{t("Signature")}</a> : null}
+                                {!docs.tenth_dmc_url && !docs.national_id_image_url && !s.signature_url ? "—" : null}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest px-2 py-1",
+                                s.active ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+                              )}>
+                                {s.active ? t("Active") : t("Disabled")}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => downloadEnrollmentPdf(sid)}
+                                  className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                  title={t("Enrollment Receipt")}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => downloadIdCardPdf(sid)}
+                                  className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                  title={t("ID Card")}
+                                >
+                                  <IdCard className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => downloadHallTicket(sid)}
+                                  className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                  title={t("Hall Ticket")}
+                                >
+                                  <Ticket className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => openStudentTransferModal(s)}
+                                  className="p-2 hover:bg-purple-500/10 text-muted-foreground hover:text-purple-500 transition-all"
+                                  title={t("Transfer Student")}
+                                >
+                                  <ArrowRightLeft className="w-4 h-4" />
+                                </button>
+                                <Link
+                                  to={`/dashboard/students/edit/${sid}`}
+                                  className="p-2 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                  title={t("Edit")}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Link>
+                                <button
+                                  onClick={() => toggleStatus(sid, s.active)}
+                                  className={cn(
+                                    "p-2 transition-all",
+                                    s.active ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10"
+                                  )}
+                                  title={s.active ? t("Disable") : t("Enable")}
+                                >
+                                  {s.active ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={() => deleteStudent(sid)}
+                                  className="p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                  title={t("Delete")}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-muted/20 text-xs font-medium">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground uppercase text-[10px] font-bold">{t("Rows per page")}:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="bg-card border border-border px-2 py-1 text-xs font-bold focus:border-primary outline-none"
-                  >
-                    {[10, 25, 50, 100].map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-muted-foreground text-[11px] ml-2">
-                    {t("Showing")} {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filtered.length)} {t("of")} {filtered.length}
-                  </span>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border bg-muted/20 text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground uppercase text-[10px] font-bold">{t("Rows per page")}:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="bg-card border border-border px-2 py-1 text-xs font-bold focus:border-primary outline-none"
+                    >
+                      {[10, 25, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-muted-foreground text-[11px] ml-2">
+                      {t("Showing")} {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1} - {Math.min(page * pageSize, filtered.length)} {t("of")} {filtered.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
+                    >
+                      {t("Previous")}
+                    </button>
+                    <span className="text-xs font-bold uppercase tracking-wider px-2">
+                      {t("Page")} {page} {t("of")} {totalPages}
+                    </span>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
+                    >
+                      {t("Next")}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
-                  >
-                    {t("Previous")}
-                  </button>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2">
-                    {t("Page")} {page} {t("of")} {totalPages}
-                  </span>
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="px-3 py-1 bg-card border border-border text-xs font-bold uppercase disabled:opacity-50 hover:bg-muted transition-all cursor-pointer"
-                  >
-                    {t("Next")}
-                  </button>
-                </div>
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
