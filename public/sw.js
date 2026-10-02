@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Don't cache API calls except static categories/content
+  // Don't cache API calls
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -44,6 +44,23 @@ self.addEventListener('fetch', (event) => {
           headers: { 'Content-Type': 'application/json' }
         });
       })
+    );
+    return;
+  }
+
+  // Handle HTML navigation requests (SPA routing)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            return response;
+          }
+          return caches.match('/index.html').then((cached) => cached || response);
+        })
+        .catch(() => {
+          return caches.match('/index.html');
+        })
     );
     return;
   }
@@ -70,7 +87,6 @@ self.addEventListener('fetch', (event) => {
         });
         return response;
       }).catch(() => {
-        // If HTML navigation fails, return cached index.html
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
@@ -78,3 +94,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
