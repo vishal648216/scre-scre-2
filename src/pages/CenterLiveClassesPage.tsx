@@ -116,15 +116,17 @@ export default function CenterLiveClassesPage() {
   const [studioOpen, setStudioOpen] = useState(false);
   const [activeStudioMeeting, setActiveStudioMeeting] = useState<LiveClass | null>(null);
 
-  // User details for studio display
-  const [centerName, setCenterName] = useState("Center Administrator");
+  // User details & role for studio display
+  const [centerName, setCenterName] = useState("Meeting Host");
+  const [userRole, setUserRole] = useState("center");
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
       if (stored) {
         const u = JSON.parse(stored);
-        setCenterName(u.username || u.name || u.center_name || "Center Director");
+        setCenterName(u.username || u.name || u.center_name || "Meeting Host");
+        if (u.role) setUserRole(String(u.role).toLowerCase());
       }
     } catch {}
   }, []);
@@ -413,10 +415,18 @@ export default function CenterLiveClassesPage() {
               </Badge>
             </div>
             <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight mt-1">
-              Live Classes & Meetings Studio
+              {userRole === "staff"
+                ? "Faculty & Staff Live Studio"
+                : userRole === "admin" || userRole === "superadmin"
+                ? "Global Multi-Center Live Engine"
+                : "Live Classes & Meetings Studio"}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">
-              1-Click Instant Host for Academic Classes, PTM Parent Meetings & Franchise Staff Briefings.
+              {userRole === "staff"
+                ? "Host Academic Course Lectures for your enrolled students or sync with center faculty."
+                : userRole === "admin" || userRole === "superadmin"
+                ? "Host franchise director syncs, staff meetings & system-wide masterclasses."
+                : "1-Click Instant Host for Academic Classes, PTM Parent Meetings & Franchise Staff Briefings."}
             </p>
           </div>
           <div className="flex items-center gap-2">

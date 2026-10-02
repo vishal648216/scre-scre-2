@@ -48,6 +48,18 @@ pub async fn list_live_classes(
                 filter.insert("center_id", oid);
             }
         }
+        UserRole::Staff => {
+            // Staff see non-hidden classes from their center
+            filter.insert("is_hidden", doc! { "$ne": true });
+            let users_coll = db.collection::<crate::models::user::User>("users");
+            if let Ok(user_oid) = ObjectId::parse_str(&claims.sub) {
+                if let Ok(Some(user)) = users_coll.find_one(doc! {"_id": user_oid}, None).await {
+                    if let Some(cid) = user.parent_id {
+                        filter.insert("center_id", cid);
+                    }
+                }
+            }
+        }
         UserRole::Student => {
             // Students see non-hidden classes from their center
             filter.insert("is_hidden", doc! { "$ne": true });
@@ -135,7 +147,7 @@ pub async fn create_live_class(
     claims: Claims,
     Json(payload): Json<CreateLiveClassPayload>,
 ) -> (StatusCode, Json<LiveClassResponse>) {
-    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Only authorized personnel can publish course videos".to_string(),
@@ -241,7 +253,7 @@ pub async fn update_live_class(
     Path(id): Path<String>,
     Json(payload): Json<UpdateLiveClassPayload>,
 ) -> (StatusCode, Json<LiveClassResponse>) {
-    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Unauthorized".to_string(),
@@ -365,7 +377,7 @@ pub async fn delete_live_class(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<LiveClassResponse>) {
-    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Unauthorized".to_string(),
