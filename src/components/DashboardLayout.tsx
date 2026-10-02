@@ -893,6 +893,16 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
+      label: "Course Videos & Lectures",
+      icon: Tv,
+      roles: ["staff"],
+      subItems: [
+        { icon: PlusCircle, label: "Upload Course Video / YouTube", href: "/dashboard/course-videos/upload" },
+        { icon: List, label: "Video Courses Directory", href: "/dashboard/course-videos/manage" },
+        { icon: BookOpen, label: "Student Video Hub Portal", href: "/dashboard/student/recorded" },
+      ]
+    },
+    {
       label: "Exams",
       icon: FlaskConical,
       roles: ["staff"],

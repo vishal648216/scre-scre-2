@@ -37,36 +37,47 @@ import {
   Clock,
   ExternalLink,
   Eye,
+  EyeOff,
   Loader2,
   CheckCircle2,
   Layers,
-  FileVideo,
   Folder,
   Share2,
+  Building,
+  ListVideo,
+  Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-interface CourseVideoItem {
+export interface CourseVideoItem {
   id: string;
   title: string;
   description?: string;
-  platform: string; // 'youtube', 'video_file', 'google_meet', 'zoom', 'other'
+  platform: string; // 'youtube', 'youtube_channel', 'youtube_playlist', 'video_file', 'google_meet'
   join_url: string;
   course_id?: string;
   course_name?: string;
   subject_name?: string;
   instructor_name?: string;
+  center_id?: string;
+  center_name?: string;
   scheduled_at: string;
   duration_minutes: number;
   status: string;
   thumbnail_url?: string;
-  is_published?: boolean;
+  is_hidden?: boolean;
 }
 
-interface CourseOption {
+export interface CourseOption {
   id: string;
   course_name: string;
+}
+
+export interface CenterOption {
+  id: string;
+  center_name: string;
+  code?: string;
 }
 
 const DEFAULT_COURSES: CourseOption[] = [
@@ -89,10 +100,12 @@ const INITIAL_VIDEOS: CourseVideoItem[] = [
     course_name: "Diploma in Computer Application (DCA)",
     subject_name: "Computer Fundamentals",
     instructor_name: "Er. Rahul Verma",
+    center_id: "all",
+    center_name: "All Centers (Global)",
     scheduled_at: new Date().toISOString(),
     duration_minutes: 45,
     status: "completed",
-    is_published: true,
+    is_hidden: false,
   },
   {
     id: "v2",
@@ -104,10 +117,12 @@ const INITIAL_VIDEOS: CourseVideoItem[] = [
     course_name: "Master Tally Prime & GST Accounting",
     subject_name: "Tally Accounting",
     instructor_name: "CA Ankit Agarwal",
+    center_id: "all",
+    center_name: "All Centers (Global)",
     scheduled_at: new Date().toISOString(),
     duration_minutes: 60,
     status: "completed",
-    is_published: true,
+    is_hidden: false,
   },
   {
     id: "v3",
@@ -119,25 +134,52 @@ const INITIAL_VIDEOS: CourseVideoItem[] = [
     course_name: "Advanced Diploma in Computer Application (ADCA)",
     subject_name: "Graphic Design",
     instructor_name: "Pooja Sharma",
+    center_id: "all",
+    center_name: "All Centers (Global)",
     scheduled_at: new Date().toISOString(),
     duration_minutes: 55,
     status: "completed",
-    is_published: true,
+    is_hidden: false,
+  },
+  {
+    id: "v4",
+    title: "Official SCRE Computer Education YouTube Channel Feed",
+    description: "Subscribed official YouTube channel playlist stream auto-categorized into DCA, ADCA, Tally, and Web Development modules.",
+    platform: "youtube_channel",
+    join_url: "https://www.youtube.com/@SCRE_Education",
+    course_id: "c5",
+    course_name: "Web Development & MERN Stack",
+    subject_name: "Official Channel Series",
+    instructor_name: "SCRE Faculty Studio",
+    center_id: "all",
+    center_name: "All Centers (Global)",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 120,
+    status: "completed",
+    is_hidden: false,
   },
 ];
 
 export default function AdminVideoCoursesManagerPage() {
   const [videos, setVideos] = useState<CourseVideoItem[]>(INITIAL_VIDEOS);
   const [courses, setCourses] = useState<CourseOption[]>(DEFAULT_COURSES);
+  const [centers, setCenters] = useState<CenterOption[]>([
+    { id: "all", center_name: "All Centers (Global)" },
+  ]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("catalog");
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
+  const [centerFilter, setCenterFilter] = useState("all");
+  const [tabFilter, setTabFilter] = useState("all"); // 'all', 'youtube', 'channel', 'mp4', 'hidden'
 
-  // Form Modal State
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<CourseVideoItem | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Player Preview Modal
+  const [previewVideo, setPreviewVideo] = useState<CourseVideoItem | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -145,12 +187,16 @@ export default function AdminVideoCoursesManagerPage() {
     platform: "youtube",
     join_url: "",
     course_id: "",
+    center_id: "all",
     subject_name: "",
     instructor_name: "Academic Faculty",
     duration_minutes: "45",
+    is_hidden: false,
   });
 
-  // Extract YouTube ID helper
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Helpers
   const extractYouTubeId = (url: string): string | null => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -167,9 +213,6 @@ export default function AdminVideoCoursesManagerPage() {
     return "";
   };
 
-  const [userProfile, setUserProfile] = useState<any>(null);
-
-  // Fetch logged-in user profile & role
   const fetchUserProfile = useCallback(async () => {
     try {
       const res = await apiFetch("/api/users/me");
@@ -180,7 +223,22 @@ export default function AdminVideoCoursesManagerPage() {
     } catch {}
   }, []);
 
-  // Fetch API classes
+  const fetchCenters = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/centers");
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data.centers || data || [];
+        const mapped: CenterOption[] = raw.map((c: any) => ({
+          id: c.id || c._id,
+          center_name: c.center_name || c.name || "Franchise Center",
+          code: c.code || c.center_code,
+        }));
+        setCenters([{ id: "all", center_name: "All Centers (Global)" }, ...mapped]);
+      }
+    } catch {}
+  }, []);
+
   const fetchVideos = useCallback(async () => {
     setLoading(true);
     try {
@@ -189,10 +247,13 @@ export default function AdminVideoCoursesManagerPage() {
         const data = await res.json();
         const raw: CourseVideoItem[] = data.classes || [];
         if (raw.length > 0) {
+          // Merge with initial demo videos if needed
           setVideos([...raw, ...INITIAL_VIDEOS]);
         } else {
           setVideos(INITIAL_VIDEOS);
         }
+      } else {
+        setVideos(INITIAL_VIDEOS);
       }
     } catch {
       setVideos(INITIAL_VIDEOS);
@@ -217,7 +278,8 @@ export default function AdminVideoCoursesManagerPage() {
     fetchUserProfile();
     fetchVideos();
     fetchCourses();
-  }, [fetchUserProfile, fetchVideos, fetchCourses]);
+    fetchCenters();
+  }, [fetchUserProfile, fetchVideos, fetchCourses, fetchCenters]);
 
   const handleOpenAddModal = () => {
     setEditingVideo(null);
@@ -226,10 +288,12 @@ export default function AdminVideoCoursesManagerPage() {
       description: "",
       platform: "youtube",
       join_url: "",
-      course_id: courses[0]?.id || "",
+      course_id: courses[0]?.id || "c1",
+      center_id: "all",
       subject_name: "",
       instructor_name: "Academic Faculty",
       duration_minutes: "45",
+      is_hidden: false,
     });
     setIsModalOpen(true);
   };
@@ -242,28 +306,68 @@ export default function AdminVideoCoursesManagerPage() {
       platform: video.platform || "youtube",
       join_url: video.join_url || "",
       course_id: video.course_id || "",
+      center_id: video.center_id || "all",
       subject_name: video.subject_name || "",
       instructor_name: video.instructor_name || "Academic Faculty",
       duration_minutes: String(video.duration_minutes || 45),
+      is_hidden: !!video.is_hidden,
     });
     setIsModalOpen(true);
   };
 
+  const handleToggleHide = async (video: CourseVideoItem) => {
+    const newHiddenState = !video.is_hidden;
+    try {
+      await apiFetch(`/api/live-classes/${video.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_hidden: newHiddenState,
+          status: newHiddenState ? "hidden" : "completed",
+        }),
+      });
+
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === video.id
+            ? { ...v, is_hidden: newHiddenState, status: newHiddenState ? "hidden" : "completed" }
+            : v
+        )
+      );
+
+      toast.success(
+        newHiddenState
+          ? `"${video.title}" is now hidden from Students.`
+          : `"${video.title}" is now published & visible to Students!`
+      );
+    } catch {
+      toast.error("Failed to update visibility state");
+    }
+  };
+
   const handleSaveVideo = async () => {
     if (!form.title.trim()) return toast.error("Please enter video title");
-    if (!form.join_url.trim()) return toast.error("Please enter YouTube or Video URL");
+    if (!form.join_url.trim()) return toast.error("Please enter YouTube URL or MP4 Link");
 
     setSaving(true);
     try {
       const matchedCourse = courses.find((c) => c.id === form.course_id);
+      const matchedCenter = centers.find((c) => c.id === form.center_id);
+
       const payload = {
         title: form.title,
         description: form.description || null,
         platform: form.platform,
         join_url: form.join_url,
         course_id: form.course_id || null,
+        center_id: form.center_id === "all" ? null : form.center_id,
+        center_name: matchedCenter?.center_name || "All Centers (Global)",
+        subject_name: form.subject_name || "Course Lecture",
+        instructor_name: form.instructor_name || "Academic Faculty",
         scheduled_at: new Date().toISOString(),
         duration_minutes: parseInt(form.duration_minutes) || 45,
+        is_hidden: form.is_hidden,
+        status: form.is_hidden ? "hidden" : "completed",
       };
 
       let res;
@@ -283,10 +387,9 @@ export default function AdminVideoCoursesManagerPage() {
 
       const data = await res.json();
       if (res.ok || data.success) {
-        toast.success(editingVideo ? "Course video updated!" : "YouTube / Course video uploaded successfully!");
-        
-        // Update local state immediately
-        const newV: CourseVideoItem = {
+        toast.success(editingVideo ? "Video lecture updated successfully!" : "Course video / YouTube channel added successfully!");
+
+        const updatedItem: CourseVideoItem = {
           id: editingVideo ? editingVideo.id : `v_${Date.now()}`,
           title: form.title,
           description: form.description,
@@ -296,16 +399,18 @@ export default function AdminVideoCoursesManagerPage() {
           course_name: matchedCourse?.course_name || "General Computer Course",
           subject_name: form.subject_name || "Module Lecture",
           instructor_name: form.instructor_name,
+          center_id: form.center_id,
+          center_name: matchedCenter?.center_name || "All Centers (Global)",
           scheduled_at: new Date().toISOString(),
           duration_minutes: parseInt(form.duration_minutes) || 45,
-          status: "completed",
-          is_published: true,
+          status: form.is_hidden ? "hidden" : "completed",
+          is_hidden: form.is_hidden,
         };
 
         if (editingVideo) {
-          setVideos(videos.map((v) => (v.id === editingVideo.id ? newV : v)));
+          setVideos(videos.map((v) => (v.id === editingVideo.id ? updatedItem : v)));
         } else {
-          setVideos([newV, ...videos]);
+          setVideos([updatedItem, ...videos]);
         }
 
         setIsModalOpen(false);
@@ -320,49 +425,63 @@ export default function AdminVideoCoursesManagerPage() {
   };
 
   const handleDeleteVideo = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this course video lecture?")) return;
+    if (!confirm("Are you sure you want to delete this video lecture?")) return;
     try {
       await apiFetch(`/api/live-classes/${id}`, { method: "DELETE" });
       setVideos(videos.filter((v) => v.id !== id));
-      toast.success("Video lecture removed");
+      toast.success("Video lecture deleted");
     } catch {
       toast.error("Failed to delete video");
     }
+  };
+
+  const handleOpenPreview = (video: CourseVideoItem) => {
+    setPreviewVideo(video);
+    setIsPreviewOpen(true);
   };
 
   const filteredVideos = videos.filter((v) => {
     const matchesSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
       (v.description && v.description.toLowerCase().includes(search.toLowerCase())) ||
-      (v.subject_name && v.subject_name.toLowerCase().includes(search.toLowerCase()));
+      (v.subject_name && v.subject_name.toLowerCase().includes(search.toLowerCase())) ||
+      (v.instructor_name && v.instructor_name.toLowerCase().includes(search.toLowerCase()));
 
     const matchesCourse =
-      courseFilter === "all" ||
-      v.course_id === courseFilter ||
-      v.course_name === courseFilter;
+      courseFilter === "all" || v.course_id === courseFilter || v.course_name === courseFilter;
 
-    return matchesSearch && matchesCourse;
+    const matchesCenter =
+      centerFilter === "all" || v.center_id === centerFilter || v.center_id === "all";
+
+    const matchesTab =
+      tabFilter === "all" ||
+      (tabFilter === "youtube" && (v.platform === "youtube" || v.join_url.includes("youtube.com/watch"))) ||
+      (tabFilter === "channel" && (v.platform === "youtube_channel" || v.platform === "youtube_playlist" || v.join_url.includes("/@") || v.join_url.includes("playlist"))) ||
+      (tabFilter === "mp4" && (v.platform === "video_file" || v.join_url.endsWith(".mp4"))) ||
+      (tabFilter === "hidden" && v.is_hidden);
+
+    return matchesSearch && matchesCourse && matchesCenter && matchesTab;
   });
 
   const previewYtId = extractYouTubeId(form.join_url);
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12">
+      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-16">
         {/* Banner Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 text-white p-6 md:p-8 rounded-none border border-border shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 text-white p-6 md:p-8 rounded-2xl border border-red-500/20 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-red-600 text-white rounded-none font-bold uppercase text-[10px] tracking-widest gap-1">
-                <Tv className="w-3.5 h-3.5" /> Video Course Upload & Playlist Studio
+              <Badge className="bg-red-600 text-white rounded-full font-bold uppercase text-[10px] tracking-widest gap-1 px-3 py-1">
+                <Tv className="w-3.5 h-3.5" /> Video Course Upload & Channel Studio
               </Badge>
               {userProfile?.role === "superadmin" ? (
-                <Badge className="bg-amber-500 text-slate-950 rounded-none font-bold uppercase text-[10px] tracking-wider">
-                  ⚡ SuperAdmin: All Centers Access
+                <Badge className="bg-amber-500 text-slate-950 rounded-full font-bold uppercase text-[10px] tracking-wider px-3 py-1">
+                  ⚡ SuperAdmin: All Centers Scoped
                 </Badge>
               ) : (
-                <Badge className="bg-indigo-600 text-white rounded-none font-bold uppercase text-[10px] tracking-wider">
-                  📍 Center Scoped: {userProfile?.center_name || "Franchise Branch"}
+                <Badge className="bg-indigo-600 text-white rounded-full font-bold uppercase text-[10px] tracking-wider px-3 py-1">
+                  📍 Center: {userProfile?.center_name || "Franchise Branch"}
                 </Badge>
               )}
             </div>
@@ -370,33 +489,33 @@ export default function AdminVideoCoursesManagerPage() {
               <Film className="w-8 h-8 text-amber-400" /> Course Videos & YouTube Management
             </h1>
             <p className="text-xs md:text-sm text-slate-300">
-              Upload YouTube lectures, MP4 video recordings, course playlists, and subject masterclasses for students across all centers.
+              Manage YouTube channel playlists, MP4 recordings, center-wise video allotments, and control student visibility (Edit, Delete, Hide/Unhide).
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <Button
               onClick={handleOpenAddModal}
-              className="rounded-none bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs h-10 px-4"
+              className="rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs h-11 px-5 shadow-lg shadow-red-600/30"
             >
               <Plus className="w-4 h-4" /> Upload Course Video / YouTube
             </Button>
             <Button
               onClick={() => window.open("/dashboard/student/recorded", "_blank")}
               variant="outline"
-              className="rounded-none text-white border-white/20 hover:bg-white/10 text-xs h-10 gap-2"
+              className="rounded-2xl text-white border-white/20 hover:bg-white/10 text-xs h-11 px-4 gap-2"
             >
               <Eye className="w-4 h-4 text-amber-400" /> Student View Portal
             </Button>
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Analytics Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-none border-border">
+          <Card className="rounded-2xl border-border bg-card/70 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-600/10 text-red-600 dark:text-red-400">
+                <div className="p-3 rounded-2xl bg-red-600/10 text-red-600 dark:text-red-400">
                   <Tv className="w-6 h-6" />
                 </div>
                 <div>
@@ -407,164 +526,275 @@ export default function AdminVideoCoursesManagerPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border">
+          <Card className="rounded-2xl border-border bg-card/70 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <Folder className="w-6 h-6" />
+                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <ListVideo className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black">{courses.length}</p>
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Course Series</p>
+                  <p className="text-2xl font-black">
+                    {videos.filter((v) => v.platform === "youtube_channel" || v.platform === "youtube_playlist").length || 2}
+                  </p>
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">YouTube Channels & Playlists</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border">
+          <Card className="rounded-2xl border-border bg-card/70 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-2xl font-black">
                     {videos.reduce((acc, v) => acc + (v.duration_minutes || 45), 0)} Mins
                   </p>
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Total Learning Time</p>
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Total Learning Hours</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border">
+          <Card className="rounded-2xl border-border bg-card/70 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="w-6 h-6" />
+                <div className="p-3 rounded-2xl bg-slate-500/10 text-slate-400">
+                  <EyeOff className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black">100% Active</p>
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Published Status</p>
+                  <p className="text-2xl font-black">
+                    {videos.filter((v) => v.is_hidden).length} Hidden
+                  </p>
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Hidden from Students</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filter & Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-4 rounded-none border border-border">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        {/* Filter Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card/80 backdrop-blur border border-border p-4 rounded-2xl shadow-sm">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by video title, subject, instructor..."
-              className="pl-9 rounded-none h-9 text-xs"
+              placeholder="Search title, instructor, topic..."
+              className="pl-10 rounded-xl h-10 text-xs font-bold bg-background/50 border-border"
             />
           </div>
 
-          <div className="w-full sm:w-72">
-            <Select value={courseFilter} onValueChange={setCourseFilter}>
-              <SelectTrigger className="rounded-none h-9 text-xs">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Enrolled Courses</SelectItem>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.course_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            {/* Center Selector */}
+            <div className="w-full sm:w-52">
+              <Select value={centerFilter} onValueChange={setCenterFilter}>
+                <SelectTrigger className="rounded-xl h-10 text-xs font-bold border-border bg-background/50">
+                  <Building className="w-3.5 h-3.5 mr-1 text-indigo-400" />
+                  <SelectValue placeholder="All Centers" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {centers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.center_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Course Selector */}
+            <div className="w-full sm:w-56">
+              <Select value={courseFilter} onValueChange={setCourseFilter}>
+                <SelectTrigger className="rounded-xl h-10 text-xs font-bold border-border bg-background/50">
+                  <GraduationCap className="w-3.5 h-3.5 mr-1 text-primary" />
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">All Course Series</SelectItem>
+                  {courses.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.course_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        {/* Catalog List / Grid */}
+        {/* Category Tabs */}
+        <Tabs value={tabFilter} onValueChange={setTabFilter} className="w-full">
+          <TabsList className="rounded-2xl bg-muted/60 p-1 w-full sm:w-auto grid grid-cols-5 h-11 border border-border">
+            <TabsTrigger value="all" className="rounded-xl text-[10px] font-black uppercase px-4">
+              All Videos
+            </TabsTrigger>
+            <TabsTrigger value="channel" className="rounded-xl text-[10px] font-black uppercase px-4">
+              Channel / Playlist
+            </TabsTrigger>
+            <TabsTrigger value="youtube" className="rounded-xl text-[10px] font-black uppercase px-4">
+              YouTube Single
+            </TabsTrigger>
+            <TabsTrigger value="mp4" className="rounded-xl text-[10px] font-black uppercase px-4">
+              MP4 Recordings
+            </TabsTrigger>
+            <TabsTrigger value="hidden" className="rounded-xl text-[10px] font-black uppercase px-4 text-amber-500">
+              Hidden
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Catalog Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : filteredVideos.length === 0 ? (
-          <Card className="rounded-none border-border">
-            <CardContent className="py-14 text-center text-muted-foreground">
-              <Video className="w-12 h-12 mx-auto mb-3 opacity-40 text-primary" />
-              <p className="font-bold text-base text-foreground">No course videos found matching your filter.</p>
-              <Button onClick={handleOpenAddModal} className="mt-4 rounded-none bg-red-600 hover:bg-red-700 text-white gap-2 text-xs">
-                <Plus className="w-4 h-4" /> Upload First Video
+          <Card className="rounded-2xl border-dashed border-2 border-border bg-card/40 py-16 text-center">
+            <CardContent className="space-y-3">
+              <Video className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+              <p className="font-bold text-base text-foreground uppercase tracking-tight">No course videos found matching current filters.</p>
+              <Button onClick={handleOpenAddModal} className="mt-2 rounded-xl bg-red-600 hover:bg-red-700 text-white gap-2 text-xs font-bold uppercase">
+                <Plus className="w-4 h-4" /> Upload First Video / YouTube
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVideos.map((vid) => {
               const ytId = extractYouTubeId(vid.join_url);
               const thumb = getThumbnail(vid);
               const courseName = courses.find((c) => c.id === vid.course_id)?.course_name || vid.course_name;
+              const isChannelOrPlaylist = vid.platform === "youtube_channel" || vid.platform === "youtube_playlist" || vid.join_url.includes("/@") || vid.join_url.includes("playlist");
+              const isMp4 = vid.platform === "video_file" || vid.join_url.endsWith(".mp4");
 
               return (
-                <Card key={vid.id} className="rounded-none border-border overflow-hidden flex flex-col justify-between group shadow-sm hover:border-red-500/50 transition-all">
+                <Card
+                  key={vid.id}
+                  className={`rounded-2xl border overflow-hidden flex flex-col justify-between group shadow-md transition-all duration-300 ${
+                    vid.is_hidden
+                      ? "border-amber-500/40 bg-slate-950/60 opacity-80"
+                      : "border-border/80 bg-card hover:border-red-500/50"
+                  }`}
+                >
                   <div>
-                    {/* Thumbnail preview */}
-                    <div className="relative aspect-video bg-slate-900 overflow-hidden">
+                    {/* Thumbnail Box */}
+                    <div className="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer" onClick={() => handleOpenPreview(vid)}>
                       {thumb ? (
-                        <img src={thumb} alt={vid.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={thumb} alt={vid.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-950">
-                          <Film className="w-12 h-12 text-slate-700" />
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-red-950">
+                          <Film className="w-12 h-12 text-red-500/40 mb-2" />
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                            {isMp4 ? "MP4 Video Recording" : "YouTube Lecture"}
+                          </span>
                         </div>
                       )}
 
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                        <Badge className="bg-red-600 text-white rounded-none text-[10px] font-bold uppercase gap-1">
-                          <Tv className="w-3 h-3" /> {ytId ? "YouTube" : "Video URL"}
-                        </Badge>
+                      {/* Top Badges */}
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
+                        {isChannelOrPlaylist ? (
+                          <Badge className="bg-amber-500 text-slate-950 font-black uppercase text-[9px] rounded-full gap-1">
+                            <Radio className="w-3 h-3" /> YouTube Channel / Series
+                          </Badge>
+                        ) : isMp4 ? (
+                          <Badge className="bg-indigo-600 text-white font-black uppercase text-[9px] rounded-full gap-1">
+                            <FileVideo className="w-3 h-3" /> MP4 Video File
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-600 text-white font-black uppercase text-[9px] rounded-full gap-1">
+                            <Tv className="w-3 h-3" /> YouTube Video
+                          </Badge>
+                        )}
+
+                        {vid.is_hidden && (
+                          <Badge className="bg-amber-500/90 text-slate-950 font-black uppercase text-[9px] rounded-full gap-1 border border-amber-400">
+                            <EyeOff className="w-3 h-3" /> Hidden from Students
+                          </Badge>
+                        )}
                       </div>
 
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono px-2 py-0.5">
+                      {/* Play Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xl">
+                          <Play className="w-5 h-5 fill-white ml-0.5" />
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono px-2 py-0.5 rounded-full backdrop-blur border border-white/10">
                         {vid.duration_minutes || 45} mins
                       </div>
                     </div>
 
-                    {/* Meta info */}
+                    {/* Metadata Content */}
                     <CardContent className="p-4 space-y-2">
-                      {courseName && (
-                        <Badge variant="outline" className="rounded-none text-[10px] uppercase font-semibold">
-                          {courseName}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {courseName && (
+                          <Badge variant="outline" className="rounded-full text-[9px] uppercase font-bold text-primary border-primary/30">
+                            {courseName}
+                          </Badge>
+                        )}
+                        {vid.center_name && (
+                          <Badge variant="secondary" className="rounded-full text-[9px] font-bold">
+                            📍 {vid.center_name}
+                          </Badge>
+                        )}
+                      </div>
 
-                      <h3 className="font-bold text-sm text-foreground line-clamp-2 leading-snug">
+                      <h3
+                        onClick={() => handleOpenPreview(vid)}
+                        className="font-heading font-black text-sm text-foreground line-clamp-2 hover:text-red-500 cursor-pointer leading-snug uppercase tracking-tight"
+                      >
                         {vid.title}
                       </h3>
 
                       {vid.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{vid.description}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 font-medium">{vid.description}</p>
                       )}
 
-                      <div className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1 font-medium">
-                        <GraduationCap className="w-3.5 h-3.5 text-primary" /> Instructor: {vid.instructor_name || "Academic Faculty"}
+                      <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1 font-semibold">
+                        <GraduationCap className="w-3.5 h-3.5 text-primary" /> Faculty: {vid.instructor_name || "Academic Faculty"}
                       </div>
                     </CardContent>
                   </div>
 
-                  {/* Actions footer */}
+                  {/* Actions Footer - Edit, Delete, Hide/Unhide */}
                   <div className="p-4 pt-0 border-t border-border/40 mt-2 flex items-center justify-between gap-2">
                     <Button
-                      onClick={() => window.open(vid.join_url, "_blank")}
+                      onClick={() => handleOpenPreview(vid)}
                       size="sm"
                       variant="outline"
-                      className="rounded-none text-xs h-8 gap-1.5"
+                      className="rounded-xl text-xs h-8 gap-1.5 font-bold"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" /> Play Link
+                      <Play className="w-3 h-3 text-red-500" /> Play & Preview
                     </Button>
 
                     <div className="flex items-center gap-1">
-                      <Button onClick={() => handleOpenEditModal(vid)} size="sm" variant="ghost" className="rounded-none h-8 w-8 p-0">
-                        <Pencil className="w-3.5 h-3.5" />
+                      {/* Hide / Unhide Toggle */}
+                      <Button
+                        onClick={() => handleToggleHide(vid)}
+                        size="sm"
+                        variant={vid.is_hidden ? "default" : "ghost"}
+                        className={`rounded-xl h-8 px-2.5 text-xs font-bold gap-1 ${
+                          vid.is_hidden
+                            ? "bg-amber-500 hover:bg-amber-600 text-slate-950"
+                            : "text-muted-foreground hover:text-amber-500"
+                        }`}
+                        title={vid.is_hidden ? "Click to Unhide for Students" : "Click to Hide from Students"}
+                      >
+                        {vid.is_hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span className="hidden sm:inline">{vid.is_hidden ? "Unhide" : "Hide"}</span>
                       </Button>
-                      <Button onClick={() => handleDeleteVideo(vid.id)} size="sm" variant="ghost" className="rounded-none h-8 w-8 p-0 text-destructive hover:text-destructive">
+
+                      {/* Edit Button */}
+                      <Button onClick={() => handleOpenEditModal(vid)} size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0" title="Edit Video">
+                        <Pencil className="w-3.5 h-3.5 text-blue-400" />
+                      </Button>
+
+                      {/* Delete Button */}
+                      <Button onClick={() => handleDeleteVideo(vid.id)} size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0 text-destructive hover:text-destructive" title="Delete Video">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -577,84 +807,103 @@ export default function AdminVideoCoursesManagerPage() {
 
         {/* UPLOAD / EDIT DIALOG */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-xl rounded-none">
+          <DialogContent className="max-w-xl rounded-2xl border-border">
             <DialogHeader>
               <DialogTitle className="font-heading uppercase font-bold text-base flex items-center gap-2">
                 <Tv className="w-5 h-5 text-red-600" />
-                {editingVideo ? "Edit Course Video Lecture" : "Upload Course Video / YouTube Link"}
+                {editingVideo ? "Edit Course Video / YouTube Link" : "Upload Course Video or YouTube Channel"}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-3 py-2 text-xs">
+            <div className="space-y-4 py-2 text-xs">
               <div className="space-y-1">
-                <Label>Video Lecture Title *</Label>
+                <Label className="font-bold">Video Lecture or Channel Title *</Label>
                 <Input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g. DCA Chapter 1 – Introduction to Computer Hardware"
-                  className="rounded-none"
+                  placeholder="e.g. DCA Chapter 1 – Computer Hardware Fundamentals"
+                  className="rounded-xl h-10 font-bold"
                 />
               </div>
 
-              <div className="space-y-1">
-                <Label>Course Assignment *</Label>
-                <Select value={form.course_id} onValueChange={(v) => setForm({ ...form, course_id: v })}>
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue placeholder="Select Course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.course_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label>Video Platform Source</Label>
-                  <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
-                    <SelectTrigger className="rounded-none">
-                      <SelectValue />
+                  <Label className="font-bold">Course Series *</Label>
+                  <Select value={form.course_id} onValueChange={(v) => setForm({ ...form, course_id: v })}>
+                    <SelectTrigger className="rounded-xl h-10 font-bold">
+                      <SelectValue placeholder="Select Course" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="youtube">📺 YouTube Video Link</SelectItem>
-                      <SelectItem value="video_file">📼 MP4 / Cloud Storage Video</SelectItem>
-                      <SelectItem value="google_meet">🎥 Live Stream Recording</SelectItem>
+                    <SelectContent className="rounded-xl">
+                      {courses.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.course_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label>Duration (Minutes)</Label>
+                  <Label className="font-bold">Center Allotment *</Label>
+                  <Select value={form.center_id} onValueChange={(v) => setForm({ ...form, center_id: v })}>
+                    <SelectTrigger className="rounded-xl h-10 font-bold">
+                      <SelectValue placeholder="Select Center" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {centers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.center_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="font-bold">Media Type Source</Label>
+                  <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
+                    <SelectTrigger className="rounded-xl h-10 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="youtube">📺 YouTube Single Video</SelectItem>
+                      <SelectItem value="youtube_channel">📻 YouTube Channel Handle / URL</SelectItem>
+                      <SelectItem value="youtube_playlist">📋 YouTube Playlist URL</SelectItem>
+                      <SelectItem value="video_file">📼 Direct MP4 Video URL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="font-bold">Duration (Minutes)</Label>
                   <Input
                     type="number"
                     value={form.duration_minutes}
                     onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })}
-                    className="rounded-none"
+                    className="rounded-xl h-10 font-bold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label>YouTube Video Link or MP4 URL *</Label>
+                <Label className="font-bold">YouTube URL / Channel Link / MP4 Video Link *</Label>
                 <Input
                   value={form.join_url}
                   onChange={(e) => setForm({ ...form, join_url: e.target.value })}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="rounded-none"
+                  placeholder="https://www.youtube.com/watch?v=... or https://youtube.com/@channel or .mp4 URL"
+                  className="rounded-xl h-10 font-bold"
                 />
               </div>
 
               {/* YouTube Live Form Preview */}
               {previewYtId && (
-                <div className="space-y-1 bg-slate-950 p-2 border border-border">
+                <div className="space-y-1 bg-slate-950 p-3 rounded-xl border border-border">
                   <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Live YouTube Link Detected
+                    <CheckCircle2 className="w-3 h-3" /> Live YouTube Link Validated
                   </p>
-                  <div className="aspect-video w-full max-h-48">
+                  <div className="aspect-video w-full max-h-48 rounded-lg overflow-hidden">
                     <iframe
                       src={`https://www.youtube.com/embed/${previewYtId}`}
                       title="YouTube Preview"
@@ -665,49 +914,103 @@ export default function AdminVideoCoursesManagerPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label>Subject / Topic Name</Label>
+                  <Label className="font-bold">Subject / Topic</Label>
                   <Input
                     value={form.subject_name}
                     onChange={(e) => setForm({ ...form, subject_name: e.target.value })}
-                    placeholder="e.g. Computer Fundamentals"
-                    className="rounded-none"
+                    placeholder="e.g. Hardware Fundamentals"
+                    className="rounded-xl h-10 font-bold"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label>Faculty / Instructor Name</Label>
+                  <Label className="font-bold">Instructor Name</Label>
                   <Input
                     value={form.instructor_name}
                     onChange={(e) => setForm({ ...form, instructor_name: e.target.value })}
                     placeholder="e.g. Er. Rahul Verma"
-                    className="rounded-none"
+                    className="rounded-xl h-10 font-bold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label>Description / Lecture Notes Summary</Label>
+                <Label className="font-bold">Description / Lecture Notes</Label>
                 <Textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Briefly describe what students will learn in this video..."
-                  className="rounded-none resize-none"
+                  placeholder="Summary of topics covered in this video lecture..."
+                  className="rounded-xl resize-none font-medium text-xs"
                   rows={3}
                 />
+              </div>
+
+              {/* Visibility Hide Toggle */}
+              <div className="flex items-center justify-between bg-muted/40 p-3 rounded-xl border border-border">
+                <div>
+                  <p className="font-bold text-xs text-foreground">Hide Video from Students?</p>
+                  <p className="text-[11px] text-muted-foreground">If hidden, this video will not appear in student portals.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant={form.is_hidden ? "default" : "outline"}
+                  onClick={() => setForm({ ...form, is_hidden: !form.is_hidden })}
+                  className={`rounded-xl text-xs font-bold gap-1.5 px-4 ${
+                    form.is_hidden ? "bg-amber-500 hover:bg-amber-600 text-slate-950" : ""
+                  }`}
+                >
+                  {form.is_hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {form.is_hidden ? "Hidden" : "Visible"}
+                </Button>
               </div>
             </div>
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-none text-xs">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-xl text-xs font-bold">
                 Cancel
               </Button>
-              <Button onClick={handleSaveVideo} disabled={saving} className="rounded-none bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs">
+              <Button onClick={handleSaveVideo} disabled={saving} className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {editingVideo ? "Update Video" : "Publish Course Video"}
+                {editingVideo ? "Update Video" : "Publish Video"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Video Preview Player Modal */}
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+          <DialogContent className="max-w-3xl rounded-2xl p-0 overflow-hidden bg-slate-950 text-white border border-slate-800">
+            {previewVideo && (
+              <div>
+                <div className="relative aspect-video w-full bg-black">
+                  {extractYouTubeId(previewVideo.join_url) ? (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${extractYouTubeId(previewVideo.join_url)}?autoplay=1`}
+                      title={previewVideo.title}
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video controls autoPlay src={previewVideo.join_url} className="w-full h-full object-contain" />
+                  )}
+                </div>
+
+                <div className="p-5 space-y-3 bg-slate-900 text-slate-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge className="bg-red-600 text-white rounded-full uppercase text-[10px] font-bold">
+                      {previewVideo.platform === "youtube" ? "📺 YouTube Video" : "📼 Video File"}
+                    </Badge>
+                    <span className="text-xs text-slate-400 font-mono">Duration: {previewVideo.duration_minutes || 45} mins</span>
+                  </div>
+
+                  <h2 className="text-lg font-black uppercase text-white tracking-tight">{previewVideo.title}</h2>
+                  {previewVideo.description && <p className="text-xs text-slate-300 leading-relaxed font-medium">{previewVideo.description}</p>}
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

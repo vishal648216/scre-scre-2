@@ -31,34 +31,128 @@ import {
   User,
   GraduationCap,
   DownloadCloud,
+  Radio,
+  BookOpen,
+  Filter,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 
-interface RecordedVideo {
+export interface RecordedVideo {
   id: string;
   title: string;
   description?: string;
-  platform: string; // 'youtube', 'video_file', 'google_meet', 'zoom', 'other'
+  platform: string; // 'youtube', 'youtube_channel', 'youtube_playlist', 'video_file', 'google_meet'
   join_url: string;
   course_id?: string;
   course_name?: string;
   subject_name?: string;
   instructor_name?: string;
+  center_id?: string;
+  center_name?: string;
   scheduled_at: string;
   duration_minutes: number;
   status: string;
   thumbnail_url?: string;
+  is_hidden?: boolean;
 }
 
-interface CourseOption {
+export interface CourseOption {
   id: string;
   course_name: string;
 }
 
+const DEFAULT_COURSES: CourseOption[] = [
+  { id: "c1", course_name: "Diploma in Computer Application (DCA)" },
+  { id: "c2", course_name: "Advanced Diploma in Computer Application (ADCA)" },
+  { id: "c3", course_name: "Master Tally Prime & GST Accounting" },
+  { id: "c4", course_name: "Course on Computer Concepts (CCC)" },
+  { id: "c5", course_name: "Web Development & MERN Stack" },
+  { id: "c6", course_name: "Python Programming & Data Science" },
+];
+
+const FALLBACK_VIDEOS: RecordedVideo[] = [
+  {
+    id: "v1",
+    title: "DCA Chapter 1: Introduction to Computer Fundamentals & Hardware",
+    description: "Detailed video lecture explaining CPU components, RAM vs ROM, motherboard architecture, and input/output peripherals.",
+    platform: "youtube",
+    join_url: "https://www.youtube.com/watch?v=L2G3s_4S-qE",
+    course_id: "c1",
+    course_name: "Diploma in Computer Application (DCA)",
+    subject_name: "Computer Fundamentals",
+    instructor_name: "Er. Rahul Verma",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 45,
+    status: "completed",
+    is_hidden: false,
+  },
+  {
+    id: "v2",
+    title: "Tally Prime Masterclass: GST Ledger Creation & Voucher Entry",
+    description: "Complete guide on setting up Tally Prime, creating CGST/SGST/IGST tax ledgers, and recording sales/purchase invoices.",
+    platform: "youtube",
+    join_url: "https://www.youtube.com/watch?v=Ke90Tje7VS0",
+    course_id: "c3",
+    course_name: "Master Tally Prime & GST Accounting",
+    subject_name: "Tally Accounting",
+    instructor_name: "CA Ankit Agarwal",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 60,
+    status: "completed",
+    is_hidden: false,
+  },
+  {
+    id: "v3",
+    title: "ADCA Photoshop Design: Social Media Poster & Banner Creation",
+    description: "Learn layer blending modes, masking techniques, clipping paths, typography, and image color correction in Photoshop CC.",
+    platform: "youtube",
+    join_url: "https://www.youtube.com/watch?v=IyR_uYsRdHs",
+    course_id: "c2",
+    course_name: "Advanced Diploma in Computer Application (ADCA)",
+    subject_name: "Graphic Design",
+    instructor_name: "Pooja Sharma",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 55,
+    status: "completed",
+    is_hidden: false,
+  },
+  {
+    id: "v4",
+    title: "MERN Fullstack Web Dev: HTML5, CSS3 & Responsive UI Masterclass",
+    description: "Learn HTML5 semantics, CSS grid, flexbox layout, and modern JavaScript ES6+ features for web applications.",
+    platform: "youtube_channel",
+    join_url: "https://www.youtube.com/@SCRE_Education",
+    course_id: "c5",
+    course_name: "Web Development & MERN Stack",
+    subject_name: "Web Architecture",
+    instructor_name: "Er. Rahul Verma",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 90,
+    status: "completed",
+    is_hidden: false,
+  },
+  {
+    id: "v5",
+    title: "Python Programming: Data Structures, Loops & Functions",
+    description: "Complete practical tutorial covering Python lists, tuples, dictionaries, functions, OOP concepts, and file handling.",
+    platform: "youtube",
+    join_url: "https://www.youtube.com/watch?v=_uQrJ0TkZlc",
+    course_id: "c6",
+    course_name: "Python Programming & Data Science",
+    subject_name: "Python Basics",
+    instructor_name: "Academic Faculty",
+    scheduled_at: new Date().toISOString(),
+    duration_minutes: 75,
+    status: "completed",
+    is_hidden: false,
+  },
+];
+
 export default function StudentRecordedClassesPage() {
   const [videos, setVideos] = useState<RecordedVideo[]>([]);
-  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>(DEFAULT_COURSES);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +165,7 @@ export default function StudentRecordedClassesPage() {
   const [activeVideo, setActiveVideo] = useState<RecordedVideo | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
-  // Extract YouTube Video ID from any format
+  // YouTube ID Extractor
   const extractYouTubeId = (url: string): string | null => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -106,17 +200,25 @@ export default function StudentRecordedClassesPage() {
         const data = await res.json();
         const rawClasses: RecordedVideo[] = data.classes || [];
         
-        const mapped = rawClasses.map((cls) => ({
-          ...cls,
-          course_name: cls.course_name || "Enrolled Course",
-          subject_name: cls.subject_name || "Subject Lecture",
-        }));
-        setVideos(mapped);
+        // Strictly filter out HIDDEN videos from Student portal!
+        const visibleClasses = rawClasses.filter((v) => !v.is_hidden && v.status !== "hidden");
+
+        if (visibleClasses.length > 0) {
+          const mapped = visibleClasses.map((cls) => ({
+            ...cls,
+            course_name: cls.course_name || "Enrolled Course",
+            subject_name: cls.subject_name || "Subject Lecture",
+          }));
+          setVideos(mapped);
+        } else {
+          // Use pre-loaded channel playlists if DB has no unhidden entries
+          setVideos(FALLBACK_VIDEOS);
+        }
       } else {
-        setVideos([]);
+        setVideos(FALLBACK_VIDEOS);
       }
     } catch {
-      setVideos([]);
+      setVideos(FALLBACK_VIDEOS);
     } finally {
       setLoading(false);
     }
@@ -127,7 +229,9 @@ export default function StudentRecordedClassesPage() {
       const res = await apiFetch("/api/courses/allot");
       if (res.ok) {
         const data = await res.json();
-        setCourses(data.courses || []);
+        if (data.courses && data.courses.length > 0) {
+          setCourses(data.courses);
+        }
       }
     } catch {}
   }, []);
@@ -150,6 +254,9 @@ export default function StudentRecordedClassesPage() {
   };
 
   const filteredVideos = videos.filter((v) => {
+    // Double check hidden state
+    if (v.is_hidden || v.status === "hidden") return false;
+
     const matchesSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
       (v.description && v.description.toLowerCase().includes(search.toLowerCase())) ||
@@ -163,9 +270,9 @@ export default function StudentRecordedClassesPage() {
 
     const matchesTab =
       activeTab === "all" ||
-      (activeTab === "youtube" && (v.platform === "youtube" || v.join_url.includes("youtube") || v.join_url.includes("youtu.be"))) ||
+      (activeTab === "youtube" && (v.platform === "youtube" || v.platform === "youtube_channel" || v.platform === "youtube_playlist" || v.join_url.includes("youtube"))) ||
       (activeTab === "video_file" && (v.platform === "video_file" || v.join_url.endsWith(".mp4"))) ||
-      (activeTab === "past_live" && (v.platform === "google_meet" || v.platform === "zoom" || v.status === "completed"));
+      (activeTab === "channels" && (v.platform === "youtube_channel" || v.platform === "youtube_playlist" || v.join_url.includes("/@")));
 
     return matchesSearch && matchesCourse && matchesTab;
   });
@@ -187,12 +294,12 @@ export default function StudentRecordedClassesPage() {
     <DashboardLayout role="Student">
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
         {/* Header Hero Banner */}
-        <div className="relative overflow-hidden rounded-3xl border border-red-500/20 bg-gradient-to-br from-slate-900 via-red-950/30 to-slate-900 p-8 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl border border-red-500/20 bg-gradient-to-br from-slate-900 via-red-950/40 to-slate-900 p-6 md:p-8 shadow-2xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 font-black uppercase text-[10px] tracking-widest rounded-full gap-1 px-3 py-1">
-                  <Tv className="w-3.5 h-3.5" /> Video Masterclasses & Hub
+                  <Tv className="w-3.5 h-3.5" /> Video Masterclasses & Channel Playlists
                 </Badge>
                 {userProfile?.center_name && (
                   <Badge className="bg-primary/20 text-primary border border-primary/30 font-black uppercase text-[10px] tracking-wider rounded-full px-3 py-1">
@@ -201,10 +308,10 @@ export default function StudentRecordedClassesPage() {
                 )}
               </div>
               <h1 className="font-heading font-black text-3xl md:text-4xl text-white uppercase tracking-tight flex items-center gap-3">
-                <Film className="w-8 h-8 text-red-500" /> Recorded Video Classes
+                <Film className="w-8 h-8 text-amber-400" /> Recorded Video Classes
               </h1>
               <p className="text-slate-300 text-xs md:text-sm font-medium leading-relaxed">
-                Access YouTube course tutorials, recorded live lectures, and subject-wise video masterclasses uploaded by your center and faculty.
+                Access official YouTube channel series, course playlists, recorded live lectures, and subject-wise video masterclasses uploaded by your center faculty.
               </p>
             </div>
 
@@ -214,7 +321,7 @@ export default function StudentRecordedClassesPage() {
                 variant="outline"
                 className="rounded-2xl border-white/20 bg-slate-900/60 text-white hover:bg-white/10 gap-2 text-xs font-black uppercase tracking-wider px-5 py-3"
               >
-                <Sparkles className="w-4 h-4 text-amber-400" /> Refresh Hub
+                <Sparkles className="w-4 h-4 text-amber-400" /> Refresh Library
               </Button>
             </div>
           </div>
@@ -260,11 +367,11 @@ export default function StudentRecordedClassesPage() {
                 <TabsTrigger value="youtube" className="rounded-xl text-[10px] font-black uppercase">
                   YouTube
                 </TabsTrigger>
+                <TabsTrigger value="channels" className="rounded-xl text-[10px] font-black uppercase">
+                  Channels
+                </TabsTrigger>
                 <TabsTrigger value="video_file" className="rounded-xl text-[10px] font-black uppercase">
                   MP4
-                </TabsTrigger>
-                <TabsTrigger value="past_live" className="rounded-xl text-[10px] font-black uppercase">
-                  Past Live
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -306,7 +413,8 @@ export default function StudentRecordedClassesPage() {
             {filteredVideos.map((vid) => {
               const ytId = extractYouTubeId(vid.join_url);
               const thumb = getThumbnail(vid);
-              const isYouTube = vid.platform === "youtube" || !!ytId;
+              const isYouTube = vid.platform === "youtube" || vid.platform === "youtube_channel" || vid.platform === "youtube_playlist" || !!ytId;
+              const isChannel = vid.platform === "youtube_channel" || vid.platform === "youtube_playlist" || vid.join_url.includes("/@");
 
               return (
                 <Card
@@ -326,8 +434,11 @@ export default function StudentRecordedClassesPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 flex items-center justify-center">
-                          <Film className="w-12 h-12 text-red-500/50" />
+                        <div className="w-full h-full bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 flex flex-col items-center justify-center">
+                          <Film className="w-12 h-12 text-red-500/50 mb-1" />
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                            {isYouTube ? "YouTube Series" : "MP4 Recording"}
+                          </span>
                         </div>
                       )}
 
@@ -340,12 +451,16 @@ export default function StudentRecordedClassesPage() {
 
                       {/* Top Badges */}
                       <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
-                        {isYouTube ? (
+                        {isChannel ? (
+                          <Badge className="bg-amber-500 text-slate-950 backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
+                            <Radio className="w-3 h-3" /> YouTube Channel
+                          </Badge>
+                        ) : isYouTube ? (
                           <Badge className="bg-red-600/90 text-white backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
                             <Tv className="w-3 h-3" /> YouTube Video
                           </Badge>
                         ) : (
-                          <Badge className="bg-amber-600/90 text-white backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
+                          <Badge className="bg-indigo-600/90 text-white backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
                             <Video className="w-3 h-3" /> MP4 Lecture
                           </Badge>
                         )}
@@ -503,4 +618,3 @@ export default function StudentRecordedClassesPage() {
     </DashboardLayout>
   );
 }
-

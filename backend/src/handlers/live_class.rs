@@ -45,7 +45,8 @@ pub async fn list_live_classes(
             }
         }
         UserRole::Student => {
-            // Students see classes from their center
+            // Students see non-hidden classes from their center
+            filter.insert("is_hidden", doc! { "$ne": true });
             let users_coll = db.collection::<crate::models::user::User>("users");
             let user_oid = match ObjectId::parse_str(&claims.sub) {
                 Ok(oid) => oid,
@@ -77,13 +78,13 @@ pub async fn list_live_classes(
     if let Some(status) = &q.status {
         filter.insert("status", status.as_str());
     } else {
-        // Default: show upcoming and ongoing
-        filter.insert("status", doc! {"$in": ["upcoming", "ongoing"]});
+        // Default: show upcoming and ongoing (and completed for recorded videos)
+        filter.insert("status", doc! {"$in": ["upcoming", "ongoing", "completed"]});
     }
 
     let opts = FindOptions::builder()
-        .sort(doc! {"scheduled_at": 1})
-        .limit(q.limit.unwrap_or(50))
+        .sort(doc! {"scheduled_at": -1})
+        .limit(q.limit.unwrap_or(100))
         .build();
 
     let mut classes = Vec::new();
@@ -95,6 +96,8 @@ pub async fn list_live_classes(
             let end_time = scheduled + chrono::Duration::minutes(cls.duration_minutes as i64);
             let computed_status = if cls.status == "cancelled" {
                 "cancelled".to_string()
+            } else if cls.is_hidden.unwrap_or(false) {
+                "hidden".to_string()
             } else if now < scheduled {
                 "upcoming".to_string()
             } else if now >= scheduled && now <= end_time {
@@ -122,7 +125,7 @@ pub async fn list_live_classes(
     (StatusCode::OK, Json(serde_json::json!({"success": true, "classes": classes})))
 }
 
-/// POST /api/live-classes — Center schedules a new live class
+/// POST /api/live-classes — Center schedules a new live class or uploads video
 pub async fn create_live_class(
     State(db): State<Database>,
     claims: Claims,
@@ -131,33 +134,31 @@ pub async fn create_live_class(
     if claims.role != UserRole::Center && claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
-            message: "Only centers can schedule live classes".to_string(),
+            message: "Only authorized personnel can publish course videos".to_string(),
         }));
     }
 
-    // Get center_id for this user
-    let center_id = match get_center_id(&db, &claims).await {
-        Some(id) => id,
-        None => return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
-            success: false,
-            message: "Center not found for this user".to_string(),
-        })),
+    // Determine center_id
+    let center_id = if let Some(cid_str) = &payload.center_id {
+        ObjectId::parse_str(cid_str).ok().or_else(|| ObjectId::parse_str(&claims.sub).ok()).unwrap_or_else(ObjectId::new)
+    } else {
+        match get_center_id(&db, &claims).await {
+            Some(id) => id,
+            None => ObjectId::parse_str(&claims.sub).unwrap_or_else(|_| ObjectId::new()),
+        }
     };
 
-    let scheduled_at = match chrono::DateTime::parse_from_rfc3339(&payload.scheduled_at) {
-        Ok(dt) => dt.with_timezone(&Utc),
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
-            success: false,
-            message: "Invalid scheduled_at datetime format. Use ISO 8601.".to_string(),
-        })),
+    let scheduled_at = match payload.scheduled_at.as_deref() {
+        Some(s) if !s.is_empty() => match chrono::DateTime::parse_from_rfc3339(s) {
+            Ok(dt) => dt.with_timezone(&Utc),
+            Err(_) => Utc::now(),
+        },
+        _ => Utc::now(),
     };
 
     let creator_oid = match ObjectId::parse_str(&claims.sub) {
         Ok(oid) => oid,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
-            success: false,
-            message: "Invalid user ID".to_string(),
-        })),
+        Err(_) => ObjectId::new(),
     };
 
     let course_id = payload.course_id.as_deref()
@@ -167,22 +168,27 @@ pub async fn create_live_class(
         id: None,
         title: payload.title,
         description: payload.description,
-        platform: payload.platform.unwrap_or_else(|| "google_meet".to_string()),
+        platform: payload.platform.unwrap_or_else(|| "youtube".to_string()),
         join_url: payload.join_url,
         course_id,
         center_id,
         scheduled_at,
-        duration_minutes: payload.duration_minutes.unwrap_or(60),
-        status: "upcoming".to_string(),
+        duration_minutes: payload.duration_minutes.unwrap_or(45),
+        status: if payload.is_hidden.unwrap_or(false) { "hidden".to_string() } else { "completed".to_string() },
         created_by: creator_oid,
         created_at: Utc::now(),
+        is_hidden: payload.is_hidden,
+        center_name: payload.center_name,
+        subject_name: payload.subject_name,
+        instructor_name: payload.instructor_name,
+        thumbnail_url: payload.thumbnail_url,
     };
 
     let coll = db.collection::<LiveClass>("live_classes");
     match coll.insert_one(cls, None).await {
         Ok(_) => (StatusCode::CREATED, Json(LiveClassResponse {
             success: true,
-            message: "Live class scheduled successfully".to_string(),
+            message: "Course video published successfully".to_string(),
         })),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(LiveClassResponse {
             success: false,
@@ -191,7 +197,7 @@ pub async fn create_live_class(
     }
 }
 
-/// PUT /api/live-classes/:id — Center updates a live class
+/// PUT /api/live-classes/:id — Center updates a live class / video
 pub async fn update_live_class(
     State(db): State<Database>,
     claims: Claims,
@@ -220,6 +226,11 @@ pub async fn update_live_class(
     if let Some(url) = payload.join_url { update_doc.insert("join_url", url); }
     if let Some(status) = payload.status { update_doc.insert("status", status); }
     if let Some(dur) = payload.duration_minutes { update_doc.insert("duration_minutes", dur); }
+    if let Some(is_hid) = payload.is_hidden { update_doc.insert("is_hidden", is_hid); }
+    if let Some(cname) = payload.center_name { update_doc.insert("center_name", cname); }
+    if let Some(sname) = payload.subject_name { update_doc.insert("subject_name", sname); }
+    if let Some(iname) = payload.instructor_name { update_doc.insert("instructor_name", iname); }
+    if let Some(turl) = payload.thumbnail_url { update_doc.insert("thumbnail_url", turl); }
     if let Some(sched) = payload.scheduled_at {
         if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&sched) {
             update_doc.insert("scheduled_at", mongodb::bson::DateTime::from_millis(dt.timestamp_millis()));
