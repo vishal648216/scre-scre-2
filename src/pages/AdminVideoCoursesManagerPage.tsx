@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,10 @@ import {
   Lock,
   Download,
   SlidersHorizontal,
+  CloudUpload,
+  Image as ImageIcon,
+  FileUp,
+  Cloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -169,27 +173,6 @@ const INITIAL_MASTERCLASSES: MasterclassTrackItem[] = [
     status: "completed",
     is_hidden: false,
   },
-  {
-    id: "m4",
-    title: "Center Exclusive: Delhi Branch Python Data Science Bootcamp",
-    description: "Specialized live recording series exclusive for Delhi franchise center students.",
-    platform: "video_file",
-    join_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    course_id: "c6",
-    course_name: "Python Programming & Data Science",
-    subject_name: "Python Basics",
-    chapter_title: "Chapter 1: Python Data Structures",
-    sequence_order: 1,
-    mode: "center_broadcast",
-    visibility_state: "center_scoped",
-    instructor_name: "Er. Rahul Verma",
-    center_id: "ctr_delhi",
-    center_name: "Delhi Branch Franchise",
-    scheduled_at: new Date().toISOString(),
-    duration_minutes: 75,
-    status: "completed",
-    is_hidden: false,
-  },
 ];
 
 export default function AdminVideoCoursesManagerPage() {
@@ -206,9 +189,18 @@ export default function AdminVideoCoursesManagerPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeUploadMode, setActiveUploadMode] = useState<"youtube_channel_sync" | "mp4_chapter_vault" | "center_broadcast">("youtube_channel_sync");
+  const [activeUploadMode, setActiveUploadMode] = useState<"youtube_channel_sync" | "mp4_chapter_vault" | "center_broadcast">("mp4_chapter_vault");
   const [editingTrack, setEditingTrack] = useState<MasterclassTrackItem | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // File Upload State
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+
+  const videoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
 
   // Cinema Preview Modal
   const [previewTrack, setPreviewTrack] = useState<MasterclassTrackItem | null>(null);
@@ -217,7 +209,7 @@ export default function AdminVideoCoursesManagerPage() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    platform: "youtube",
+    platform: "video_file",
     join_url: "",
     course_id: "c1",
     center_id: "all",
@@ -225,6 +217,7 @@ export default function AdminVideoCoursesManagerPage() {
     chapter_title: "",
     sequence_order: "1",
     keyword: "",
+    thumbnail_url: "",
     pdf_attachment_url: "",
     instructor_name: "Academic Faculty",
     duration_minutes: "45",
@@ -322,13 +315,48 @@ export default function AdminVideoCoursesManagerPage() {
     fetchCenters();
   }, [fetchUserProfile, fetchTracks, fetchCourses, fetchCenters]);
 
-  const handleOpenAddModal = (mode: "youtube_channel_sync" | "mp4_chapter_vault" | "center_broadcast" = "youtube_channel_sync") => {
+  // Handle Direct Computer File Browsing & Cloud Upload
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetField: "join_url" | "thumbnail_url" | "pdf_attachment_url",
+    setUploading: (v: boolean) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    toast.info(`Uploading ${file.name} to Cloud Storage CDN...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await apiFetch("/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setForm((prev) => ({ ...prev, [targetField]: data.url }));
+        toast.success(`Uploaded ${file.name} to CDN Storage!`);
+      } else {
+        toast.error(data.message || "Failed to upload file to storage.");
+      }
+    } catch {
+      toast.error("Network error during file upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleOpenAddModal = (mode: "youtube_channel_sync" | "mp4_chapter_vault" | "center_broadcast" = "mp4_chapter_vault") => {
     setEditingTrack(null);
     setActiveUploadMode(mode);
     setForm({
       title: "",
       description: "",
-      platform: mode === "youtube_channel_sync" ? "youtube_channel" : mode === "mp4_chapter_vault" ? "video_file" : "youtube",
+      platform: mode === "youtube_channel_sync" ? "youtube_channel" : "video_file",
       join_url: "",
       course_id: courses[0]?.id || "c1",
       center_id: mode === "center_broadcast" ? (centers[1]?.id || "all") : "all",
@@ -336,6 +364,7 @@ export default function AdminVideoCoursesManagerPage() {
       chapter_title: "Chapter 1: Masterclass Module",
       sequence_order: "1",
       keyword: "",
+      thumbnail_url: "",
       pdf_attachment_url: "",
       instructor_name: "Academic Faculty",
       duration_minutes: "45",
@@ -350,7 +379,7 @@ export default function AdminVideoCoursesManagerPage() {
     setForm({
       title: track.title,
       description: track.description || "",
-      platform: track.platform || "youtube",
+      platform: track.platform || "video_file",
       join_url: track.join_url || "",
       course_id: track.course_id || "",
       center_id: track.center_id || "all",
@@ -358,6 +387,7 @@ export default function AdminVideoCoursesManagerPage() {
       chapter_title: track.chapter_title || "Chapter 1: Module",
       sequence_order: String(track.sequence_order || 1),
       keyword: track.keyword || "",
+      thumbnail_url: track.thumbnail_url || "",
       pdf_attachment_url: track.pdf_attachment_url || "",
       instructor_name: track.instructor_name || "Academic Faculty",
       duration_minutes: String(track.duration_minutes || 45),
@@ -367,7 +397,6 @@ export default function AdminVideoCoursesManagerPage() {
   };
 
   const handleToggleVisibility = async (track: MasterclassTrackItem) => {
-    // Cycle state: published -> center_scoped -> hidden -> published
     let nextState = "hidden";
     if (track.visibility_state === "published") nextState = "center_scoped";
     else if (track.visibility_state === "center_scoped") nextState = "hidden";
@@ -402,7 +431,7 @@ export default function AdminVideoCoursesManagerPage() {
 
   const handleSaveTrack = async () => {
     if (!form.title.trim()) return toast.error("Please enter Masterclass Track Title");
-    if (!form.join_url.trim()) return toast.error("Please enter YouTube URL, Channel Link, or MP4 URL");
+    if (!form.join_url.trim()) return toast.error("Please browse and upload a Video File or enter URL");
 
     setSaving(true);
     try {
@@ -428,6 +457,7 @@ export default function AdminVideoCoursesManagerPage() {
         chapter_title: form.chapter_title || "Chapter 1: Masterclass",
         sequence_order: parseInt(form.sequence_order) || 1,
         keyword: form.keyword || null,
+        thumbnail_url: form.thumbnail_url || null,
         pdf_attachment_url: form.pdf_attachment_url || null,
         visibility_state: form.visibility_state,
       };
@@ -471,6 +501,7 @@ export default function AdminVideoCoursesManagerPage() {
           chapter_title: form.chapter_title,
           sequence_order: parseInt(form.sequence_order) || 1,
           keyword: form.keyword,
+          thumbnail_url: form.thumbnail_url,
           pdf_attachment_url: form.pdf_attachment_url,
           visibility_state: form.visibility_state,
         };
@@ -536,12 +567,35 @@ export default function AdminVideoCoursesManagerPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-16">
+        {/* Hidden File Inputs */}
+        <input
+          ref={videoFileInputRef}
+          type="file"
+          accept="video/*,.mp4,.mkv,.webm"
+          className="hidden"
+          onChange={(e) => handleFileUpload(e, "join_url", setUploadingVideo)}
+        />
+        <input
+          ref={thumbnailInputRef}
+          type="file"
+          accept="image/*,.png,.jpg,.jpeg,.webp"
+          className="hidden"
+          onChange={(e) => handleFileUpload(e, "thumbnail_url", setUploadingThumbnail)}
+        />
+        <input
+          ref={pdfInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => handleFileUpload(e, "pdf_attachment_url", setUploadingPdf)}
+        />
+
         {/* Header Hero Studio Banner */}
         <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-red-950 text-white p-6 md:p-8 rounded-3xl border border-red-500/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Badge className="bg-red-600 text-white rounded-full font-black uppercase text-[10px] tracking-widest gap-1 px-3 py-1">
-                <Tv className="w-3.5 h-3.5" /> Course Masterclass Studio Plan B
+                <Tv className="w-3.5 h-3.5" /> Direct Cloud Upload & CDN Studio
               </Badge>
               {userProfile?.role === "superadmin" ? (
                 <Badge className="bg-amber-400 text-slate-950 rounded-full font-black uppercase text-[10px] tracking-wider px-3 py-1">
@@ -555,27 +609,27 @@ export default function AdminVideoCoursesManagerPage() {
             </div>
 
             <h1 className="text-2xl md:text-3xl font-heading font-black tracking-tight uppercase flex items-center gap-3 text-white">
-              <Film className="w-8 h-8 text-amber-400" /> Recorded Video Masterclass Hub
+              <Film className="w-8 h-8 text-amber-400" /> Recorded Video Masterclass Studio
             </h1>
 
             <p className="text-xs md:text-sm text-slate-300 max-w-2xl font-medium leading-relaxed">
-              Create structured course tracks with **YouTube Keyword Sync**, **MP4 Chapter Vaults**, and **Center-Exclusive Broadcasts**. Control visibility (Published, Center Scoped, Hidden Drafts).
+              Upload MP4 files & custom thumbnails directly from your computer to Cloud Storage CDN. Organize videos into course playlists and control visibility.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
             <Button
-              onClick={() => handleOpenAddModal("youtube_channel_sync")}
-              className="rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs h-11 px-4 shadow-lg shadow-red-600/30"
+              onClick={() => handleOpenAddModal("mp4_chapter_vault")}
+              className="rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs h-11 px-5 shadow-lg shadow-red-600/30"
             >
-              <Radio className="w-4 h-4 text-amber-400" /> Mode 1: YouTube Channel Sync
+              <CloudUpload className="w-4 h-4 text-white" /> Browse & Upload MP4 Video
             </Button>
             <Button
-              onClick={() => handleOpenAddModal("mp4_chapter_vault")}
+              onClick={() => handleOpenAddModal("youtube_channel_sync")}
               variant="outline"
               className="rounded-2xl border-white/20 bg-slate-900/60 text-white hover:bg-white/10 text-xs h-11 px-4 gap-2 font-bold"
             >
-              <Folder className="w-4 h-4 text-indigo-400" /> Mode 2: MP4 Chapter Vault
+              <Radio className="w-4 h-4 text-amber-400" /> YouTube Channel Sync
             </Button>
             <Button
               onClick={() => window.open("/dashboard/student/recorded", "_blank")}
@@ -606,14 +660,14 @@ export default function AdminVideoCoursesManagerPage() {
           <Card className="rounded-2xl border-border bg-card/80 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600">
-                  <Radio className="w-6 h-6" />
+                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-600">
+                  <Folder className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-2xl font-black">
-                    {tracks.filter((t) => t.mode === "youtube_channel_sync").length}
+                    {tracks.filter((t) => t.mode === "mp4_chapter_vault" || t.platform === "video_file").length}
                   </p>
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Channel Keyword Synced</p>
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Direct MP4 Files</p>
                 </div>
               </div>
             </CardContent>
@@ -622,14 +676,14 @@ export default function AdminVideoCoursesManagerPage() {
           <Card className="rounded-2xl border-border bg-card/80 backdrop-blur">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-600">
-                  <Folder className="w-6 h-6" />
+                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600">
+                  <Radio className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-2xl font-black">
-                    {tracks.filter((t) => t.mode === "mp4_chapter_vault").length}
+                    {tracks.filter((t) => t.mode === "youtube_channel_sync").length}
                   </p>
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">MP4 Chapter Vaults</p>
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Channel Synced</p>
                 </div>
               </div>
             </CardContent>
@@ -665,7 +719,6 @@ export default function AdminVideoCoursesManagerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Center Selector */}
             <div className="w-full sm:w-52">
               <Select value={centerFilter} onValueChange={setCenterFilter}>
                 <SelectTrigger className="rounded-xl h-10 text-xs font-bold border-border bg-background/50">
@@ -682,7 +735,6 @@ export default function AdminVideoCoursesManagerPage() {
               </Select>
             </div>
 
-            {/* Course Selector */}
             <div className="w-full sm:w-56">
               <Select value={courseFilter} onValueChange={setCourseFilter}>
                 <SelectTrigger className="rounded-xl h-10 text-xs font-bold border-border bg-background/50">
@@ -708,11 +760,11 @@ export default function AdminVideoCoursesManagerPage() {
             <TabsTrigger value="all" className="rounded-xl text-[10px] font-black uppercase px-3">
               All Tracks
             </TabsTrigger>
-            <TabsTrigger value="youtube_channel_sync" className="rounded-xl text-[10px] font-black uppercase px-3">
-              YouTube Sync
-            </TabsTrigger>
             <TabsTrigger value="mp4_chapter_vault" className="rounded-xl text-[10px] font-black uppercase px-3">
               MP4 Vault
+            </TabsTrigger>
+            <TabsTrigger value="youtube_channel_sync" className="rounded-xl text-[10px] font-black uppercase px-3">
+              YouTube Sync
             </TabsTrigger>
             <TabsTrigger value="center_broadcast" className="rounded-xl text-[10px] font-black uppercase px-3">
               Center Exclusive
@@ -734,8 +786,8 @@ export default function AdminVideoCoursesManagerPage() {
               <Video className="w-12 h-12 text-muted-foreground/40 mx-auto" />
               <p className="font-bold text-base text-foreground uppercase tracking-tight">No Masterclass Tracks found matching current filters.</p>
               <div className="flex justify-center gap-2 pt-2">
-                <Button onClick={() => handleOpenAddModal("youtube_channel_sync")} className="rounded-xl bg-red-600 hover:bg-red-700 text-white gap-2 text-xs font-bold uppercase">
-                  <Plus className="w-4 h-4" /> Add Masterclass
+                <Button onClick={() => handleOpenAddModal("mp4_chapter_vault")} className="rounded-xl bg-red-600 hover:bg-red-700 text-white gap-2 text-xs font-bold uppercase">
+                  <CloudUpload className="w-4 h-4" /> Upload Video File
                 </Button>
               </div>
             </CardContent>
@@ -789,7 +841,6 @@ export default function AdminVideoCoursesManagerPage() {
                           </Badge>
                         )}
 
-                        {/* Tri-State Visibility Badge */}
                         {track.visibility_state === "published" ? (
                           <Badge className="bg-emerald-600 text-white font-black uppercase text-[9px] rounded-full">
                             🟢 Published
@@ -871,7 +922,6 @@ export default function AdminVideoCoursesManagerPage() {
                     </Button>
 
                     <div className="flex items-center gap-1">
-                      {/* Tri-State Visibility Toggle Button */}
                       <Button
                         onClick={() => handleToggleVisibility(track)}
                         size="sm"
@@ -888,12 +938,10 @@ export default function AdminVideoCoursesManagerPage() {
                         )}
                       </Button>
 
-                      {/* Edit Button */}
                       <Button onClick={() => handleOpenEditModal(track)} size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0" title="Edit Track">
                         <Pencil className="w-3.5 h-3.5 text-blue-400" />
                       </Button>
 
-                      {/* Delete Button */}
                       <Button onClick={() => handleDeleteTrack(track.id)} size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0 text-destructive hover:text-destructive" title="Delete Track">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -905,13 +953,13 @@ export default function AdminVideoCoursesManagerPage() {
           </div>
         )}
 
-        {/* UPLOAD / EDIT DIALOG MODAL */}
+        {/* UPLOAD / EDIT DIALOG MODAL WITH DIRECT BROWSER FILE UPLOAD */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-2xl rounded-3xl border-border">
+          <DialogContent className="max-w-2xl rounded-3xl border-border max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-heading uppercase font-bold text-base flex items-center gap-2">
                 <Tv className="w-5 h-5 text-red-600" />
-                {editingTrack ? "Edit Course Masterclass Track" : "Publish Masterclass Track (Plan B Studio)"}
+                {editingTrack ? "Edit Course Masterclass Track" : "Publish Masterclass Track (Cloud CDN Studio)"}
               </DialogTitle>
             </DialogHeader>
 
@@ -919,11 +967,11 @@ export default function AdminVideoCoursesManagerPage() {
             <div className="py-1">
               <Tabs value={activeUploadMode} onValueChange={(v: any) => setActiveUploadMode(v)}>
                 <TabsList className="rounded-xl bg-muted/60 p-1 w-full grid grid-cols-3 h-10 border border-border">
+                  <TabsTrigger value="mp4_chapter_vault" className="rounded-lg text-[10px] font-bold uppercase">
+                    📼 Direct MP4 Upload
+                  </TabsTrigger>
                   <TabsTrigger value="youtube_channel_sync" className="rounded-lg text-[10px] font-bold uppercase">
                     📺 Channel Sync
-                  </TabsTrigger>
-                  <TabsTrigger value="mp4_chapter_vault" className="rounded-lg text-[10px] font-bold uppercase">
-                    📼 MP4 Chapter Vault
                   </TabsTrigger>
                   <TabsTrigger value="center_broadcast" className="rounded-lg text-[10px] font-bold uppercase">
                     ⚡ Center Exclusive
@@ -1009,7 +1057,41 @@ export default function AdminVideoCoursesManagerPage() {
                 </div>
               </div>
 
-              {/* Mode Specific Inputs */}
+              {/* 1. DIRECT MP4 VIDEO FILE UPLOAD ZONE */}
+              {activeUploadMode !== "youtube_channel_sync" && (
+                <div className="space-y-2 bg-indigo-500/10 p-3.5 rounded-2xl border border-indigo-500/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-bold text-indigo-400 flex items-center gap-1.5">
+                      <CloudUpload className="w-4 h-4" /> MP4 Video File (Browser Upload to CDN) *
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={uploadingVideo}
+                      onClick={() => videoFileInputRef.current?.click()}
+                      className="rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 h-8 px-3"
+                    >
+                      {uploadingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
+                      {uploadingVideo ? "Uploading to CDN..." : "Browse PC for Video"}
+                    </Button>
+                  </div>
+
+                  <Input
+                    value={form.join_url}
+                    onChange={(e) => setForm({ ...form, join_url: e.target.value })}
+                    placeholder="Auto-populated CDN URL or paste https://... video link"
+                    className="rounded-xl h-10 font-bold bg-background text-xs"
+                  />
+
+                  {form.join_url && !previewYtId && (
+                    <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono font-bold pt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Video Ready: {form.join_url}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. YOUTUBE CHANNEL SYNC INPUT */}
               {activeUploadMode === "youtube_channel_sync" && (
                 <div className="space-y-3 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
                   <div className="space-y-1">
@@ -1033,42 +1115,74 @@ export default function AdminVideoCoursesManagerPage() {
                 </div>
               )}
 
-              {activeUploadMode === "mp4_chapter_vault" && (
-                <div className="space-y-3 bg-indigo-500/10 p-3 rounded-2xl border border-indigo-500/20">
-                  <div className="space-y-1">
-                    <Label className="font-bold text-indigo-400">Direct MP4 Video Storage Link *</Label>
-                    <Input
-                      value={form.join_url}
-                      onChange={(e) => setForm({ ...form, join_url: e.target.value })}
-                      placeholder="https://domain.com/videos/lecture1.mp4"
-                      className="rounded-xl h-10 font-bold bg-background"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="font-bold text-indigo-400">PDF Study Notes Attachment URL (Optional)</Label>
-                    <Input
-                      value={form.pdf_attachment_url}
-                      onChange={(e) => setForm({ ...form, pdf_attachment_url: e.target.value })}
-                      placeholder="https://domain.com/notes/chapter1.pdf"
-                      className="rounded-xl h-10 font-bold bg-background"
-                    />
-                  </div>
+              {/* 3. CUSTOM THUMBNAIL IMAGE FILE BROWSER UPLOAD */}
+              <div className="space-y-2 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-slate-200 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-amber-400" /> Custom Cover Thumbnail Image
+                  </Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={uploadingThumbnail}
+                    onClick={() => thumbnailInputRef.current?.click()}
+                    className="rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white gap-1.5 h-8 px-3 border border-slate-700"
+                  >
+                    {uploadingThumbnail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5 text-amber-400" />}
+                    {uploadingThumbnail ? "Uploading Thumbnail..." : "Browse PC for Thumbnail"}
+                  </Button>
                 </div>
-              )}
 
-              {activeUploadMode === "center_broadcast" && (
-                <div className="space-y-3 bg-red-500/10 p-3 rounded-2xl border border-red-500/20">
-                  <div className="space-y-1">
-                    <Label className="font-bold text-red-400">Center Broadcast Video URL *</Label>
-                    <Input
-                      value={form.join_url}
-                      onChange={(e) => setForm({ ...form, join_url: e.target.value })}
-                      placeholder="YouTube link or MP4 link for Center Students"
-                      className="rounded-xl h-10 font-bold bg-background"
-                    />
+                <Input
+                  value={form.thumbnail_url}
+                  onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })}
+                  placeholder="Auto-populated thumbnail image CDN URL"
+                  className="rounded-xl h-10 font-bold bg-background text-xs"
+                />
+
+                {form.thumbnail_url && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-24 aspect-video rounded-lg overflow-hidden border border-border bg-black">
+                      <img src={form.thumbnail_url} alt="Cover Thumbnail Preview" className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Thumbnail CDN Ready
+                    </span>
                   </div>
+                )}
+              </div>
+
+              {/* 4. PDF STUDY NOTES FILE BROWSER UPLOAD */}
+              <div className="space-y-2 bg-emerald-500/10 p-3.5 rounded-2xl border border-emerald-500/20">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4" /> PDF Study Notes Attachment (Optional)
+                  </Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={uploadingPdf}
+                    onClick={() => pdfInputRef.current?.click()}
+                    className="rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-white gap-1.5 h-8 px-3"
+                  >
+                    {uploadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
+                    {uploadingPdf ? "Uploading PDF..." : "Browse PC for PDF"}
+                  </Button>
                 </div>
-              )}
+
+                <Input
+                  value={form.pdf_attachment_url}
+                  onChange={(e) => setForm({ ...form, pdf_attachment_url: e.target.value })}
+                  placeholder="Auto-populated PDF study notes CDN URL"
+                  className="rounded-xl h-10 font-bold bg-background text-xs"
+                />
+
+                {form.pdf_attachment_url && (
+                  <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono font-bold pt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> PDF Notes Attached: {form.pdf_attachment_url}
+                  </div>
+                )}
+              </div>
 
               {/* YouTube Live Form Preview */}
               {previewYtId && (
@@ -1151,7 +1265,7 @@ export default function AdminVideoCoursesManagerPage() {
               <Button variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-xl text-xs font-bold">
                 Cancel
               </Button>
-              <Button onClick={handleSaveTrack} disabled={saving} className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs">
+              <Button onClick={handleSaveTrack} disabled={saving || uploadingVideo || uploadingThumbnail || uploadingPdf} className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-xs">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {editingTrack ? "Update Track" : "Publish Masterclass"}
               </Button>
