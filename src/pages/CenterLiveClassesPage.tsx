@@ -371,6 +371,29 @@ export default function CenterLiveClassesPage() {
     }
   };
 
+  const handleEndMeeting = async (cls: LiveClass) => {
+    if (!confirm(`End live meeting "${cls.title}" for all attendees?`)) return;
+    try {
+      const res = await apiFetch(`/api/live-classes/${cls.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("✅ Live meeting ended & marked Completed!");
+        if (activeStudioMeeting?.id === cls.id) {
+          setStudioOpen(false);
+        }
+        fetchClasses();
+      } else {
+        toast.error(data.message || "Failed to end meeting");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
+
   const handleCancel = async (cls: LiveClass) => {
     if (!confirm(`Cancel "${cls.title}"?`)) return;
     try {
@@ -612,7 +635,7 @@ export default function CenterLiveClassesPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {!isCancelled && (
+                        {!isCancelled && cls.status !== "completed" && (
                           <Button
                             size="sm"
                             variant={isOngoing ? "default" : "outline"}
@@ -621,6 +644,17 @@ export default function CenterLiveClassesPage() {
                           >
                             <Zap className="w-3.5 h-3.5" />
                             {isOngoing ? "Enter Live Studio (Host)" : "Launch Studio"}
+                          </Button>
+                        )}
+                        {!isCancelled && cls.status !== "completed" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="rounded-lg gap-1 text-xs font-bold bg-red-600 hover:bg-red-700"
+                            onClick={() => handleEndMeeting(cls)}
+                            title="End & Close Live Broadcast for all participants"
+                          >
+                            Stop / End Meeting
                           </Button>
                         )}
                         {!isCancelled && cls.status !== "completed" && (
@@ -660,6 +694,7 @@ export default function CenterLiveClassesPage() {
         meeting={activeStudioMeeting}
         userDisplayName={centerName}
         isHost={true}
+        onEndMeeting={() => activeStudioMeeting && handleEndMeeting(activeStudioMeeting)}
       />
 
       {/* Schedule / Edit Dialog */}

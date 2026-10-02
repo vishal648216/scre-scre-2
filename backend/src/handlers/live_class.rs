@@ -112,6 +112,8 @@ pub async fn list_live_classes(
             let end_time = scheduled + chrono::Duration::minutes(cls.duration_minutes as i64);
             let computed_status = if cls.status == "cancelled" {
                 "cancelled".to_string()
+            } else if cls.status == "completed" {
+                "completed".to_string()
             } else if cls.is_hidden.unwrap_or(false) {
                 "hidden".to_string()
             } else if now < scheduled {

@@ -34,6 +34,7 @@ interface LiveMeetingStudioModalProps {
   } | null;
   userDisplayName?: string;
   isHost?: boolean;
+  onEndMeeting?: () => void;
 }
 
 const SERVER_PROVIDERS = [
@@ -48,6 +49,7 @@ export default function LiveMeetingStudioModal({
   meeting,
   userDisplayName = "Participant",
   isHost = false,
+  onEndMeeting,
 }: LiveMeetingStudioModalProps) {
   const [providerIndex, setProviderIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -178,12 +180,29 @@ export default function LiveMeetingStudioModal({
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
 
+            {isHost && onEndMeeting && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (confirm("Are you sure you want to end this live meeting for all participants?")) {
+                    onEndMeeting();
+                    onClose();
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-lg px-3 py-1.5 text-xs gap-1.5 shadow-lg shadow-red-600/30 animate-pulse"
+                title="End & Close Live Broadcast for all participants"
+              >
+                <X className="w-3.5 h-3.5" />
+                End Meeting (Stop Live)
+              </Button>
+            )}
+
             <Button
               size="sm"
               onClick={onClose}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg px-3 py-1.5 text-xs gap-1"
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-lg px-3 py-1.5 text-xs gap-1"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
               Leave Room
             </Button>
           </div>
