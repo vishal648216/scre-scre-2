@@ -11,7 +11,6 @@
     <meta name="author" content="SCRE" />
 
     <meta name="theme-color" content="#2563eb" />
-    <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/images/logo.jpeg" />
     <link rel="icon" href="/images/logo.jpeg">
 
@@ -29,19 +28,19 @@
   <body>
     <div id="root"></div>
     <script>
-      // Purge legacy caches to guarantee fresh JS assets from Render
+      // Force unregister all service workers and clear browser cache storage completely
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
       if ('caches' in window) {
         caches.keys().then(function(names) {
           for (let name of names) {
             caches.delete(name);
           }
-        });
-      }
-      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => {
-            console.log('PWA ServiceWorker registration error:', err);
-          });
         });
       }
     </script>
