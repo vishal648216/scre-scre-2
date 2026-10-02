@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import LiveMeetingStudioModal from "@/components/LiveMeetingStudioModal";
 import {
   Video,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   CheckCircle2,
   Building2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -67,6 +69,21 @@ export default function StudentLiveClassesPage() {
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "academic" | "ptm" | "history">("all");
 
+  // Embedded Studio Modal state
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [activeStudioMeeting, setActiveStudioMeeting] = useState<LiveClass | null>(null);
+  const [studentName, setStudentName] = useState("Student Participant");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        setStudentName(u.username || u.name || u.full_name || "Student Participant");
+      }
+    } catch {}
+  }, []);
+
   const fetchClasses = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,21 +116,25 @@ export default function StudentLiveClassesPage() {
   const handleJoinClass = async (cls: LiveClass) => {
     setJoiningId(cls.id);
     try {
-      // Call join endpoint to mark student attendance automatically
+      // Call join endpoint to mark student attendance automatically in database
       const res = await apiFetch(`/api/live-classes/${cls.id}/join`, {
         method: "POST",
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success("✅ Attendance Marked Present! Opening Live Room...");
-        const targetUrl = data.join_url || cls.join_url;
-        window.open(targetUrl, "_blank");
-      } else {
-        // Fallback to direct link if API fails
-        window.open(cls.join_url, "_blank");
+        toast.success("✅ Attendance Marked Present! Launching Live Studio...");
       }
+      
+      const targetMeeting = {
+        ...cls,
+        join_url: (data && data.join_url) ? data.join_url : cls.join_url,
+      };
+
+      setActiveStudioMeeting(targetMeeting);
+      setStudioOpen(true);
     } catch {
-      window.open(cls.join_url, "_blank");
+      setActiveStudioMeeting(cls);
+      setStudioOpen(true);
     } finally {
       setJoiningId(null);
     }
@@ -310,9 +331,9 @@ export default function StudentLiveClassesPage() {
                           {joiningId === cls.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <ExternalLink className="w-3.5 h-3.5" />
+                            <Zap className="w-3.5 h-3.5" />
                           )}
-                          {isOngoing ? "Join Live Now" : "Enter Room"}
+                          {isOngoing ? "Join Live Studio" : "Enter Room"}
                         </Button>
                       )}
                     </div>
@@ -323,6 +344,15 @@ export default function StudentLiveClassesPage() {
           </div>
         )}
       </div>
+
+      {/* Embedded Live Studio Modal */}
+      <LiveMeetingStudioModal
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        meeting={activeStudioMeeting}
+        userDisplayName={studentName}
+        isHost={false}
+      />
     </DashboardLayout>
   );
 }

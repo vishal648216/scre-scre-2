@@ -18,6 +18,10 @@ use serde::{Deserialize, Serialize};
 pub struct LiveClassResponse {
     pub success: bool,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub join_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -135,6 +139,8 @@ pub async fn create_live_class(
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Only authorized personnel can publish course videos".to_string(),
+            id: None,
+            join_url: None,
         }));
     }
 
@@ -208,14 +214,22 @@ pub async fn create_live_class(
     };
 
     let coll = db.collection::<LiveClass>("live_classes");
+    let join_url_clone = cls.join_url.clone();
     match coll.insert_one(cls, None).await {
-        Ok(_) => (StatusCode::CREATED, Json(LiveClassResponse {
-            success: true,
-            message: "Live class meeting scheduled & broadcast room created successfully".to_string(),
-        })),
+        Ok(res) => {
+            let inserted_id = res.inserted_id.as_object_id().map(|o| o.to_hex());
+            (StatusCode::CREATED, Json(LiveClassResponse {
+                success: true,
+                message: "Live class meeting scheduled & broadcast room created successfully".to_string(),
+                id: inserted_id,
+                join_url: Some(join_url_clone),
+            }))
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(LiveClassResponse {
             success: false,
             message: format!("Failed to create: {}", e),
+            id: None,
+            join_url: None,
         })),
     }
 }
@@ -231,6 +245,8 @@ pub async fn update_live_class(
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Unauthorized".to_string(),
+            id: None,
+            join_url: None,
         }));
     }
 
@@ -239,6 +255,8 @@ pub async fn update_live_class(
         Err(_) => return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
             success: false,
             message: "Invalid ID".to_string(),
+            id: None,
+            join_url: None,
         })),
     };
 
@@ -274,6 +292,8 @@ pub async fn update_live_class(
         return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
             success: false,
             message: "No fields to update".to_string(),
+            id: None,
+            join_url: None,
         }));
     }
 
@@ -282,10 +302,14 @@ pub async fn update_live_class(
         Ok(_) => (StatusCode::OK, Json(LiveClassResponse {
             success: true,
             message: "Updated successfully".to_string(),
+            id: None,
+            join_url: None,
         })),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(LiveClassResponse {
             success: false,
             message: format!("Update failed: {}", e),
+            id: None,
+            join_url: None,
         })),
     }
 }
@@ -345,6 +369,8 @@ pub async fn delete_live_class(
         return (StatusCode::FORBIDDEN, Json(LiveClassResponse {
             success: false,
             message: "Unauthorized".to_string(),
+            id: None,
+            join_url: None,
         }));
     }
 
@@ -353,6 +379,8 @@ pub async fn delete_live_class(
         Err(_) => return (StatusCode::BAD_REQUEST, Json(LiveClassResponse {
             success: false,
             message: "Invalid ID".to_string(),
+            id: None,
+            join_url: None,
         })),
     };
 
@@ -362,10 +390,14 @@ pub async fn delete_live_class(
         Ok(_) => (StatusCode::OK, Json(LiveClassResponse {
             success: true,
             message: "Class cancelled".to_string(),
+            id: None,
+            join_url: None,
         })),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(LiveClassResponse {
             success: false,
             message: format!("Failed: {}", e),
+            id: None,
+            join_url: None,
         })),
     }
 }

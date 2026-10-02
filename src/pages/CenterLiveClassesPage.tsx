@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import LiveMeetingStudioModal from "@/components/LiveMeetingStudioModal";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +31,6 @@ import {
   Pencil,
   Loader2,
   Radio,
-  Users,
-  Sparkles,
   UserCheck,
   Building2,
   GraduationCap,
@@ -53,7 +52,7 @@ interface LiveClass {
   status: string;
   meeting_type?: string;
   target_audience?: string;
-  is_instant?: bool;
+  is_instant?: boolean;
   joined_count?: number;
 }
 
@@ -92,7 +91,7 @@ const AUDIENCE_OPTIONS: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
-  jitsi: { label: "SCRE Instant HD Room (Auto)", icon: "⚡" },
+  jitsi: { label: "SCRE Instant HD Studio (Password-Free)", icon: "⚡" },
   google_meet: { label: "Google Meet", icon: "🎥" },
   zoom: { label: "Zoom Meeting", icon: "📹" },
   youtube: { label: "YouTube Stream / Channel", icon: "📺" },
@@ -102,7 +101,7 @@ const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   upcoming: { label: "Upcoming", variant: "secondary" },
-  ongoing: { label: "🔴 Live Now", variant: "default" },
+  ongoing: { label: "🔴 Live Studio Active", variant: "default" },
   completed: { label: "Completed", variant: "outline" },
   cancelled: { label: "Cancelled", variant: "destructive" },
 };
@@ -113,7 +112,24 @@ export default function CenterLiveClassesPage() {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  // Dialog state
+  // Live Studio Modal state
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [activeStudioMeeting, setActiveStudioMeeting] = useState<LiveClass | null>(null);
+
+  // User details for studio display
+  const [centerName, setCenterName] = useState("Center Administrator");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        setCenterName(u.username || u.name || u.center_name || "Center Director");
+      }
+    } catch {}
+  }, []);
+
+  // Dialog state for scheduling
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<LiveClass | null>(null);
   const [saving, setSaving] = useState(false);
@@ -219,6 +235,11 @@ export default function CenterLiveClassesPage() {
     setOpen(true);
   };
 
+  const launchStudioModal = (cls: LiveClass) => {
+    setActiveStudioMeeting(cls);
+    setStudioOpen(true);
+  };
+
   const handleQuickInstantHost = async (mType: string) => {
     setSaving(true);
     try {
@@ -238,7 +259,7 @@ export default function CenterLiveClassesPage() {
         meeting_type: mType,
         target_audience,
         platform: "jitsi",
-        join_url: null, // Backend auto-generates Jitsi URL
+        join_url: null, // Backend auto-generates URL
         is_instant: true,
         duration_minutes: 60,
       };
@@ -251,8 +272,25 @@ export default function CenterLiveClassesPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success("⚡ Instant meeting created & live room ready!");
+        toast.success("⚡ Live Meeting Studio Launched! Opening Room...");
         fetchClasses();
+
+        // Construct instant meeting object and AUTO-LAUNCH STUDIO MODAL IMMEDIATELY!
+        const createdMeeting: LiveClass = {
+          id: data.id || `inst-${Date.now()}`,
+          title,
+          description: payload.description,
+          platform: "jitsi",
+          join_url: data.join_url || `https://meet.jit.si/scre-live-inst-${Date.now()}`,
+          meeting_type: mType,
+          target_audience,
+          scheduled_at: new Date().toISOString(),
+          duration_minutes: 60,
+          status: "ongoing",
+          joined_count: 1,
+        };
+
+        launchStudioModal(createdMeeting);
       } else {
         toast.error(data.message || "Failed to start meeting");
       }
@@ -277,7 +315,7 @@ export default function CenterLiveClassesPage() {
         meeting_type: form.meeting_type,
         target_audience: form.target_audience,
         platform: form.platform,
-        join_url: form.join_url || null, // Auto-generated if empty
+        join_url: form.join_url || null,
         course_id: form.course_id || null,
         scheduled_at: isoString,
         duration_minutes: parseInt(form.duration_minutes) || 60,
@@ -304,6 +342,23 @@ export default function CenterLiveClassesPage() {
         toast.success(editing ? "Meeting updated!" : "Live meeting broadcasted!");
         setOpen(false);
         fetchClasses();
+
+        // If created with instant or starting now, auto launch studio modal
+        if (!editing && (form.is_instant || new Date(isoString).getTime() <= Date.now() + 60000)) {
+          const m: LiveClass = {
+            id: data.id || `m-${Date.now()}`,
+            title: form.title,
+            description: form.description,
+            platform: form.platform,
+            join_url: data.join_url || form.join_url || `https://meet.jit.si/scre-live-${Date.now()}`,
+            meeting_type: form.meeting_type,
+            target_audience: form.target_audience,
+            scheduled_at: isoString,
+            duration_minutes: parseInt(form.duration_minutes) || 60,
+            status: "ongoing",
+          };
+          launchStudioModal(m);
+        }
       } else {
         toast.error(data.message || "Failed to save");
       }
@@ -354,14 +409,14 @@ export default function CenterLiveClassesPage() {
                 Universal Live Studio
               </Badge>
               <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400">
-                ⚡ Auto-Room Engine Enabled
+                ⚡ Password-Free Direct Studio
               </Badge>
             </div>
             <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight mt-1">
               Live Classes & Meetings Studio
             </h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">
-              Host Academic Classes, PTM Parent Connect & Franchise Staff Meetings with zero link creation hassle.
+              1-Click Instant Host for Academic Classes, PTM Parent Meetings & Franchise Staff Briefings.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -380,7 +435,7 @@ export default function CenterLiveClassesPage() {
           </div>
         </div>
 
-        {/* Quick Action Meeting Launchers */}
+        {/* Quick Action Meeting Launchers (Auto-Start Studio Immediately!) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="rounded-xl border-border bg-gradient-to-br from-blue-950/20 to-card hover:border-blue-500/40 transition-all">
             <CardContent className="p-5 space-y-3">
@@ -392,12 +447,12 @@ export default function CenterLiveClassesPage() {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-foreground">Course Live Class</h3>
-                <p className="text-xs text-muted-foreground mt-1">Academic lectures with student live attendance auto-logging.</p>
+                <p className="text-xs text-muted-foreground mt-1">Host interactive course lecture. Auto-starts embedded studio instantly!</p>
               </div>
               <div className="pt-2 flex gap-2">
-                <Button size="sm" onClick={() => handleQuickInstantHost("academic_class")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-blue-600 hover:bg-blue-700 text-white">
-                  <Zap className="w-3.5 h-3.5" />
-                  Instant Host
+                <Button size="sm" onClick={() => handleQuickInstantHost("academic_class")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                  Instant Host Now
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => openCreateWithPreset("academic_class")} className="rounded-lg">
                   Schedule
@@ -416,12 +471,12 @@ export default function CenterLiveClassesPage() {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-foreground">Parent-Teacher Meeting</h3>
-                <p className="text-xs text-muted-foreground mt-1">Direct video conference with parents and student guardians.</p>
+                <p className="text-xs text-muted-foreground mt-1">Direct video conference with parents. 1-click password-free room!</p>
               </div>
               <div className="pt-2 flex gap-2">
-                <Button size="sm" onClick={() => handleQuickInstantHost("ptm_parent_meeting")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Zap className="w-3.5 h-3.5" />
-                  Instant Host
+                <Button size="sm" onClick={() => handleQuickInstantHost("ptm_parent_meeting")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                  Instant Host Now
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => openCreateWithPreset("ptm_parent_meeting")} className="rounded-lg">
                   Schedule
@@ -440,12 +495,12 @@ export default function CenterLiveClassesPage() {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-foreground">Staff & Director Sync</h3>
-                <p className="text-xs text-muted-foreground mt-1">Private room for teachers, staff & center management.</p>
+                <p className="text-xs text-muted-foreground mt-1">Private studio for teachers & management. Zero setup required.</p>
               </div>
               <div className="pt-2 flex gap-2">
-                <Button size="sm" onClick={() => handleQuickInstantHost("staff_director_meeting")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-purple-600 hover:bg-purple-700 text-white">
-                  <Zap className="w-3.5 h-3.5" />
-                  Instant Host
+                <Button size="sm" onClick={() => handleQuickInstantHost("staff_director_meeting")} disabled={saving} className="w-full rounded-lg gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold">
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                  Instant Host Now
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => openCreateWithPreset("staff_director_meeting")} className="rounded-lg">
                   Schedule
@@ -551,11 +606,11 @@ export default function CenterLiveClassesPage() {
                           <Button
                             size="sm"
                             variant={isOngoing ? "default" : "outline"}
-                            className="rounded-lg gap-1.5 font-bold"
-                            onClick={() => window.open(cls.join_url, "_blank")}
+                            className="rounded-lg gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => launchStudioModal(cls)}
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            {isOngoing ? "Enter Room (Host)" : "Open Room Link"}
+                            <Zap className="w-3.5 h-3.5" />
+                            {isOngoing ? "Enter Live Studio (Host)" : "Launch Studio"}
                           </Button>
                         )}
                         {!isCancelled && cls.status !== "completed" && (
@@ -587,6 +642,15 @@ export default function CenterLiveClassesPage() {
           </div>
         )}
       </div>
+
+      {/* Embedded Live Studio Modal */}
+      <LiveMeetingStudioModal
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        meeting={activeStudioMeeting}
+        userDisplayName={centerName}
+        isHost={true}
+      />
 
       {/* Schedule / Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -666,7 +730,7 @@ export default function CenterLiveClassesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="jitsi">⚡ Auto Generated HD Room (Recommended)</SelectItem>
+                    <SelectItem value="jitsi">⚡ SCRE Instant Studio (Password-Free)</SelectItem>
                     <SelectItem value="google_meet">🎥 Google Meet</SelectItem>
                     <SelectItem value="zoom">📹 Zoom</SelectItem>
                     <SelectItem value="youtube">📺 YouTube Live / Video</SelectItem>
@@ -692,7 +756,7 @@ export default function CenterLiveClassesPage() {
             {form.platform === "jitsi" && (
               <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>Zero configuration required! Room URL will be auto-generated securely upon creation.</span>
+                <span>Zero configuration required! Direct password-free studio will launch inside your web dashboard.</span>
               </div>
             )}
 
