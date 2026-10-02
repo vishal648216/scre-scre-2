@@ -36,6 +36,20 @@ pub struct LiveClass {
     pub instructor_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
+
+    // --- Plan B Masterclass Hub Extensions ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>, // "youtube_channel_sync" | "mp4_chapter_vault" | "center_broadcast"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chapter_title: Option<String>, // Module / Chapter Title
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sequence_order: Option<i32>, // 1, 2, 3...
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keyword: Option<String>, // Keyword filter for channel sync
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pdf_attachment_url: Option<String>, // PDF Notes Link
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visibility_state: Option<String>, // "published" | "center_scoped" | "hidden"
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,6 +67,14 @@ pub struct CreateLiveClassPayload {
     pub subject_name: Option<String>,
     pub instructor_name: Option<String>,
     pub thumbnail_url: Option<String>,
+
+    // Plan B Extensions
+    pub mode: Option<String>,
+    pub chapter_title: Option<String>,
+    pub sequence_order: Option<i32>,
+    pub keyword: Option<String>,
+    pub pdf_attachment_url: Option<String>,
+    pub visibility_state: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,4 +91,12 @@ pub struct UpdateLiveClassPayload {
     pub subject_name: Option<String>,
     pub instructor_name: Option<String>,
     pub thumbnail_url: Option<String>,
+
+    // Plan B Extensions
+    pub mode: Option<String>,
+    pub chapter_title: Option<String>,
+    pub sequence_order: Option<i32>,
+    pub keyword: Option<String>,
+    pub pdf_attachment_url: Option<String>,
+    pub visibility_state: Option<String>,
 }

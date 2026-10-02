@@ -182,6 +182,12 @@ pub async fn create_live_class(
         subject_name: payload.subject_name,
         instructor_name: payload.instructor_name,
         thumbnail_url: payload.thumbnail_url,
+        mode: payload.mode,
+        chapter_title: payload.chapter_title,
+        sequence_order: payload.sequence_order,
+        keyword: payload.keyword,
+        pdf_attachment_url: payload.pdf_attachment_url,
+        visibility_state: payload.visibility_state,
     };
 
     let coll = db.collection::<LiveClass>("live_classes");
@@ -231,6 +237,12 @@ pub async fn update_live_class(
     if let Some(sname) = payload.subject_name { update_doc.insert("subject_name", sname); }
     if let Some(iname) = payload.instructor_name { update_doc.insert("instructor_name", iname); }
     if let Some(turl) = payload.thumbnail_url { update_doc.insert("thumbnail_url", turl); }
+    if let Some(mode) = payload.mode { update_doc.insert("mode", mode); }
+    if let Some(ctitle) = payload.chapter_title { update_doc.insert("chapter_title", ctitle); }
+    if let Some(seq) = payload.sequence_order { update_doc.insert("sequence_order", seq); }
+    if let Some(kw) = payload.keyword { update_doc.insert("keyword", kw); }
+    if let Some(pdf) = payload.pdf_attachment_url { update_doc.insert("pdf_attachment_url", pdf); }
+    if let Some(vstate) = payload.visibility_state { update_doc.insert("visibility_state", vstate); }
     if let Some(sched) = payload.scheduled_at {
         if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&sched) {
             update_doc.insert("scheduled_at", mongodb::bson::DateTime::from_millis(dt.timestamp_millis()));
