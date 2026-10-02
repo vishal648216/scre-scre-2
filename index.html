@@ -29,19 +29,19 @@
   <body>
     <div id="root"></div>
     <script>
-      // Clear legacy service worker & caches to prevent stale index.html asset hash mismatches
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            registration.unregister();
-          }
-        });
-      }
+      // Purge legacy caches to guarantee fresh JS assets from Render
       if ('caches' in window) {
         caches.keys().then(function(names) {
           for (let name of names) {
             caches.delete(name);
           }
+        });
+      }
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('PWA ServiceWorker registration error:', err);
+          });
         });
       }
     </script>
