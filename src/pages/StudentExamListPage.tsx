@@ -474,26 +474,26 @@ function LegacyStudentExamListPage() {
                 const canStart = (paper.status === "Generated" || paper.status === "InProgress") && !isTooEarly && !isTooLate;
 
                 return (
-                  <Card key={paper._id} className="rounded-none border-border shadow-md hover:border-primary/40 transition-all group overflow-hidden">
+                  <Card key={paper._id} className="rounded-3xl border border-border bg-card shadow-lg hover:border-primary/40 transition-all group overflow-hidden">
                     <div className="p-6 space-y-6">
                       <div className="flex justify-between items-start">
-                        <div className="w-12 h-12 bg-primary/5 border border-primary/10 flex items-center justify-center">
+                        <div className="w-12 h-12 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-center">
                           <FileText className="w-6 h-6 text-primary" />
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex items-center gap-1.5 flex-wrap justify-end">
                             {blueprint?.exam_pattern && (
-                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 border bg-indigo-500/10 text-indigo-600 border-indigo-500/20">
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border bg-indigo-500/10 text-indigo-600 border-indigo-500/20">
                                 {blueprint.exam_pattern} {blueprint.term_number ? `• Term ${blueprint.term_number}` : ''}
                               </span>
                             )}
                             {blueprint?.exam_mode && blueprint.exam_mode.toLowerCase().includes("offline") && (
-                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 border bg-amber-500/10 text-amber-600 border-amber-500/20">
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
                                 📝 Offline Exam
                               </span>
                             )}
                             <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest px-2 py-1 border",
+                              "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
                               paper.status === "Generated" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
                                 paper.status === "InProgress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
                                   paper.status === "Submitted" ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
@@ -521,19 +521,19 @@ function LegacyStudentExamListPage() {
                         )}
                         <div className="flex flex-wrap gap-4">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="w-3.5 h-3.5" />
+                            <Clock className="w-3.5 h-3.5 text-primary" />
                             <span className="text-[10px] font-bold uppercase tracking-widest">
                               {subjectDuration ?? "--"} {t("Minutes")}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                             <span className="text-[10px] font-bold uppercase tracking-widest">
                               {subjectTotalMarks ?? "--"} {t("Total Marks")}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
                             <span className="text-[10px] font-bold uppercase tracking-widest">
                               {t("Attempt")} {paper.attempt_number} {t("of")} {maxAttempts}
                             </span>
@@ -545,14 +545,14 @@ function LegacyStudentExamListPage() {
                         {isOfflineStudent && (paper.status === "Generated" || paper.status === "InProgress") ? (
                           <Button
                             onClick={downloadHallTicket}
-                            className="w-full rounded-none font-black uppercase tracking-widest text-xs h-12"
+                            className="w-full rounded-2xl font-black uppercase tracking-widest text-xs h-12"
                           >
                             <Ticket className="w-4 h-4 mr-2" />
                             {t("Download Hall Ticket")}
                           </Button>
                         ) : paper.status === "Generated" || paper.status === "InProgress" ? (
                           <Link to={canStart ? `/dashboard/student/exams/take/${paper._id}` : "#"} className={cn(!canStart && "cursor-not-allowed")}>
-                            <Button disabled={!canStart} className="w-full rounded-none font-black uppercase tracking-widest text-xs h-12">
+                            <Button disabled={!canStart} className="w-full rounded-2xl font-black uppercase tracking-widest text-xs h-12">
                               <PlayCircle className="w-4 h-4 mr-2" />
                               {isTooEarly ? t("Wait for window") : isTooLate ? t("Window Expired") : paper.status === "InProgress" ? t("Resume Exam") : t("Start Examination")}
                             </Button>
@@ -566,7 +566,7 @@ function LegacyStudentExamListPage() {
                               </p>
                             </div>
                             <Link to={`/dashboard/student/exams/results/${paper._id}`}>
-                              <Button variant="outline" className="rounded-none font-black uppercase tracking-widest text-[10px]">
+                              <Button variant="outline" className="rounded-2xl font-black uppercase tracking-widest text-[10px]">
                                 {t("View Details")}
                               </Button>
                             </Link>

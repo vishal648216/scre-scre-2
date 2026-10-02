@@ -219,11 +219,12 @@ const AdminCenterWalletsPage = () => {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
         <div>
-          <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">
+          <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight flex items-center gap-3">
+            <Wallet className="w-8 h-8 text-primary" />
             Center Wallet Management
           </h1>
           <p className="text-muted-foreground mt-1 text-sm font-medium">
-            View wallet balance, add funds, and track royalty deductions.
+            View wallet balance, add funds, configure royalty rates, and track deduction records.
           </p>
         </div>
 
@@ -234,22 +235,22 @@ const AdminCenterWalletsPage = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="rounded-none border-border overflow-hidden lg:col-span-1">
-                <CardHeader className="bg-muted/30 border-b">
-                  <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
-                    <Wallet className="w-4 h-4" />
-                    Wallet
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl overflow-hidden lg:col-span-1">
+                <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 py-4 px-6">
+                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
+                    <Wallet className="w-4 h-4 text-primary" />
+                    Center Wallet
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-6 space-y-5">
                   <div className="space-y-2">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Center Selector</div>
+                    <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Select Center</div>
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <Building2 className="w-4 h-4 text-zinc-500 shrink-0" />
                       <select
                         value={selectedCenterId}
                         onChange={(e) => setSelectedCenterId(e.target.value)}
-                        className="w-full border border-border bg-background px-3 py-2 text-sm"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2.5 text-sm font-medium text-zinc-100 focus:border-primary focus:outline-none transition-all"
                       >
                         {centers.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -259,26 +260,26 @@ const AdminCenterWalletsPage = () => {
                       </select>
                     </div>
                     {selectedCenter ? (
-                      <div className="text-xs text-muted-foreground">
-                        Center ID: <span className="font-mono">{selectedCenter.id}</span>
+                      <div className="text-[10px] text-zinc-500 font-mono mt-1">
+                        ID: {selectedCenter.id}
                       </div>
                     ) : null}
                   </div>
 
-                  <div className="border border-border p-4 bg-muted/10">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Balance</div>
+                  <div className="border border-zinc-800 rounded-2xl p-5 bg-zinc-950/60 space-y-1">
+                    <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Current Balance</div>
                     <div className="mt-1 flex items-center gap-2">
-                      <IndianRupee className="w-5 h-5 text-primary" />
-                      <div className="text-2xl font-extrabold text-primary">
+                      <IndianRupee className="w-6 h-6 text-emerald-400" />
+                      <div className="text-3xl font-black text-emerald-400">
                         ₹{(wallet?.balance ?? 0).toLocaleString("en-IN")}
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 items-start">
-                    <div className="border border-border p-3 space-y-2">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        Royalty %
+                    <div className="border border-zinc-800 rounded-2xl p-4 bg-zinc-950/40 space-y-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        Royalty Rate
                       </div>
                       <div className="flex items-center gap-2">
                         <input
@@ -306,45 +307,45 @@ const AdminCenterWalletsPage = () => {
                             }
                             await fetchWallet(selectedCenterId);
                           }}
-                          className="w-20 border border-border bg-background px-2 py-1 text-sm"
+                          className="w-20 rounded-xl border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-sm font-bold text-zinc-100 focus:border-primary focus:outline-none"
                         />
-                        <span className="text-xs font-semibold text-muted-foreground">%</span>
+                        <span className="text-xs font-bold text-primary">%</span>
                       </div>
                     </div>
-                    <div className="border border-border p-3">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Wallet Center ID</div>
-                      <div className="mt-1 text-xs font-mono truncate">{toId(wallet?.center_id) || "—"}</div>
+                    <div className="border border-zinc-800 rounded-2xl p-4 bg-zinc-950/40 space-y-1">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Wallet Ref</div>
+                      <div className="mt-1 text-xs font-mono text-zinc-300 truncate">{toId(wallet?.center_id) || "—"}</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-none border-border overflow-hidden lg:col-span-2">
-                <CardHeader className="bg-muted/30 border-b">
-                  <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
-                    <PlusCircle className="w-4 h-4" />
-                    Admin Actions
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl overflow-hidden lg:col-span-2">
+                <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 py-4 px-6">
+                  <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
+                    <PlusCircle className="w-4 h-4 text-primary" />
+                    Admin Actions & Fund Management
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-6 space-y-5">
                   <Dialog open={addOpen} onOpenChange={setAddOpen}>
                     <DialogTrigger asChild>
                       <button
                         type="button"
                         disabled={!selectedCenterId}
-                        className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+                        className="inline-flex items-center gap-2.5 bg-primary text-primary-foreground px-6 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 transition-all"
                       >
                         <PlusCircle className="w-4 h-4" />
                         Add Funds Manually
                       </button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-lg">
+                    <DialogContent className="max-w-lg rounded-2xl bg-zinc-900 border-zinc-800 text-zinc-100 p-6">
                       <DialogHeader>
-                        <DialogTitle>Add Funds</DialogTitle>
+                        <DialogTitle className="text-lg font-bold text-zinc-100">Add Funds to Center Wallet</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-3">
-                        <div className="text-xs text-muted-foreground">
-                          Center: <span className="font-mono">{selectedCenterId}</span>
+                      <div className="space-y-4 pt-2">
+                        <div className="text-xs text-zinc-400">
+                          Selected Center ID: <span className="font-mono text-zinc-200">{selectedCenterId}</span>
                         </div>
                         <input
                           type="number"
@@ -353,12 +354,12 @@ const AdminCenterWalletsPage = () => {
                           value={addAmount}
                           onChange={(e) => setAddAmount(e.target.value)}
                           placeholder="Amount (₹)"
-                          className="w-full border border-border bg-background px-4 py-3"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-primary focus:outline-none"
                         />
                         <select
                           value={addPaymentMethod}
                           onChange={(e) => setAddPaymentMethod(e.target.value)}
-                          className="w-full border border-border bg-background px-4 py-3"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-primary focus:outline-none"
                         >
                           <option>Cash</option>
                           <option>Online</option>
@@ -371,31 +372,31 @@ const AdminCenterWalletsPage = () => {
                           onChange={(e) => setAddDescription(e.target.value)}
                           placeholder="Description (optional)"
                           rows={3}
-                          className="w-full border border-border bg-background px-4 py-3"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-primary focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={submitAddFunds}
                           disabled={addSubmitting}
-                          className="w-full bg-primary text-primary-foreground px-5 py-3 text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+                          className="w-full bg-primary text-primary-foreground rounded-xl px-5 py-3.5 text-xs font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-50 shadow-lg shadow-primary/20 transition-all"
                         >
-                          {addSubmitting ? "Submitting..." : "Submit"}
+                          {addSubmitting ? "Submitting..." : "Submit Payment"}
                         </button>
                       </div>
                     </DialogContent>
                   </Dialog>
 
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    Full amount is credited to wallet; royalty is paid separately.
+                  <div className="text-xs text-zinc-400 leading-relaxed bg-zinc-950/40 border border-zinc-800/80 rounded-xl p-4">
+                    Full amount added here is credited to the center's wallet. Royalty deductions are tracked automatically on student admissions.
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="rounded-none border-border overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b">
-                <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4" />
+            <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl overflow-hidden">
+              <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 py-4 px-6">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
+                  <CalendarClock className="w-4 h-4 text-primary" />
                   Transaction History
                 </CardTitle>
               </CardHeader>
@@ -405,44 +406,44 @@ const AdminCenterWalletsPage = () => {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
                 ) : txData.items.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground text-sm">No transactions yet.</div>
+                  <div className="py-12 text-center text-zinc-400 text-xs font-bold uppercase tracking-widest">No transactions recorded yet.</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left px-6 py-3 text-[10px] font-black uppercase">Date</th>
-                          <th className="text-left px-6 py-3 text-[10px] font-black uppercase">Transaction ID</th>
-                          <th className="text-right px-6 py-3 text-[10px] font-black uppercase">Credit</th>
-                          <th className="text-right px-6 py-3 text-[10px] font-black uppercase">Royalty Deduction</th>
-                          <th className="text-right px-6 py-3 text-[10px] font-black uppercase">Net Amount</th>
-                          <th className="text-left px-6 py-3 text-[10px] font-black uppercase">Description</th>
-                          <th className="text-left px-6 py-3 text-[10px] font-black uppercase">Action</th>
+                        <tr className="border-b border-zinc-800 bg-zinc-950/80 text-zinc-400 uppercase text-[11px] font-bold tracking-wider">
+                          <th className="px-6 py-4">Date</th>
+                          <th className="px-6 py-4">Transaction ID</th>
+                          <th className="px-6 py-4 text-right">Credit</th>
+                          <th className="px-6 py-4 text-right">Royalty Deduction</th>
+                          <th className="px-6 py-4 text-right">Net Amount</th>
+                          <th className="px-6 py-4">Description</th>
+                          <th className="px-6 py-4">Action</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-zinc-800/60 text-xs">
                         {txData.items.map((t) => (
-                          <tr key={t.id} className="border-b border-border hover:bg-muted/10">
-                            <td className="px-6 py-3 text-sm whitespace-nowrap">{format(new Date(t.created_at), "dd MMM yyyy")}</td>
-                            <td className="px-6 py-3 text-xs font-mono whitespace-nowrap">{toId(t.transaction_id)}</td>
-                            <td className="px-6 py-3 text-right text-sm">
+                          <tr key={t.id} className="hover:bg-zinc-800/40 transition-colors">
+                            <td className="px-6 py-4 text-zinc-200 font-medium whitespace-nowrap">{format(new Date(t.created_at), "dd MMM yyyy")}</td>
+                            <td className="px-6 py-4 text-zinc-400 font-mono text-[11px] whitespace-nowrap">{toId(t.transaction_id)}</td>
+                            <td className="px-6 py-4 text-right font-bold text-emerald-400">
                               {t.credit_amount ? `₹${Number(t.credit_amount).toLocaleString("en-IN")}` : "—"}
                             </td>
-                            <td className="px-6 py-3 text-right text-sm">
+                            <td className="px-6 py-4 text-right font-bold text-amber-400">
                               {t.royalty_amount ? `₹${Number(t.royalty_amount).toLocaleString("en-IN")}` : "—"}
                             </td>
-                            <td className="px-6 py-3 text-right text-sm font-extrabold text-primary">
+                            <td className="px-6 py-4 text-right font-black text-primary text-sm">
                               ₹{Number(t.net_amount).toLocaleString("en-IN")}
                             </td>
-                            <td className="px-6 py-3 text-sm">{t.description || "—"}</td>
-                            <td className="px-6 py-3 text-sm">
-                              <div className="flex gap-2">
+                            <td className="px-6 py-4 text-zinc-300 font-medium">{t.description || "—"}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => openEditDate(t)}
-                                  className="inline-flex items-center gap-2 border border-border px-3 py-2 text-xs font-extrabold hover:border-primary transition"
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-800 transition"
                                 >
-                                  <Pencil className="w-3 h-3" />
+                                  <Pencil className="w-3 h-3 text-primary" />
                                   Edit Date
                                 </button>
                                 {t.receipt_number && (

@@ -20,7 +20,7 @@ interface Subject {
 const AdminSubjectsPage = () => {
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; category_code?: string }[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [courseSubjectMappings, setCourseSubjectMappings] = useState<any[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
@@ -85,8 +85,8 @@ const AdminSubjectsPage = () => {
         toast.success(isEditing ? "Subject updated" : "Subject created");
         setIsAdding(false);
         setIsEditing(false);
-        setForm({ subject_name: "", description: "", status: "active" });
-        fetchSubjects();
+        setForm({ subject_name: "", subject_code: "", description: "", status: "active" });
+        fetchAllData();
       } else {
         const data = await response.json();
         toast.error(data.message || "Operation failed");
@@ -115,7 +115,7 @@ const AdminSubjectsPage = () => {
       const response = await apiFetch(`/api/admin/subjects/${id}`, { method: "DELETE" });
       if (response.ok) {
         toast.success("Subject deleted");
-        fetchSubjects();
+        fetchAllData();
       } else {
         const data = await response.json();
         toast.error(data.message || "Delete failed");
@@ -307,7 +307,9 @@ const AdminSubjectsPage = () => {
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
+                  </option>
                 ))}
               </select>
             </div>

@@ -294,20 +294,18 @@ const AdminListPage = () => {
     <DashboardLayout>
       <div className="space-y-8 animate-in fade-in duration-500 pb-12">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">
-                  {t("Admin Directory")}
-                </h1>
-                <p className="text-muted-foreground text-xs font-medium mt-0.5">
-                  {t("Manage regional administrators, access privileges, security credentials, and status.")}
-                </p>
-              </div>
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Shield className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="font-heading font-black text-2xl md:text-3xl text-foreground uppercase tracking-tight">
+                {t("Admin Directory")}
+              </h1>
+              <p className="text-muted-foreground text-xs font-semibold mt-0.5">
+                {t("Manage regional administrators, access privileges, security credentials, and status.")}
+              </p>
             </div>
           </div>
 
@@ -315,7 +313,7 @@ const AdminListPage = () => {
             {/* Download Report Button */}
             <button
               onClick={handleDownloadReport}
-              className="bg-card border border-border text-foreground px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-muted transition-all flex items-center gap-2 shadow-sm"
+              className="bg-muted/30 border border-border text-foreground px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-muted transition-all flex items-center gap-2 shadow-sm"
             >
               <Download className="w-4 h-4 text-emerald-500" />
               {t("Download Report")}
@@ -324,7 +322,7 @@ const AdminListPage = () => {
             {/* Add New Admin Button */}
             <button
               onClick={() => navigate("/dashboard/admins/add")}
-              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-extrabold text-xs uppercase tracking-wider shadow-lg hover:opacity-90 transition-all flex items-center gap-2"
+              className="bg-primary text-primary-foreground px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2"
             >
               <Users className="w-4 h-4" />
               {t("Add New Admin")}
@@ -333,14 +331,14 @@ const AdminListPage = () => {
         </div>
 
         {/* Search & Filter Bar */}
-        <Card className="rounded-xl border border-border/60 shadow-sm bg-card">
+        <Card className="rounded-3xl border border-border shadow-md bg-card overflow-hidden">
           <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder={t("SEARCH BY USERNAME, NAME, EMAIL OR PHONE...")}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-muted/20 text-xs font-semibold focus:border-primary focus:outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -351,7 +349,7 @@ const AdminListPage = () => {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-4 py-2.5 border border-border rounded-lg bg-background text-xs font-bold uppercase tracking-wider focus:outline-none"
+                className="px-4 py-3 border border-border rounded-2xl bg-muted/20 text-foreground text-xs font-black uppercase tracking-wider focus:outline-none"
               >
                 <option value="all">{t("All Roles")}</option>
                 <option value="superadmin">{t("Super Admin")}</option>
@@ -362,9 +360,9 @@ const AdminListPage = () => {
         </Card>
 
         {/* Admins Table Card */}
-        <Card className="rounded-xl border border-border/60 shadow-md overflow-hidden bg-card">
-          <CardHeader className="bg-muted/20 border-b border-border py-4 px-6 flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-extrabold uppercase tracking-widest flex items-center gap-2">
+        <Card className="rounded-3xl border border-border shadow-xl overflow-hidden bg-card">
+          <CardHeader className="bg-muted/40 border-b border-border py-4 px-6 flex flex-row items-center justify-between">
+            <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-foreground">
               <Shield className="w-4 h-4 text-primary" />
               {t("System Administrators Directory")} ({filteredAdmins.length})
             </CardTitle>

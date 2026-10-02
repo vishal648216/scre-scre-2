@@ -58,7 +58,8 @@ import {
   Languages,
   BookCheck,
   Upload,
-  Stamp
+  Stamp,
+  Briefcase
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -298,7 +299,7 @@ const CenterDashboard = () => {
             {quickLinks.map((link) => {
               const Icon = (() => {
                 const iconMap: Record<string, any> = {
-                  Users, School, IndianRupee, GraduationCap, BookOpen, Library, Calendar, ClipboardList, CheckSquare, PlusCircle, Clock, Bell, Mail, MessageSquare, Trophy, Award, CreditCard, Wallet, FileText, Image, Download, ShieldCheck, Layers, PenTool, Handshake, BarChart3, TrendingUp, History, Filter, Zap, Video, FlaskConical, Database, List, Trash2, Send, Paperclip, IdCard, Settings, ShoppingBag, Globe, MapPin, AlertTriangle, Star, HardDrive, FileSpreadsheet, UserCheck, Languages, BookCheck, Upload, Stamp, ExternalLink
+                  Users, School, IndianRupee, GraduationCap, BookOpen, Library, Calendar, ClipboardList, CheckSquare, PlusCircle, Clock, Bell, Mail, MessageSquare, Trophy, Award, CreditCard, Wallet, FileText, Image, Download, ShieldCheck, Layers, PenTool, Handshake, BarChart3, TrendingUp, History, Filter, Zap, Video, FlaskConical, Database, List, Trash2, Send, Paperclip, IdCard, Settings, ShoppingBag, Globe, MapPin, AlertTriangle, Star, HardDrive, FileSpreadsheet, UserCheck, Languages, BookCheck, Upload, Stamp, Briefcase, ExternalLink
                 };
                 return iconMap[link.iconName] || ExternalLink;
               })();

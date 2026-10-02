@@ -352,52 +352,57 @@ const CenterWalletPage = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="rounded-none border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <Wallet className="w-8 h-8 text-primary" />
-                    <div>
-                      <p className="text-xs font-bold uppercase text-muted-foreground">{t("Payable Balance")}</p>
-                        <p className="text-2xl font-bold text-primary">
-                          ₹{(wallet?.balance ?? 0).toLocaleString("en-IN")}
-                        </p>
-                    </div>
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Wallet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{t("Payable Balance")}</p>
+                    <p className="text-2xl font-black text-emerald-400 mt-0.5">
+                      ₹{(wallet?.balance ?? 0).toLocaleString("en-IN")}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-none border-border">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <IndianRupee className="w-8 h-8 text-muted-foreground" />
-                    <div>
-                        <p className="text-xs font-bold uppercase text-muted-foreground">{t("Total Credited")}</p>
-                        <p className="text-2xl font-bold">
-                          ₹{totalCredit.toLocaleString("en-IN")}
-                        </p>
-                    </div>
+
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <IndianRupee className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{t("Total Credited")}</p>
+                    <p className="text-2xl font-black text-zinc-100 mt-0.5">
+                      ₹{totalCredit.toLocaleString("en-IN")}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-none border-border">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <History className="w-8 h-8 text-muted-foreground" />
-                    <div>
-                        <p className="text-xs font-bold uppercase text-muted-foreground">
-                          {t("Royalty")} ({(wallet?.royalty_percentage ?? 0).toLocaleString("en-IN")}%)
-                        </p>
-                        <p className="text-2xl font-bold">
-                          ₹{totalRoyalty.toLocaleString("en-IN")}
-                        </p>
-                    </div>
+
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                    <History className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      {t("Royalty Rate")} ({(wallet?.royalty_percentage ?? 0).toLocaleString("en-IN")}%)
+                    </p>
+                    <p className="text-2xl font-black text-amber-400 mt-0.5">
+                      ₹{totalRoyalty.toLocaleString("en-IN")}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="rounded-none border-border overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b">
-                <CardTitle className="text-sm font-bold uppercase tracking-tight">{t("Recent Wallet Transactions")}</CardTitle>
+            <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl overflow-hidden">
+              <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 py-4 px-6">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
+                  <History className="w-4 h-4 text-primary" />
+                  {t("Recent Wallet Transactions")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {txLoading ? (
@@ -405,17 +410,17 @@ const CenterWalletPage = () => {
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   </div>
                 ) : txData.items.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground">{t("No transactions yet.")}</div>
+                  <div className="py-12 text-center text-zinc-400 text-xs font-bold uppercase tracking-widest">{t("No transactions yet.")}</div>
                 ) : (
-                  <div className="divide-y divide-border">
+                  <div className="divide-y divide-zinc-800/60">
                     {txData.items.slice(0, 15).map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between px-6 py-3">
+                      <div key={tx.id} className="flex items-center justify-between px-6 py-4 hover:bg-zinc-800/40 transition-colors">
                         <div>
-                          <p className="font-mono text-sm">{tx.transaction_id}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-mono text-xs font-bold text-zinc-200">{tx.transaction_id}</p>
+                          <p className="text-xs text-zinc-400 mt-0.5">
                             {format(new Date(tx.created_at), "dd MMM yyyy")}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-zinc-400 mt-0.5 font-medium">
                             {t(tx.description || "—")}
                           </p>
                         </div>
@@ -434,23 +439,23 @@ const CenterWalletPage = () => {
                                 a.click();
                                 URL.revokeObjectURL(url);
                               }}
-                              className="inline-flex items-center gap-1 text-xs font-extrabold border border-border px-2 py-1 hover:border-primary transition"
+                              className="inline-flex items-center gap-1.5 text-xs font-bold rounded-xl border border-zinc-700 bg-zinc-800/60 px-3 py-1 text-zinc-200 hover:bg-zinc-800 transition"
                             >
-                              <Download className="w-3 h-3" />
+                              <Download className="w-3.5 h-3.5 text-primary" />
                               {t("Receipt")}
                             </button>
                           )}
                           {tx.credit_amount ? (
-                            <p className="font-bold text-primary">
+                            <p className="font-black text-emerald-400 text-sm">
                               +₹{Number(tx.credit_amount).toLocaleString("en-IN")}
                             </p>
                           ) : null}
                           {tx.royalty_amount ? (
-                            <p className="text-xs text-red-500">
+                            <p className="text-xs font-bold text-amber-400">
                               {t("Royalty")}: -₹{Number(tx.royalty_amount).toLocaleString("en-IN")}
                             </p>
                           ) : null}
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-zinc-400 font-semibold">
                             {t("Net")}: ₹{Number(tx.net_amount).toLocaleString("en-IN")}
                           </p>
                         </div>

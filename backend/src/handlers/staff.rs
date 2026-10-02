@@ -21,6 +21,7 @@ pub struct CreateStaffRequest {
     pub phone: Option<String>,
     pub email: Option<String>,
     pub permissions: Option<StaffPermissions>,
+    pub center_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +67,16 @@ pub async fn handle_create_staff(
     let parent_oid = match ObjectId::parse_str(&claims.sub) {
         Ok(oid) => oid,
         Err(_) => return (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Invalid ID".to_string() })),
+    };
+
+    let effective_parent_oid = if (claims.role == UserRole::SuperAdmin || claims.role == UserRole::Admin) && payload.center_id.is_some() {
+        if let Some(ref cid) = payload.center_id {
+            ObjectId::parse_str(cid).ok().unwrap_or(parent_oid)
+        } else {
+            parent_oid
+        }
+    } else {
+        parent_oid
     };
 
     let user_coll = db.collection::<User>("users");
@@ -129,7 +140,7 @@ pub async fn handle_create_staff(
         password_hash: hashed_password,
         raw_password: Some(password_plain),
         role: UserRole::Staff,
-        parent_id: Some(parent_oid),
+        parent_id: Some(effective_parent_oid),
         full_name: Some(payload.name.clone()),
         first_name: None,
         middle_name: None,
@@ -193,6 +204,8 @@ pub async fn handle_create_staff(
         is_deleted_by_center_final: false,
         internship_domain: None,
         internship_mode: None,
+        monthly_stipend: None,
+        stipend_status: None,
         total_fees: None,
         extra_charges: None,
         grand_total: None,
@@ -224,7 +237,7 @@ pub async fn handle_create_staff(
     let new_staff = Staff {
         id: None,
         user_id,
-        parent_id: parent_oid,
+        parent_id: effective_parent_oid,
         parent_role: parent_role_str.to_string(),
         name: payload.name,
         designation: payload.designation,
@@ -510,8 +523,18 @@ pub async fn get_staff_permissions(
     State(db): State<Database>,
     claims: Claims,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    if claims.role != UserRole::Staff {
-        return (StatusCode::FORBIDDEN, Json(serde_json::json!({})));
+    if claims.role == UserRole::SuperAdmin || claims.role == UserRole::Admin || claims.role == UserRole::Center {
+        return (StatusCode::OK, Json(serde_json::json!({
+            "can_manage_students": true,
+            "can_manage_attendance": true,
+            "can_manage_fees": true,
+            "can_manage_courses": true,
+            "can_manage_exams": true,
+            "can_view_reports": true,
+            "can_manage_staff": true,
+            "can_manage_enquiries": true,
+            "can_issue_certificates": true
+        })));
     }
 
     let user_oid = match ObjectId::parse_str(&claims.sub) {
@@ -520,10 +543,32 @@ pub async fn get_staff_permissions(
     };
 
     let staff_coll = db.collection::<Staff>("staff");
-    match staff_coll.find_one(doc! { "user_id": user_oid }, None).await {
-        Ok(Some(staff)) => (StatusCode::OK, Json(serde_json::to_value(staff.permissions).unwrap_or(serde_json::json!({})))),
-        _ => (StatusCode::NOT_FOUND, Json(serde_json::json!({}))),
+    if let Ok(Some(staff)) = staff_coll.find_one(doc! { "user_id": user_oid }, None).await {
+        let mut val = serde_json::to_value(&staff.permissions).unwrap_or(serde_json::json!({}));
+        if let Some(obj) = val.as_object_mut() {
+            obj.insert("assigned_subjects".to_string(), serde_json::to_value(staff.assigned_subjects).unwrap_or(serde_json::json!([])));
+            obj.insert("assigned_centers".to_string(), serde_json::to_value(staff.assigned_centers).unwrap_or(serde_json::json!([])));
+            obj.insert("designation".to_string(), serde_json::json!(staff.designation));
+        }
+        return (StatusCode::OK, Json(val));
     }
+
+    let user_coll = db.collection::<User>("users");
+    if let Ok(Some(_)) = user_coll.find_one(doc! { "_id": user_oid }, None).await {
+        return (StatusCode::OK, Json(serde_json::json!({
+            "can_manage_students": true,
+            "can_manage_attendance": true,
+            "can_manage_fees": true,
+            "can_manage_courses": true,
+            "can_manage_exams": true,
+            "can_view_reports": true,
+            "can_manage_staff": true,
+            "can_manage_enquiries": true,
+            "can_issue_certificates": true
+        })));
+    }
+
+    (StatusCode::NOT_FOUND, Json(serde_json::json!({})))
 }
 
 pub async fn update_staff(
@@ -673,6 +718,9 @@ pub struct SaveAttendanceRequest {
 #[derive(Debug, Deserialize)]
 pub struct AttendanceQuery {
     pub date: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub center_id: Option<String>,
 }
 
 pub async fn get_staff_attendance(
@@ -684,34 +732,72 @@ pub async fn get_staff_attendance(
         return (StatusCode::FORBIDDEN, Json(serde_json::json!({ "error": "Forbidden" })));
     }
 
-    let date = query.date.unwrap_or_else(|| Utc::now().naive_utc().date().to_string());
     let att_coll = db.collection::<mongodb::bson::Document>("staff_attendance");
 
-    let is_locked = match att_coll.find_one(doc! { "date": &date, "is_locked": true }, None).await {
-        Ok(Some(_)) => true,
-        _ => false,
-    };
+    // Single Date Query
+    if let Some(ref raw_date) = query.date {
+        let clean_date = raw_date.split('T').next().unwrap_or(raw_date).to_string();
 
-    let filter = doc! { "date": &date, "type": { "$ne": "lock_marker" } };
+        let is_locked = match att_coll.find_one(doc! { "date": &clean_date, "type": "lock_marker", "is_locked": true }, None).await {
+            Ok(Some(_)) => true,
+            _ => false,
+        };
+
+        let filter = doc! { "date": &clean_date, "type": { "$ne": "lock_marker" } };
+        let mut cursor = match att_coll.find(filter, None).await {
+            Ok(c) => c,
+            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "date": clean_date, "is_locked": is_locked, "records": [] }))),
+        };
+
+        let mut records = Vec::new();
+        while let Some(result) = cursor.next().await {
+            if let Ok(doc) = result {
+                if let Ok(val) = serde_json::to_value(doc) {
+                    records.push(val);
+                }
+            }
+        }
+
+        return (StatusCode::OK, Json(serde_json::json!({
+            "date": clean_date,
+            "is_locked": is_locked,
+            "records": records
+        })));
+    }
+
+    // Range Query (start_date & end_date) for Monthly Ledger Report
+    let mut filter = doc! { "type": { "$ne": "lock_marker" } };
+
+    if query.start_date.is_some() || query.end_date.is_some() {
+        if let (Some(start), Some(end)) = (query.start_date.as_ref(), query.end_date.as_ref()) {
+            let start_str = start.split('T').next().unwrap_or(start);
+            let end_str = end.split('T').next().unwrap_or(end);
+
+            filter.insert("date", doc! { "$gte": start_str, "$lte": end_str });
+        } else if let Some(ref start) = query.start_date {
+            let start_str = start.split('T').next().unwrap_or(start);
+            filter.insert("date", doc! { "$gte": start_str });
+        } else if let Some(ref end) = query.end_date {
+            let end_str = end.split('T').next().unwrap_or(end);
+            filter.insert("date", doc! { "$lte": end_str });
+        }
+    }
+
     let mut cursor = match att_coll.find(filter, None).await {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "is_locked": is_locked, "records": [] }))),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!([]))),
     };
 
-    let mut records = Vec::new();
+    let mut results = vec![];
     while let Some(result) = cursor.next().await {
         if let Ok(doc) = result {
             if let Ok(val) = serde_json::to_value(doc) {
-                records.push(val);
+                results.push(val);
             }
         }
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "date": date,
-        "is_locked": is_locked,
-        "records": records
-    })))
+    (StatusCode::OK, Json(serde_json::json!(results)))
 }
 
 pub async fn save_staff_attendance(
@@ -723,14 +809,17 @@ pub async fn save_staff_attendance(
         return (StatusCode::FORBIDDEN, Json(StaffResponse { success: false, message: "Forbidden".to_string() }));
     }
 
+    let clean_date = payload.date.split('T').next().unwrap_or(&payload.date).to_string();
     let att_coll = db.collection::<mongodb::bson::Document>("staff_attendance");
 
-    // Check if date is locked
-    if let Ok(Some(_)) = att_coll.find_one(doc! { "date": &payload.date, "is_locked": true }, None).await {
-        return (StatusCode::FORBIDDEN, Json(StaffResponse {
-            success: false,
-            message: format!("Attendance for date {} is locked and cannot be edited!", payload.date)
-        }));
+    // Check if date is locked (Only restrict non-Admins)
+    if claims.role != UserRole::SuperAdmin && claims.role != UserRole::Admin {
+        if let Ok(Some(_)) = att_coll.find_one(doc! { "date": &clean_date, "type": "lock_marker", "is_locked": true }, None).await {
+            return (StatusCode::FORBIDDEN, Json(StaffResponse {
+                success: false,
+                message: format!("Staff attendance for date {} is locked and cannot be edited!", clean_date)
+            }));
+        }
     }
 
     // Save records and mark as locked
@@ -738,32 +827,61 @@ pub async fn save_staff_attendance(
     for rec in payload.records {
         let rec_doc = doc! {
             "staff_id": &rec.staff_id,
-            "date": &payload.date,
-            "status": &rec.status,
+            "date": &clean_date,
+            "status": rec.status.to_lowercase(),
             "check_in": rec.check_in.unwrap_or_else(|| "09:30 AM".to_string()),
             "is_locked": true,
             "created_at": now.to_rfc3339(),
         };
 
-        let filter = doc! { "staff_id": &rec.staff_id, "date": &payload.date };
+        let filter = doc! { "staff_id": &rec.staff_id, "date": &clean_date };
         let options = mongodb::options::ReplaceOptions::builder().upsert(true).build();
         let _ = att_coll.replace_one(filter, rec_doc, options).await;
     }
 
     // Save date lock marker doc
     let lock_doc = doc! {
-        "date": &payload.date,
+        "date": &clean_date,
         "type": "lock_marker",
         "is_locked": true,
         "locked_by": &claims.sub,
         "locked_at": now.to_rfc3339(),
     };
-    let _ = att_coll.replace_one(doc! { "date": &payload.date, "type": "lock_marker" }, lock_doc, mongodb::options::ReplaceOptions::builder().upsert(true).build()).await;
+    let _ = att_coll.replace_one(
+        doc! { "date": &clean_date, "type": "lock_marker" },
+        lock_doc,
+        mongodb::options::ReplaceOptions::builder().upsert(true).build()
+    ).await;
 
     (StatusCode::OK, Json(StaffResponse {
         success: true,
-        message: format!("Attendance for {} saved & locked successfully", payload.date)
+        message: format!("Staff attendance for {} saved & locked successfully", clean_date)
     }))
+}
+
+pub async fn unlock_staff_attendance(
+    State(db): State<Database>,
+    claims: Claims,
+    axum::extract::Query(query): axum::extract::Query<AttendanceQuery>,
+) -> (StatusCode, Json<StaffResponse>) {
+    if claims.role != UserRole::SuperAdmin && claims.role != UserRole::Admin {
+        return (StatusCode::FORBIDDEN, Json(StaffResponse {
+            success: false,
+            message: "Only SuperAdmin/Admin can unlock staff attendance registers".to_string(),
+        }));
+    }
+
+    if let Some(ref date_val) = query.date {
+        let clean_date = date_val.split('T').next().unwrap_or(date_val).to_string();
+        let att_coll = db.collection::<mongodb::bson::Document>("staff_attendance");
+        let _ = att_coll.delete_many(doc! { "date": &clean_date, "type": "lock_marker" }, None).await;
+        return (StatusCode::OK, Json(StaffResponse {
+            success: true,
+            message: format!("Staff attendance for {} unlocked successfully", clean_date),
+        }));
+    }
+
+    (StatusCode::BAD_REQUEST, Json(StaffResponse { success: false, message: "Missing date parameter".to_string() }))
 }
 
 #[derive(Debug, Deserialize)]

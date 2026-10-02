@@ -658,7 +658,11 @@ export default function AdminPaperBuilderPage() {
                       <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                      {subjects.map(s => <SelectItem key={s._id} value={s._id}>{s.subject_name}</SelectItem>)}
+                      {subjects.map(s => (
+                        <SelectItem key={s._id} value={s._id}>
+                          {s.subject_name} {s.subject_code ? `[${s.subject_code}]` : ''}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -293,6 +293,7 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       subItems: [
         { icon: Layers, label: "Course Categories", href: "/dashboard/academics/categories" },
         { icon: BookOpen, label: "Courses", href: "/dashboard/academics/courses" },
+        { icon: CheckSquare, label: "Request Center (Course Proposals)", href: "/dashboard/academics/course-requests" },
         { icon: Library, label: "Subjects", href: "/dashboard/academics/subjects" },
         { icon: LinkIcon, label: "Subject Mapping", href: "/dashboard/academics/mapping" },
         { icon: Calendar, label: "Batches & Sessions", href: "/dashboard/academics/sessions" },
@@ -555,15 +556,22 @@ export const getDashboardMenuItems = (role: string, permissions: any, userId?: s
       ]
     },
     {
-      label: "Courses",
+      label: "Academics",
       icon: BookOpen,
       roles: ["center"],
       subItems: [
-        { icon: Layers, label: "Allotted Courses", href: "/dashboard/courses/allotted" },
-        { icon: Library, label: "Course Subjects", href: "/dashboard/courses/subjects" },
-        { icon: Calendar, label: "Batches", href: "/dashboard/center/batches" },
-        { icon: Calendar, label: "Sessions", href: "/dashboard/courses/sessions" },
-        { icon: FileText, label: "Course Materials", href: "/dashboard/courses/materials" },
+        { icon: Layers, label: "Course Categories", href: "/dashboard/academics/categories" },
+        { icon: BookOpen, label: "Courses", href: "/dashboard/academics/courses" },
+        { icon: School, label: "Allotted Courses", href: "/dashboard/courses/allotted" },
+        { icon: Library, label: "Subjects", href: "/dashboard/academics/subjects" },
+        { icon: LinkIcon, label: "Subject Mapping", href: "/dashboard/academics/mapping" },
+        { icon: Calendar, label: "Batches & Seats", href: "/dashboard/center/batches" },
+        { icon: Calendar, label: "Academic Sessions", href: "/dashboard/academics/sessions" },
+        { icon: FileText, label: "Study Material", href: "/dashboard/academics/study-material" },
+        { icon: ClipboardList, label: "Exam Blueprints", href: "/dashboard/academics/blueprints" },
+        { icon: FlaskConical, label: "Mock Tests & CBT", href: "/dashboard/academics/mock-tests" },
+        { icon: Database, label: "Question Bank", href: "/dashboard/academics/question-bank" },
+        { icon: MessageSquare, label: "Question Feedback", href: "/dashboard/academics/question-feedback" },
         { icon: BookMarked, label: "Digital Library", href: "/dashboard/center/library" },
       ]
     },

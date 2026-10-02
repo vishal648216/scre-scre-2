@@ -18,8 +18,19 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Save
+  Save,
+  Truck,
+  AlertTriangle,
+  Bus,
+  School,
+  Sparkles,
+  Plus,
+  Search,
+  Receipt,
+  Download,
+  CheckCircle
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -1081,9 +1092,9 @@ const AddStudentPage = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="flex flex-col gap-8">
               {/* Section 1: Course & Selection */}
-              <Card className="rounded-none border-border shadow-md overflow-hidden border-t-4 border-t-emerald-600">
-                <CardHeader className="bg-muted/30 border-b border-border py-4">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
+              <Card className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
+                <CardHeader className="bg-muted/40 border-b border-border py-4">
+                  <CardTitle className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                     <BookOpen className="w-5 h-5" />
                     {t("Course & Selection")}
                   </CardTitle>
@@ -1091,11 +1102,11 @@ const AddStudentPage = () => {
                 <CardContent className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Select Category")} *</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Select Category")} *</label>
                       <select
                         name="courseCategory"
                         required
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.courseCategory}
                         onChange={handleChange}
                       >
@@ -1107,11 +1118,11 @@ const AddStudentPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Select Course")} *</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Select Course")} *</label>
                       <select
                         name="courseId"
                         required
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.courseId}
                         onChange={handleCourseChange}
                       >
@@ -1121,11 +1132,11 @@ const AddStudentPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Select Session")} *</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Select Session")} *</label>
                       <select
                         name="session_id"
                         required
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.session_id}
                         onChange={handleSessionChange}
                       >
@@ -1137,33 +1148,33 @@ const AddStudentPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Enrollment Date")}</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Enrollment Date")}</label>
                       <input
                         name="registrationDate"
                         type="date"
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.registrationDate}
                         onChange={handleChange}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Course Start Date")}</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Course Start Date")}</label>
                       <input
                         name="sessionStartDate"
                         type="date"
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.sessionStartDate}
                         onChange={handleStartDateChange}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Course End Date")}</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Course End Date")}</label>
                       <input
                         name="sessionEndDate"
                         type="date"
-                        className="w-full px-4 py-3 rounded-none border border-border bg-background text-sm font-bold focus:border-primary focus:outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground"
                         value={formData.sessionEndDate}
                         onChange={handleChange}
                       />

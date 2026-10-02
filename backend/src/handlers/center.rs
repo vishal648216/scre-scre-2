@@ -133,16 +133,278 @@ pub async fn public_get_center_by_code(
     )
 }
 
+use rand::Rng;
+use crate::models::user::UserRole;
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCenterRequest {
+    pub name: String,
+    pub owner_name: String,
+    pub about_center: Option<String>,
+    pub phone: String,
+    pub email: String,
+    pub address: String,
+    pub city: String,
+    pub district: Option<String>,
+    pub state: String,
+    pub center_code: Option<String>,
+    pub discount_coupon: Option<String>,
+    pub referral_code: Option<String>,
+    pub username: Option<String>,
+    pub password: String,
+
+    pub country: Option<String>,
+    pub maps_embed_url: Option<String>,
+    pub pincode: Option<String>,
+
+    pub computers: Option<i32>,
+    pub classrooms: Option<i32>,
+    pub staff: Option<i32>,
+    pub lab_type: Option<String>,
+    pub internet_available: Option<bool>,
+    pub power_backup: Option<bool>,
+
+    #[serde(default)]
+    pub course_allotment: Vec<String>,
+
+    pub bank_name: Option<String>,
+    pub account_number: Option<String>,
+    pub ifsc_code: Option<String>,
+    pub account_holder: Option<String>,
+    pub branch_address: Option<String>,
+
+    #[serde(default)]
+    pub documents: Vec<crate::models::center::CenterDocumentItem>,
+
+    pub creation_date: Option<String>,
+    pub validity_date: Option<String>,
+    pub franchise_fee: Option<f64>,
+    pub royalty_percent: Option<f64>,
+    pub mock_test_enabled: Option<bool>,
+    pub mock_test_start_date: Option<String>,
+    pub mock_test_end_date: Option<String>,
+
+    pub auth_letter_url: Option<String>,
+    pub owner_photo_url: Option<String>,
+    pub owner_signature_url: Option<String>,
+    pub center_stamp_url: Option<String>,
+
+    pub center_logo_url: Option<String>,
+    pub banner_image_url: Option<String>,
+    #[serde(default)]
+    pub gallery_urls: Vec<String>,
+    pub qr_code_1_url: Option<String>,
+    pub qr_code_2_url: Option<String>,
+    #[serde(default)]
+    pub short_clip_urls: Vec<String>,
+
+    pub opening_time: Option<String>,
+    pub closing_time: Option<String>,
+    #[serde(default)]
+    pub working_days: Vec<String>,
+}
+
 pub async fn handle_create_center(
-    State(_db): State<Database>,
-    _claims: Claims,
-    Json(_payload): Json<serde_json::Value>,
+    State(db): State<Database>,
+    claims: Claims,
+    Json(payload): Json<CreateCenterRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
+    let email_clean = payload.email.trim().to_lowercase();
+    let username_clean = payload
+        .username
+        .as_deref()
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| email_clean.clone());
+
+    let user_coll = db.collection::<User>("users");
+    let center_coll = db.collection::<Center>("centers");
+
+    // 1. Check if user already exists
+    let existing_user = user_coll
+        .find_one(
+            doc! {
+                "$or": [
+                    { "email": &email_clean },
+                    { "username": &username_clean }
+                ],
+                "is_deleted": false
+            },
+            None,
+        )
+        .await;
+
+    if let Ok(Some(_)) = existing_user {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "message": "User with this email or username already exists"
+            })),
+        );
+    }
+
+    // 2. Generate center code if not provided
+    let code = match payload.center_code {
+        Some(ref c) if !c.trim().is_empty() => c.trim().to_uppercase(),
+        _ => format!("CENT{:04}", rand::thread_rng().gen_range(1000..9999)),
+    };
+
+    // 3. Hash password
+    let password_plain = if payload.password.trim().is_empty() {
+        "Center@123".to_string()
+    } else {
+        payload.password.trim().to_string()
+    };
+    let hashed_password = match bcrypt::hash(&password_plain, bcrypt::DEFAULT_COST) {
+        Ok(h) => h,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "success": false,
+                    "message": "Failed to encrypt password"
+                })),
+            );
+        }
+    };
+
+    // 4. Create User document
+    let user_id = ObjectId::new();
+    let new_user = User {
+        id: Some(user_id),
+        username: username_clean,
+        password_hash: hashed_password,
+        raw_password: Some(password_plain),
+        role: UserRole::Center,
+        parent_id: None,
+        full_name: Some(payload.name.clone()),
+        email: Some(email_clean.clone()),
+        phone: Some(payload.phone.clone()),
+        active: true,
+        is_deleted: false,
+        approval_status: Some("approved".to_string()),
+        ..Default::default()
+    };
+
+    if let Err(e) = user_coll.insert_one(new_user, None).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "message": format!("Failed to create user record: {}", e)
+            })),
+        );
+    }
+
+    // 5. Create Center document
+    let center_id = ObjectId::new();
+    let admin_id = ObjectId::parse_str(&claims.sub).unwrap_or(user_id);
+
+    let new_center = Center {
+        id: Some(center_id),
+        name: payload.name.clone(),
+        code: code.clone(),
+        owner_name: payload.owner_name.clone(),
+        about_center: payload.about_center,
+        phone: payload.phone.clone(),
+        email: email_clean.clone(),
+        address: payload.address.clone(),
+        city: payload.city.clone(),
+        district: payload.district.clone(),
+        state: payload.state.clone(),
+        center_code: Some(code.clone()),
+        discount_coupon: payload.discount_coupon,
+        referral_code: payload.referral_code,
+        location: Some(crate::models::center::CenterLocation {
+            country: payload.country,
+            state: Some(payload.state.clone()),
+            district: payload.district.clone(),
+            city: Some(payload.city.clone()),
+            address: Some(payload.address.clone()),
+            maps_embed_url: payload.maps_embed_url,
+            pincode: payload.pincode,
+        }),
+        infrastructure: Some(crate::models::center::CenterInfrastructure {
+            computers: payload.computers,
+            classrooms: payload.classrooms,
+            staff: payload.staff,
+            lab_type: payload.lab_type,
+            internet_available: payload.internet_available,
+            power_backup: payload.power_backup,
+        }),
+        course_allotment: payload.course_allotment,
+        bank_details: Some(crate::models::center::CenterBankDetails {
+            bank_name: payload.bank_name,
+            account_number: payload.account_number,
+            ifsc_code: payload.ifsc_code,
+            account_holder: payload.account_holder,
+            branch_address: payload.branch_address,
+        }),
+        documents: payload.documents,
+        key_documents: Some(crate::models::center::CenterKeyDocuments {
+            auth_letter_url: payload.auth_letter_url,
+            owner_photo_url: payload.owner_photo_url,
+            owner_signature_url: payload.owner_signature_url,
+            center_stamp_url: payload.center_stamp_url,
+        }),
+        branding_media: Some(crate::models::center::CenterBrandingMedia {
+            center_logo_url: payload.center_logo_url,
+            banner_image_url: payload.banner_image_url,
+            gallery_urls: payload.gallery_urls,
+            qr_code_1_url: payload.qr_code_1_url,
+            qr_code_2_url: payload.qr_code_2_url,
+            director_video_url: None,
+            short_clip_url: None,
+            short_clip_urls: payload.short_clip_urls,
+        }),
+        working_hours: Some(crate::models::center::CenterWorkingHours {
+            opening_time: payload.opening_time,
+            closing_time: payload.closing_time,
+            working_days: payload.working_days,
+        }),
+        config_validity: Some(crate::models::center::CenterConfigValidity {
+            creation_date: payload.creation_date,
+            validity_date: payload.validity_date,
+            franchise_fee: payload.franchise_fee,
+            royalty_percent: payload.royalty_percent,
+            mock_test_enabled: payload.mock_test_enabled.unwrap_or(true),
+            mock_test_start_date: payload.mock_test_start_date,
+            mock_test_end_date: payload.mock_test_end_date,
+        }),
+        admin_id,
+        user_id,
+        active: true,
+        is_deleted: false,
+        deleted_at: None,
+        permanent_delete_at: None,
+        is_email_verified: true,
+        email_verified_at: Some(Utc::now()),
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = center_coll.insert_one(new_center, None).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "success": false,
+                "message": format!("Failed to create center record: {}", e)
+            })),
+        );
+    }
+
     (
         StatusCode::OK,
-        Json(json!({"success": true, "message": "Center created"})),
+        Json(json!({
+            "success": true,
+            "message": "Center created successfully!",
+            "center_id": center_id.to_hex(),
+            "centerId": center_id.to_hex(),
+            "user_id": user_id.to_hex()
+        })),
     )
 }
+
 
 pub async fn get_centers(
     State(db): State<Database>,

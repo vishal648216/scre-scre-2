@@ -459,17 +459,17 @@ const StudentCertificatesPage = () => {
           <div className="flex items-center gap-2 w-full max-w-md">
             <button
               onClick={selectAllFiltered}
-              className="px-3 py-2 bg-muted border border-border text-[10px] font-black uppercase tracking-widest hover:bg-muted/80 whitespace-nowrap"
+              className="px-3.5 py-2.5 bg-muted border border-border text-[10px] font-black uppercase tracking-widest hover:bg-muted/80 whitespace-nowrap rounded-2xl transition-all"
             >
               {filtered.length > 0 && filtered.every(s => selectedIds.has(studentIdStr(s))) ? "Deselect All" : "Select All"}
             </button>
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 placeholder="Search students..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-none text-xs font-bold uppercase tracking-widest focus:border-primary outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-2xl text-xs font-bold uppercase tracking-widest focus:border-primary outline-none text-foreground"
               />
             </div>
           </div>
@@ -491,17 +491,17 @@ const StudentCertificatesPage = () => {
                       type="checkbox"
                       checked={isSelectedForBulk}
                       onChange={() => toggleStudent(sid)}
-                      className="w-4 h-4 accent-primary ml-1"
+                      className="w-4 h-4 accent-primary ml-1 rounded-md"
                     />
                     <button
                       onClick={() => {
                         setSelected(s);
                         setIssuing(false);
                       }}
-                      className={cn("flex-1 p-4 border text-left transition-all rounded-none",
+                      className={cn("flex-1 p-4 border text-left transition-all rounded-2xl shadow-sm",
                         selected && studentIdStr(selected) === sid
-                          ? "bg-primary border-transparent shadow-lg"
-                          : "bg-card border-border hover:border-primary/50")}
+                          ? "bg-primary border-transparent shadow-lg text-primary-foreground"
+                          : "bg-card border-border hover:border-primary/50 text-card-foreground")}
                     >
                       <div className="flex items-center gap-3">
                         <div

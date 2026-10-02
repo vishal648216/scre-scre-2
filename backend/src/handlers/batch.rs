@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
@@ -22,6 +22,8 @@ pub struct CreateBatchRequest {
     pub days: Vec<String>,
     pub max_capacity: i32,
     pub status: String,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +34,8 @@ pub struct UpdateBatchRequest {
     pub days: Option<Vec<String>>,
     pub max_capacity: Option<i32>,
     pub status: Option<String>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,6 +122,8 @@ pub async fn handle_create_batch(
         max_capacity: payload.max_capacity,
         current_count: 0,
         status: payload.status,
+        start_date: payload.start_date,
+        end_date: payload.end_date,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -315,6 +321,12 @@ pub async fn handle_update_batch(
     }
     if let Some(v) = payload.status {
         update_doc.insert("status", v);
+    }
+    if let Some(v) = payload.start_date {
+        update_doc.insert("start_date", v);
+    }
+    if let Some(v) = payload.end_date {
+        update_doc.insert("end_date", v);
     }
 
     match collection

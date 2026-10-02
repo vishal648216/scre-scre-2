@@ -13,7 +13,7 @@ use mongodb::{
     Database,
     bson::{Bson, doc, oid::ObjectId},
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Match a student's `user.course` string (name or ObjectId hex) to a `Course` document.
 pub async fn resolve_course_from_enrollment_string(
@@ -67,6 +67,70 @@ fn parse_oid_list(ids: Option<Vec<String>>) -> Vec<ObjectId> {
         .collect()
 }
 
+fn deserialize_option_i32<'de, D>(deserializer: D) -> Result<Option<i32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum IntOrString {
+        Int(i32),
+        Float(f64),
+        String(String),
+        Null,
+    }
+
+    match Option::<IntOrString>::deserialize(deserializer)? {
+        None | Some(IntOrString::Null) => Ok(None),
+        Some(IntOrString::Int(i)) => Ok(Some(i)),
+        Some(IntOrString::Float(f)) => Ok(Some(f as i32)),
+        Some(IntOrString::String(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                Ok(None)
+            } else {
+                trimmed
+                    .parse::<i32>()
+                    .map(Some)
+                    .or_else(|_| trimmed.parse::<f64>().map(|f| Some(f as i32)))
+                    .map_err(serde::de::Error::custom)
+            }
+        }
+    }
+}
+
+fn deserialize_option_u32<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum IntOrString {
+        Int(u32),
+        Float(f64),
+        String(String),
+        Null,
+    }
+
+    match Option::<IntOrString>::deserialize(deserializer)? {
+        None | Some(IntOrString::Null) => Ok(None),
+        Some(IntOrString::Int(i)) => Ok(Some(i)),
+        Some(IntOrString::Float(f)) => Ok(Some(f as u32)),
+        Some(IntOrString::String(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                Ok(None)
+            } else {
+                trimmed
+                    .parse::<u32>()
+                    .map(Some)
+                    .or_else(|_| trimmed.parse::<f64>().map(|f| Some(f as u32)))
+                    .map_err(serde::de::Error::custom)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateCourseRequest {
     #[serde(alias = "categoryId")]
@@ -74,7 +138,9 @@ pub struct CreateCourseRequest {
     pub course_name: String,
     pub course_code: Option<String>,
     pub short_code: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_option_u32")]
     pub duration_months: Option<u32>,
+    #[serde(default, deserialize_with = "deserialize_option_u32")]
     pub duration_value: Option<u32>,
     pub duration_unit: Option<String>,
     pub course_type: Option<String>,
@@ -82,17 +148,21 @@ pub struct CreateCourseRequest {
     pub image_url: Option<String>,
     pub og_image_url: Option<String>,
     pub syllabus: Option<String>,
+    #[serde(alias = "total_fee", alias = "total_fees", default, deserialize_with = "deserialize_option_i32")]
     pub fees: Option<i32>,
+    #[serde(alias = "admission_fee", alias = "registration_fees", default, deserialize_with = "deserialize_option_i32")]
     pub registration_fee: Option<i32>,
     pub exam_fees_applicable: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_option_i32")]
     pub exam_fee_amount: Option<i32>,
     pub backlog_fees_applicable: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_option_i32")]
     pub backlog_fee_amount: Option<i32>,
     #[serde(alias = "hasCourseStructureUnits")]
     pub has_course_structure_units: Option<bool>,
     #[serde(alias = "unitType")]
     pub unit_type: Option<String>,
-    #[serde(alias = "unitCount")]
+    #[serde(alias = "unitCount", default, deserialize_with = "deserialize_option_u32")]
     pub unit_count: Option<u32>,
     #[serde(alias = "customUnitName")]
     pub custom_unit_name: Option<String>,
@@ -162,12 +232,65 @@ pub struct CourseQuery {
     pub lang: Option<String>,
 }
 
+pub async fn resolve_center_info_for_claims(
+    db: &Database,
+    claims: &Claims,
+) -> (Option<ObjectId>, Option<String>) {
+    let user_oid = match ObjectId::parse_str(&claims.sub) {
+        Ok(oid) => oid,
+        Err(_) => return (None, None),
+    };
+    let center_coll = db.collection::<crate::models::center::Center>("centers");
+    let user_coll = db.collection::<crate::models::user::User>("users");
+
+    if claims.role == UserRole::Center {
+        if let Ok(Some(c)) = center_coll.find_one(doc! { "user_id": user_oid }, None).await {
+            let cid = c.id.unwrap_or(user_oid);
+            return (Some(cid), Some(c.name));
+        }
+        if let Ok(Some(c)) = center_coll.find_one(doc! { "_id": user_oid }, None).await {
+            let cid = c.id.unwrap_or(user_oid);
+            return (Some(cid), Some(c.name));
+        }
+        if let Ok(Some(u)) = user_coll.find_one(doc! { "_id": user_oid }, None).await {
+            if let Some(ref email) = u.email {
+                if let Ok(Some(c)) = center_coll.find_one(doc! { "email": email }, None).await {
+                    let cid = c.id.unwrap_or(user_oid);
+                    return (Some(cid), Some(c.name));
+                }
+            }
+            let name = u.full_name.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| u.username.clone());
+            return (Some(user_oid), Some(name));
+        }
+        return (Some(user_oid), None);
+    } else if claims.role == UserRole::Staff || claims.role == UserRole::Student {
+        if let Ok(Some(u)) = user_coll.find_one(doc! { "_id": user_oid }, None).await {
+            if let Some(parent_oid) = u.parent_id {
+                if let Ok(Some(c)) = center_coll.find_one(doc! { "_id": parent_oid }, None).await {
+                    let cid = c.id.unwrap_or(parent_oid);
+                    return (Some(cid), Some(c.name));
+                }
+                if let Ok(Some(c)) = center_coll.find_one(doc! { "user_id": parent_oid }, None).await {
+                    let cid = c.id.unwrap_or(parent_oid);
+                    return (Some(cid), Some(c.name));
+                }
+                if let Ok(Some(parent_u)) = user_coll.find_one(doc! { "_id": parent_oid }, None).await {
+                    let p_name = parent_u.full_name.clone().filter(|s| !s.trim().is_empty()).unwrap_or_else(|| parent_u.username.clone());
+                    return (Some(parent_oid), Some(p_name));
+                }
+                return (Some(parent_oid), None);
+            }
+        }
+    }
+    (None, None)
+}
+
 pub async fn create_course(
     State(db): State<Database>,
     claims: Claims,
     Json(payload): Json<CreateCourseRequest>,
 ) -> (StatusCode, Json<CourseResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (
             StatusCode::FORBIDDEN,
             Json(CourseResponse {
@@ -396,10 +519,29 @@ pub async fn create_course(
         None
     };
 
+    let (is_center_or_staff, c_id, c_name) = if claims.role == UserRole::Center || claims.role == UserRole::Staff {
+        let (cid, cname) = resolve_center_info_for_claims(&db, &claims).await;
+        (true, cid, cname)
+    } else {
+        (false, None, None)
+    };
+
+    let initial_status = if is_center_or_staff {
+        "pending_approval".to_string()
+    } else {
+        payload.status.unwrap_or_else(|| "active".to_string())
+    };
+
+    let initial_approval_status = if is_center_or_staff {
+        Some("pending".to_string())
+    } else {
+        Some("approved".to_string())
+    };
+
     let new_course = Course {
         id: None,
         category_id: cat_oid,
-        course_name: payload.course_name,
+        course_name: payload.course_name.clone(),
         course_code,
         slug,
         short_code,
@@ -422,24 +564,55 @@ pub async fn create_course(
         unit_count,
         custom_unit_name,
         eligibility: payload.eligibility,
-        status: payload.status.unwrap_or_else(|| "active".to_string()),
+        status: initial_status,
+        approval_status: initial_approval_status,
+        rejection_reason: None,
+        reviewed_by: None,
+        reviewed_at: None,
         featured_on_home: featured_on,
         home_feature_order: home_order,
         typing_tests_enabled: payload.typing_tests_enabled.unwrap_or(false),
         mock_tests_enabled: payload.mock_tests_enabled.unwrap_or(false),
         linked_typing_tests: parse_oid_list(payload.linked_typing_tests),
         linked_mock_tests: parse_oid_list(payload.linked_mock_tests),
+        created_by_center_id: c_id,
+        created_by_center_name: c_name,
         created_at: Utc::now(),
     };
 
     match collection.insert_one(new_course, None).await {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(CourseResponse {
-                success: true,
-                message: "Course created successfully".to_string(),
-            }),
-        ),
+        Ok(res) => {
+            if let (Some(cid), Some(inserted_id)) = (c_id, res.inserted_id.as_object_id()) {
+                let allotted_coll = db.collection::<AllottedCourse>("allotted_courses");
+                let _ = allotted_coll.insert_one(AllottedCourse {
+                    id: None,
+                    center_id: cid,
+                    course_id: inserted_id,
+                    allotted_at: Utc::now(),
+                }, None).await;
+
+                let center_coll = db.collection::<crate::models::center::Center>("centers");
+                let _ = center_coll.update_one(
+                    doc! { "_id": cid },
+                    doc! { "$addToSet": { "course_allotment": &payload.course_name } },
+                    None
+                ).await;
+            }
+
+            let msg = if is_center_or_staff {
+                "Course request submitted successfully! Pending Super Admin approval before going live.".to_string()
+            } else {
+                "Course created successfully".to_string()
+            };
+
+            (
+                StatusCode::CREATED,
+                Json(CourseResponse {
+                    success: true,
+                    message: msg,
+                }),
+            )
+        }
         Err(e) => {
             let error_msg = format!("Database error: {}", e);
             eprintln!("COURSE_CREATE_ERROR: {}", error_msg);
@@ -482,12 +655,18 @@ pub struct CourseListItem {
     pub custom_unit_name: Option<String>,
     pub eligibility: Option<String>,
     pub status: String,
+    pub approval_status: Option<String>,
+    pub rejection_reason: Option<String>,
+    pub reviewed_by: Option<String>,
+    pub reviewed_at: Option<DateTime<Utc>>,
     pub featured_on_home: bool,
     pub home_feature_order: u32,
     pub linked_typing_tests: Vec<String>,
     pub linked_mock_tests: Vec<String>,
     pub typing_tests_enabled: bool,
     pub mock_tests_enabled: bool,
+    pub created_by_center_id: Option<String>,
+    pub created_by_center_name: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -524,6 +703,10 @@ fn course_to_list_item(course: Course) -> CourseListItem {
         custom_unit_name: course.custom_unit_name,
         eligibility: course.eligibility,
         status: course.status,
+        approval_status: course.approval_status,
+        rejection_reason: course.rejection_reason,
+        reviewed_by: course.reviewed_by,
+        reviewed_at: course.reviewed_at,
         featured_on_home: course.featured_on_home,
         home_feature_order: course.home_feature_order,
         linked_typing_tests: course
@@ -538,11 +721,17 @@ fn course_to_list_item(course: Course) -> CourseListItem {
             .collect(),
         typing_tests_enabled: course.typing_tests_enabled,
         mock_tests_enabled: course.mock_tests_enabled,
+        created_by_center_id: course.created_by_center_id.map(|o| o.to_hex()),
+        created_by_center_name: course.created_by_center_name,
         created_at: course.created_at,
     }
 }
 
-pub async fn fetch_courses_list(db: &Database, q: &CourseQuery) -> Vec<CourseListItem> {
+pub async fn fetch_courses_list_with_claims(
+    db: &Database,
+    q: &CourseQuery,
+    claims: Option<&Claims>,
+) -> Vec<CourseListItem> {
     let collection = db.collection::<Course>("courses");
     let mut filter = doc! {};
     let lang = q.lang.as_ref().map(|l| normalize_lang(l));
@@ -577,6 +766,38 @@ pub async fn fetch_courses_list(db: &Database, q: &CourseQuery) -> Vec<CourseLis
         }
     }
 
+    if let Some(c) = claims {
+        if c.role == UserRole::Center || c.role == UserRole::Staff || c.role == UserRole::Student {
+            let (center_id_opt, _) = resolve_center_info_for_claims(db, c).await;
+            if let Some(cid) = center_id_opt {
+                let allotted_coll = db.collection::<AllottedCourse>("allotted_courses");
+                let mut allotted_ids = Vec::new();
+                if let Ok(mut cursor) = allotted_coll.find(doc! { "center_id": cid }, None).await {
+                    while let Some(Ok(ac)) = cursor.next().await {
+                        allotted_ids.push(ac.course_id);
+                    }
+                }
+
+                filter.insert(
+                    "$or",
+                    vec![
+                        doc! { "created_by_center_id": cid },
+                        doc! { "_id": { "$in": &allotted_ids }, "created_by_center_id": null },
+                        doc! { "_id": { "$in": &allotted_ids }, "created_by_center_id": { "$exists": false } },
+                    ],
+                );
+            }
+        }
+    } else {
+        filter.insert(
+            "$or",
+            vec![
+                doc! { "created_by_center_id": null },
+                doc! { "created_by_center_id": { "$exists": false } },
+            ],
+        );
+    }
+
     let mut cursor = collection
         .find(filter, None)
         .await
@@ -608,6 +829,10 @@ pub async fn fetch_courses_list(db: &Database, q: &CourseQuery) -> Vec<CourseLis
         }
     }
     courses
+}
+
+pub async fn fetch_courses_list(db: &Database, q: &CourseQuery) -> Vec<CourseListItem> {
+    fetch_courses_list_with_claims(db, q, None).await
 }
 
 /// Public catalog (no auth) — use **`/api/public/courses`** only.
@@ -708,8 +933,7 @@ pub async fn get_courses(
     claims: Claims,
     Query(q): Query<CourseQuery>,
 ) -> (StatusCode, Json<Vec<CourseListItem>>) {
-    let _ = claims; // validated by extractor
-    let courses = fetch_courses_list(&db, &q).await;
+    let courses = fetch_courses_list_with_claims(&db, &q, Some(&claims)).await;
     (StatusCode::OK, Json(courses))
 }
 
@@ -1331,6 +1555,7 @@ pub async fn get_allotted_courses(
 
                     items.push(serde_json::json!({
                         "_id": course.id.map(|id| id.to_hex()).unwrap_or_default(),
+                        "id": course.id.map(|id| id.to_hex()).unwrap_or_default(),
                         "name": course.course_name,
                         "course_name": course.course_name,
                         "code": course.course_code,
@@ -1360,13 +1585,86 @@ pub async fn get_allotted_courses(
                         "linked_typing_tests": course.linked_typing_tests.iter().map(|o| o.to_hex()).collect::<Vec<_>>(),
                         "eligibility": course.eligibility,
                         "status": course.status,
+                        "approval_status": course.approval_status.clone().unwrap_or_else(|| {
+                            if course.status == "active" { "approved".to_string() } else { "pending".to_string() }
+                        }),
+                        "rejection_reason": course.rejection_reason,
+                        "created_by_center_id": course.created_by_center_id.map(|o| o.to_hex()),
+                        "created_by_center_name": course.created_by_center_name,
                         "category": category_name,
-                        "allotted_at": Utc::now(), // Placeholder
+                        "category_id": course.category_id.to_hex(),
+                        "allotted_at": Utc::now(),
                     }));
                 } else {
                     eprintln!("[WARN] Course not found in DB: {}", course_name_or_id);
                 }
             }
+
+            // Also fetch any course directly created by this center that might not be in course_allotment array
+            let center_courses_filter = doc! {
+                "$or": [
+                    { "created_by_center_id": user_oid },
+                    { "created_by_center_id": center.id }
+                ]
+            };
+            if let Ok(mut cursor) = course_coll.find(center_courses_filter, None).await {
+                while let Some(Ok(course)) = cursor.next().await {
+                    let cid_str = course.id.map(|id| id.to_hex()).unwrap_or_default();
+                    let already_in = items.iter().any(|it| {
+                        it.get("_id").and_then(|v| v.as_str()) == Some(&cid_str)
+                            || it.get("course_name").and_then(|v| v.as_str()) == Some(&course.course_name)
+                    });
+                    if !already_in {
+                        let mut category_name = "General".to_string();
+                        if let Ok(Some(cat)) = cat_coll.find_one(doc! { "_id": course.category_id }, None).await {
+                            category_name = cat.name;
+                        }
+                        items.push(serde_json::json!({
+                            "_id": cid_str,
+                            "id": cid_str,
+                            "name": course.course_name,
+                            "course_name": course.course_name,
+                            "code": course.course_code,
+                            "course_code": course.course_code,
+                            "short_code": course.short_code,
+                            "course_type": course.course_type,
+                            "description": course.description,
+                            "image_url": course.image_url,
+                            "og_image_url": course.og_image_url,
+                            "duration_months": course.duration_months,
+                            "duration_value": course.duration_value,
+                            "duration_unit": course.duration_unit,
+                            "total_fees": course.fees.unwrap_or(0),
+                            "fees": course.fees.unwrap_or(0),
+                            "registration_fee": course.registration_fee.unwrap_or(0),
+                            "admission_fee": course.registration_fee.unwrap_or(0),
+                            "exam_fees_applicable": course.exam_fees_applicable,
+                            "exam_fee_amount": course.exam_fee_amount.unwrap_or(0),
+                            "backlog_fees_applicable": course.backlog_fees_applicable,
+                            "backlog_fee_amount": course.backlog_fee_amount.unwrap_or(0),
+                            "has_course_structure_units": course.has_course_structure_units,
+                            "unit_type": course.unit_type,
+                            "unit_count": course.unit_count,
+                            "custom_unit_name": course.custom_unit_name,
+                            "typing_tests_enabled": course.typing_tests_enabled,
+                            "mock_tests_enabled": course.mock_tests_enabled,
+                            "linked_typing_tests": course.linked_typing_tests.iter().map(|o| o.to_hex()).collect::<Vec<_>>(),
+                            "eligibility": course.eligibility,
+                            "status": course.status,
+                            "approval_status": course.approval_status.clone().unwrap_or_else(|| {
+                                if course.status == "active" { "approved".to_string() } else { "pending".to_string() }
+                            }),
+                            "rejection_reason": course.rejection_reason,
+                            "created_by_center_id": course.created_by_center_id.map(|o| o.to_hex()),
+                            "created_by_center_name": course.created_by_center_name,
+                            "category": category_name,
+                            "category_id": course.category_id.to_hex(),
+                            "allotted_at": Utc::now(),
+                        }));
+                    }
+                }
+            }
+
             eprintln!(
                 "[INFO] Returning {} courses for center {}",
                 items.len(),
@@ -1433,6 +1731,12 @@ pub async fn get_allotted_courses(
                     "eligibility": course.eligibility,
                     "status": course.status,
                     "category": category_name,
+                    "category_id": course.category_id.to_hex(),
+                    "approval_status": course.approval_status.unwrap_or_else(|| "approved".to_string()),
+                    "rejection_reason": course.rejection_reason,
+                    "created_by_center_id": course.created_by_center_id.map(|o| o.to_hex()),
+                    "created_by_center_name": course.created_by_center_name,
+                    "created_at": course.created_at.to_rfc3339(),
                 }));
             }
         }
@@ -1571,6 +1875,8 @@ pub async fn bulk_create_courses(
                     created_at: Utc::now(),
                     image_url: None,
                     sort_order: 0,
+                    created_by_center_id: None,
+                    created_by_center_name: None,
                 };
                 if let Ok(res) = cat_coll.insert_one(new_cat, None).await {
                     if let Some(oid) = res.inserted_id.as_object_id() {
@@ -1599,3 +1905,317 @@ pub async fn bulk_create_courses(
     )
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RejectCoursePayload {
+    #[serde(alias = "rejection_reason")]
+    pub reason: Option<String>,
+}
+
+pub async fn approve_course(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<CourseResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CourseResponse {
+                success: false,
+                message: "Unauthorized: Only Super Admin / Admin can approve courses".to_string(),
+            }),
+        );
+    }
+
+    let collection = db.collection::<Course>("courses");
+    let regex_pattern = format!("^{}$", regex::escape(&id));
+    let course_filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! {
+            "$or": [
+                { "_id": oid },
+                { "course_code": &id },
+                { "short_code": &id },
+                { "slug": &id },
+                { "course_name": &id }
+            ]
+        }
+    } else {
+        doc! {
+            "$or": [
+                { "course_code": &id },
+                { "short_code": &id },
+                { "slug": &id },
+                { "course_name": &id },
+                { "course_code": doc! { "$regex": &regex_pattern, "$options": "i" } },
+                { "short_code": doc! { "$regex": &regex_pattern, "$options": "i" } },
+                { "course_name": doc! { "$regex": &regex_pattern, "$options": "i" } }
+            ]
+        }
+    };
+
+    let existing = match collection.find_one(course_filter, None).await {
+        Ok(Some(c)) => c,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(CourseResponse {
+                    success: false,
+                    message: format!("Course '{}' not found", id),
+                }),
+            );
+        }
+    };
+
+    let oid = match existing.id {
+        Some(oid) => oid,
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(CourseResponse {
+                    success: false,
+                    message: "Course missing ObjectId".to_string(),
+                }),
+            );
+        }
+    };
+
+    let update_doc = doc! {
+        "$set": {
+            "status": "active",
+            "approval_status": "approved",
+            "rejection_reason": Bson::Null,
+            "reviewed_by": &claims.sub,
+            "reviewed_at": Utc::now().to_rfc3339(),
+        }
+    };
+
+    if let Err(e) = collection.update_one(doc! { "_id": oid }, update_doc, None).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(CourseResponse {
+                success: false,
+                message: format!("Failed to approve course: {}", e),
+            }),
+        );
+    }
+
+    if let Some(cid) = existing.created_by_center_id {
+        let allotted_coll = db.collection::<AllottedCourse>("allotted_courses");
+        if allotted_coll.find_one(doc! { "center_id": cid, "course_id": oid }, None).await.ok().flatten().is_none() {
+            let _ = allotted_coll.insert_one(AllottedCourse {
+                id: None,
+                center_id: cid,
+                course_id: oid,
+                allotted_at: Utc::now(),
+            }, None).await;
+        }
+
+        let center_coll = db.collection::<crate::models::center::Center>("centers");
+        let _ = center_coll.update_one(
+            doc! { "_id": cid },
+            doc! { "$addToSet": { "course_allotment": &existing.course_name } },
+            None
+        ).await;
+    }
+
+    (
+        StatusCode::OK,
+        Json(CourseResponse {
+            success: true,
+            message: "Course approved and published live successfully!".to_string(),
+        }),
+    )
+}
+
+pub async fn reject_course(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+    Json(payload): Json<RejectCoursePayload>,
+) -> (StatusCode, Json<CourseResponse>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(CourseResponse {
+                success: false,
+                message: "Unauthorized: Only Super Admin / Admin can reject courses".to_string(),
+            }),
+        );
+    }
+
+    let collection = db.collection::<Course>("courses");
+    let regex_pattern = format!("^{}$", regex::escape(&id));
+    let course_filter = if let Ok(oid) = ObjectId::parse_str(&id) {
+        doc! {
+            "$or": [
+                { "_id": oid },
+                { "course_code": &id },
+                { "short_code": &id },
+                { "slug": &id },
+                { "course_name": &id }
+            ]
+        }
+    } else {
+        doc! {
+            "$or": [
+                { "course_code": &id },
+                { "short_code": &id },
+                { "slug": &id },
+                { "course_name": &id },
+                { "course_code": doc! { "$regex": &regex_pattern, "$options": "i" } },
+                { "short_code": doc! { "$regex": &regex_pattern, "$options": "i" } },
+                { "course_name": doc! { "$regex": &regex_pattern, "$options": "i" } }
+            ]
+        }
+    };
+
+    let existing = match collection.find_one(course_filter, None).await {
+        Ok(Some(c)) => c,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(CourseResponse {
+                    success: false,
+                    message: format!("Course '{}' not found", id),
+                }),
+            );
+        }
+    };
+
+    let oid = match existing.id {
+        Some(oid) => oid,
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(CourseResponse {
+                    success: false,
+                    message: "Course missing ObjectId".to_string(),
+                }),
+            );
+        }
+    };
+
+    let reason_str = payload.reason.unwrap_or_else(|| "Course request rejected by Super Admin".to_string());
+
+    let update_doc = doc! {
+        "$set": {
+            "status": "rejected",
+            "approval_status": "rejected",
+            "rejection_reason": reason_str,
+            "reviewed_by": &claims.sub,
+            "reviewed_at": Utc::now().to_rfc3339(),
+        }
+    };
+
+    match collection.update_one(doc! { "_id": oid }, update_doc, None).await {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(CourseResponse {
+                success: true,
+                message: "Course request rejected".to_string(),
+            }),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(CourseResponse {
+                success: false,
+                message: format!("Failed to reject course: {}", e),
+            }),
+        ),
+    }
+}
+
+pub async fn get_course_requests(
+    State(db): State<Database>,
+    claims: Claims,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({ "success": false, "message": "Unauthorized" })),
+        );
+    }
+
+    let collection = db.collection::<Course>("courses");
+    let cat_coll = db.collection::<crate::models::course_category::CourseCategory>("course_categories");
+    let center_coll = db.collection::<crate::models::center::Center>("centers");
+    let user_coll = db.collection::<crate::models::user::User>("users");
+
+    let filter = doc! {
+        "$or": [
+            { "created_by_center_id": { "$ne": Bson::Null, "$exists": true } },
+            { "approval_status": { "$in": ["pending", "approved", "rejected"] } }
+        ]
+    };
+
+    let mut cursor = match collection.find(filter, None).await {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error fetching course requests: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!([])));
+        }
+    };
+
+    let mut items = Vec::new();
+    while let Some(res) = cursor.next().await {
+        if let Ok(course) = res {
+            let mut category_name = "General".to_string();
+            if let Ok(Some(cat)) = cat_coll.find_one(doc! { "_id": course.category_id }, None).await {
+                category_name = cat.name;
+            }
+
+            let app_status = course.approval_status.clone().unwrap_or_else(|| {
+                if course.status == "active" {
+                    "approved".to_string()
+                } else {
+                    "pending".to_string()
+                }
+            });
+
+            // Dynamically resolve center name if missing or empty
+            let mut req_center_name = course.created_by_center_name.clone();
+            if req_center_name.as_deref().unwrap_or("").trim().is_empty() {
+                if let Some(cid) = course.created_by_center_id {
+                    if let Ok(Some(c)) = center_coll.find_one(doc! { "_id": cid }, None).await {
+                        req_center_name = Some(c.name);
+                    } else if let Ok(Some(c)) = center_coll.find_one(doc! { "user_id": cid }, None).await {
+                        req_center_name = Some(c.name);
+                    } else if let Ok(Some(u)) = user_coll.find_one(doc! { "_id": cid }, None).await {
+                        req_center_name = u.full_name.clone().filter(|s| !s.trim().is_empty()).or_else(|| Some(u.username.clone()));
+                    }
+                }
+            }
+
+            let final_center_name = req_center_name.unwrap_or_else(|| "Franchise Partner".to_string());
+            let course_id_str = course.id.map(|oid| oid.to_hex()).unwrap_or_default();
+
+            items.push(serde_json::json!({
+                "id": course_id_str,
+                "_id": course_id_str,
+                "name": course.course_name.clone(),
+                "course_name": course.course_name,
+                "code": course.course_code.clone(),
+                "category": category_name,
+                "category_id": course.category_id.to_hex(),
+                "type": course.course_type.clone(),
+                "duration_months": course.duration_months,
+                "duration_value": course.duration_value,
+                "duration_unit": course.duration_unit,
+                "total_fee": course.fees.unwrap_or(0),
+                "fees": course.fees.unwrap_or(0),
+                "registration_fee": course.registration_fee.unwrap_or(0),
+                "description": course.description,
+                "eligibility": course.eligibility,
+                "approval_status": app_status,
+                "status": course.status,
+                "requested_by_center_id": course.created_by_center_id.map(|o| o.to_hex()),
+                "requested_by_center_name": final_center_name,
+                "created_by_center_name": final_center_name,
+                "requested_at": course.created_at.to_rfc3339(),
+                "rejection_reason": course.rejection_reason,
+                "units_count": course.unit_count.unwrap_or(0),
+            }));
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!(items)))
+}

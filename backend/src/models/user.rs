@@ -170,6 +170,10 @@ pub struct User {
     pub internship_domain: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub internship_mode: Option<String>,
+    #[serde(default)]
+    pub monthly_stipend: Option<f64>,
+    #[serde(default)]
+    pub stipend_status: Option<String>,
     // Fees
     #[serde(default)]
     pub total_fees: Option<f64>,
@@ -272,6 +276,8 @@ impl Default for User {
             is_deleted_by_center_final: false,
             internship_domain: None,
             internship_mode: None,
+            monthly_stipend: None,
+            stipend_status: None,
             total_fees: None,
             extra_charges: None,
             grand_total: None,

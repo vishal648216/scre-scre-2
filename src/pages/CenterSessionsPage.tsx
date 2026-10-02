@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Calendar } from "lucide-react";
+import { Loader2, Calendar, PlusCircle, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
@@ -64,8 +66,14 @@ const CenterSessionsPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Academic Sessions</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">View the current and upcoming academic sessions for your courses.</p>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">View academic sessions, class timings, and manage batch allocations for your courses.</p>
           </div>
+          <Link to="/dashboard/center/batches">
+            <Button className="rounded-none bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] h-12 px-6 shadow-lg">
+              <PlusCircle className="w-4 h-4 mr-2" />
+              Manage All Batches
+            </Button>
+          </Link>
         </div>
 
         {loading ? (
@@ -95,7 +103,7 @@ const CenterSessionsPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sessions.map((session) => (
-              <Card key={session.id} className="rounded-none border-border group hover:border-primary transition-all">
+              <Card key={session.id} className="rounded-none border-border group hover:border-primary transition-all flex flex-col justify-between">
                 <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between py-4">
                   <CardTitle className="text-sm font-bold uppercase tracking-tight flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-primary" />
@@ -108,10 +116,17 @@ const CenterSessionsPage = () => {
                     {session.status}
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="mb-4">
+                <CardContent className="p-6 space-y-4">
+                  <div>
                     <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Course</div>
                     <div className="text-sm font-bold uppercase tracking-tight">{getCourseName(session.course_id)}</div>
+                  </div>
+                  <div className="pt-2 border-t border-border/40">
+                    <Link to="/dashboard/center/batches">
+                      <Button size="sm" variant="outline" className="w-full rounded-none text-[9px] font-black uppercase tracking-widest h-9">
+                        <Users className="w-3.5 h-3.5 mr-1.5 text-primary" /> Manage Batches & Seats
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

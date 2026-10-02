@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -23,7 +20,6 @@ import {
   Video,
   Play,
   Search,
-  BookOpen,
   Calendar,
   Clock,
   ExternalLink,
@@ -34,7 +30,7 @@ import {
   Sparkles,
   User,
   GraduationCap,
-  Filter,
+  DownloadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -59,61 +55,6 @@ interface CourseOption {
   id: string;
   course_name: string;
 }
-
-const DEFAULT_RECORDED_VIDEOS: RecordedVideo[] = [
-  {
-    id: "rec-1",
-    title: "DCA Chapter 1: Introduction to Computer Hardware & Operating System",
-    description: "Learn basic computer architecture, CPU, RAM, storage devices, Windows 11 keyboard shortcuts, and file management system.",
-    platform: "youtube",
-    join_url: "https://www.youtube.com/watch?v=L2G3s_4S-qE",
-    course_name: "Diploma in Computer Application (DCA)",
-    subject_name: "Computer Fundamentals",
-    instructor_name: "Er. Rahul Verma (Senior Faculty)",
-    scheduled_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    duration_minutes: 45,
-    status: "completed",
-  },
-  {
-    id: "rec-2",
-    title: "Tally Prime Complete GST Accounting & Journal Voucher Entry",
-    description: "Step-by-step masterclass on creating company in Tally Prime, setting up GST ledgers, recording purchases, sales, and generating GSTR-1 & GSTR-3B reports.",
-    platform: "youtube",
-    join_url: "https://www.youtube.com/watch?v=Ke90Tje7VS0",
-    course_name: "Master Tally Prime & GST (TALLY)",
-    subject_name: "Financial Accounting",
-    instructor_name: "CA Ankit Agarwal",
-    scheduled_at: new Date(Date.now() - 86400000 * 4).toISOString(),
-    duration_minutes: 60,
-    status: "completed",
-  },
-  {
-    id: "rec-3",
-    title: "ADCA Graphic Design: Adobe Photoshop Banner & Poster Design",
-    description: "Learn layers, masking, selection tools, typography, blending options, and export formats for social media graphics and printing banners.",
-    platform: "youtube",
-    join_url: "https://www.youtube.com/watch?v=IyR_uYsRdHs",
-    course_name: "Advanced Diploma in Computer Application (ADCA)",
-    subject_name: "Graphic Design & Photoshop",
-    instructor_name: "Pooja Sharma (UI/UX Expert)",
-    scheduled_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-    duration_minutes: 50,
-    status: "completed",
-  },
-  {
-    id: "rec-4",
-    title: "CCC Exam Practice: Top 100 Most Important Questions & Mock Paper",
-    description: "Comprehensive review of LibreOffice Writer, Calc, Impress, Internet, Cyber Security, and Digital Financial Services for CCC examination.",
-    platform: "youtube",
-    join_url: "https://www.youtube.com/watch?v=rfscVS0vtbw",
-    course_name: "Course on Computer Concepts (CCC)",
-    subject_name: "CCC Master Preparation",
-    instructor_name: "Deepak Kumar",
-    scheduled_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-    duration_minutes: 75,
-    status: "completed",
-  },
-];
 
 export default function StudentRecordedClassesPage() {
   const [videos, setVideos] = useState<RecordedVideo[]>([]);
@@ -165,22 +106,17 @@ export default function StudentRecordedClassesPage() {
         const data = await res.json();
         const rawClasses: RecordedVideo[] = data.classes || [];
         
-        // Merge real API data with sample recordings if list is small
-        if (rawClasses.length > 0) {
-          const mapped = rawClasses.map((cls) => ({
-            ...cls,
-            course_name: cls.course_name || "Enrolled Course",
-            subject_name: cls.subject_name || "Subject Lecture",
-          }));
-          setVideos([...mapped, ...DEFAULT_RECORDED_VIDEOS]);
-        } else {
-          setVideos(DEFAULT_RECORDED_VIDEOS);
-        }
+        const mapped = rawClasses.map((cls) => ({
+          ...cls,
+          course_name: cls.course_name || "Enrolled Course",
+          subject_name: cls.subject_name || "Subject Lecture",
+        }));
+        setVideos(mapped);
       } else {
-        setVideos(DEFAULT_RECORDED_VIDEOS);
+        setVideos([]);
       }
     } catch {
-      setVideos(DEFAULT_RECORDED_VIDEOS);
+      setVideos([]);
     } finally {
       setLoading(false);
     }
@@ -207,7 +143,12 @@ export default function StudentRecordedClassesPage() {
     setIsPlayerOpen(true);
   };
 
-  // Strict Course & Center Scoped Filtering for Student
+  const handleDownloadVideo = (url: string, title: string) => {
+    if (!url) return;
+    toast.success(`Downloading lecture video: ${title}`);
+    window.open(url, "_blank");
+  };
+
   const filteredVideos = videos.filter((v) => {
     const matchesSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -243,66 +184,63 @@ export default function StudentRecordedClassesPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12">
+    <DashboardLayout role="Student">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-16">
         {/* Header Hero Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 md:p-8 rounded-none border border-border shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl relative z-10">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-red-600 text-white font-bold uppercase text-[10px] tracking-widest rounded-none gap-1">
-                <Tv className="w-3 h-3" /> Recorded Video Courses & YouTube Lectures
-              </Badge>
-              {userProfile?.center_name && (
-                <Badge className="bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-wider rounded-none">
-                  📍 Center: {userProfile.center_name}
+        <div className="relative overflow-hidden rounded-3xl border border-red-500/20 bg-gradient-to-br from-slate-900 via-red-950/30 to-slate-900 p-8 shadow-2xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2 max-w-2xl">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 font-black uppercase text-[10px] tracking-widest rounded-full gap-1 px-3 py-1">
+                  <Tv className="w-3.5 h-3.5" /> Video Masterclasses & Hub
                 </Badge>
-              )}
-              {userProfile?.course_name && (
-                <Badge className="bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-wider rounded-none">
-                  🎓 Enrolled: {userProfile.course_name}
-                </Badge>
-              )}
+                {userProfile?.center_name && (
+                  <Badge className="bg-primary/20 text-primary border border-primary/30 font-black uppercase text-[10px] tracking-wider rounded-full px-3 py-1">
+                    📍 {userProfile.center_name}
+                  </Badge>
+                )}
+              </div>
+              <h1 className="font-heading font-black text-3xl md:text-4xl text-white uppercase tracking-tight flex items-center gap-3">
+                <Film className="w-8 h-8 text-red-500" /> Recorded Video Classes
+              </h1>
+              <p className="text-slate-300 text-xs md:text-sm font-medium leading-relaxed">
+                Access YouTube course tutorials, recorded live lectures, and subject-wise video masterclasses uploaded by your center and faculty.
+              </p>
             </div>
-            <h1 className="font-heading font-black text-2xl md:text-4xl uppercase tracking-tight text-white flex items-center gap-3">
-              <Film className="w-8 h-8 text-amber-400" /> Recorded Classes & Video Hub
-            </h1>
-            <p className="text-slate-300 text-xs md:text-sm font-medium">
-              Access YouTube course tutorials, recorded live lectures, and subject-wise video masterclasses uploaded by your center and faculty.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-3 relative z-10 shrink-0">
-            <Button
-              onClick={() => fetchRecordedVideos()}
-              variant="outline"
-              className="rounded-none text-white border-white/20 hover:bg-white/10 gap-2 text-xs"
-            >
-              <Sparkles className="w-4 h-4 text-amber-400" /> Refresh Library
-            </Button>
+            <div className="flex items-center gap-3 shrink-0">
+              <Button
+                onClick={() => fetchRecordedVideos()}
+                variant="outline"
+                className="rounded-2xl border-white/20 bg-slate-900/60 text-white hover:bg-white/10 gap-2 text-xs font-black uppercase tracking-wider px-5 py-3"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" /> Refresh Hub
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-card p-4 rounded-none border border-border shadow-sm">
+        <div className="bg-card/80 backdrop-blur-xl border border-border p-4 rounded-3xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative md:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search topic, subject, or course..."
-              className="pl-9 rounded-none h-10 text-xs"
+              placeholder="Search topic, subject, or lecture..."
+              className="pl-10 h-11 rounded-2xl border-border bg-background/50 font-bold text-xs"
             />
           </div>
 
           <div className="md:col-span-1">
             <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-              <SelectTrigger className="rounded-none h-10 text-xs">
+              <SelectTrigger className="rounded-2xl h-11 text-xs font-bold border-border bg-background/50">
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-primary" />
                   <SelectValue placeholder="All Courses" />
                 </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl">
                 <SelectItem value="all">All Enrolled Courses</SelectItem>
                 {courses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -315,18 +253,18 @@ export default function StudentRecordedClassesPage() {
 
           <div className="md:col-span-1">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="rounded-none bg-muted/60 p-1 w-full grid grid-cols-4 h-10">
-                <TabsTrigger value="all" className="rounded-none text-[11px] font-bold uppercase">
+              <TabsList className="rounded-2xl bg-muted/60 p-1 w-full grid grid-cols-4 h-11 border border-border">
+                <TabsTrigger value="all" className="rounded-xl text-[10px] font-black uppercase">
                   All
                 </TabsTrigger>
-                <TabsTrigger value="youtube" className="rounded-none text-[11px] font-bold uppercase">
+                <TabsTrigger value="youtube" className="rounded-xl text-[10px] font-black uppercase">
                   YouTube
                 </TabsTrigger>
-                <TabsTrigger value="video_file" className="rounded-none text-[11px] font-bold uppercase">
-                  MP4 File
+                <TabsTrigger value="video_file" className="rounded-xl text-[10px] font-black uppercase">
+                  MP4
                 </TabsTrigger>
-                <TabsTrigger value="past_live" className="rounded-none text-[11px] font-bold uppercase">
-                  Live Recs
+                <TabsTrigger value="past_live" className="rounded-xl text-[10px] font-black uppercase">
+                  Past Live
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -335,15 +273,20 @@ export default function StudentRecordedClassesPage() {
 
         {/* Video Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Loading video masterclasses...
+            </p>
           </div>
         ) : filteredVideos.length === 0 ? (
-          <Card className="rounded-none border-border">
-            <CardContent className="py-16 text-center text-muted-foreground">
-              <Video className="w-12 h-12 mx-auto mb-4 opacity-40 text-primary" />
-              <p className="font-bold text-lg text-foreground">No recorded course videos match your search.</p>
-              <p className="text-xs mt-1">Try resetting your filter or searching for another topic.</p>
+          <Card className="rounded-3xl border-dashed border-2 border-border bg-card/40 py-16 text-center">
+            <CardContent className="space-y-4">
+              <Video className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+              <h3 className="text-lg font-black uppercase tracking-tight text-foreground">No Video Classes Found</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                No recorded course videos match your current search or category filter.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -352,14 +295,14 @@ export default function StudentRecordedClassesPage() {
                   setSelectedCourse("all");
                   setActiveTab("all");
                 }}
-                className="mt-4 rounded-none"
+                className="rounded-2xl text-xs font-bold uppercase"
               >
                 Clear Filters
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVideos.map((vid) => {
               const ytId = extractYouTubeId(vid.join_url);
               const thumb = getThumbnail(vid);
@@ -368,11 +311,14 @@ export default function StudentRecordedClassesPage() {
               return (
                 <Card
                   key={vid.id}
-                  className="rounded-none border-border overflow-hidden hover:border-primary/60 transition-all duration-300 group flex flex-col justify-between shadow-sm hover:shadow-md"
+                  className="rounded-3xl border border-border/80 bg-card hover:border-red-500/50 transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-red-500/5 overflow-hidden flex flex-col justify-between group"
                 >
                   <div>
-                    {/* Thumbnail / Video Preview Area */}
-                    <div className="relative aspect-video bg-slate-900 overflow-hidden cursor-pointer" onClick={() => handleOpenPlayer(vid)}>
+                    {/* Thumbnail Preview Box */}
+                    <div
+                      className="relative aspect-video bg-slate-900 overflow-hidden cursor-pointer"
+                      onClick={() => handleOpenPlayer(vid)}
+                    >
                       {thumb ? (
                         <img
                           src={thumb}
@@ -380,48 +326,48 @@ export default function StudentRecordedClassesPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                          <Film className="w-12 h-12 text-indigo-400/50" />
+                        <div className="w-full h-full bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 flex items-center justify-center">
+                          <Film className="w-12 h-12 text-red-500/50" />
                         </div>
                       )}
 
-                      {/* Overlay Play Button */}
+                      {/* Play Overlay Button */}
                       <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                           <Play className="w-5 h-5 fill-white ml-0.5" />
                         </div>
                       </div>
 
                       {/* Top Badges */}
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
                         {isYouTube ? (
-                          <Badge className="bg-red-600 text-white rounded-none text-[10px] font-bold uppercase tracking-wide gap-1">
+                          <Badge className="bg-red-600/90 text-white backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
                             <Tv className="w-3 h-3" /> YouTube Video
                           </Badge>
                         ) : (
-                          <Badge className="bg-amber-600 text-white rounded-none text-[10px] font-bold uppercase tracking-wide gap-1">
-                            <Video className="w-3 h-3" /> Recorded MP4
+                          <Badge className="bg-amber-600/90 text-white backdrop-blur rounded-full text-[9px] font-black uppercase tracking-wider gap-1 px-3 py-0.5">
+                            <Video className="w-3 h-3" /> MP4 Lecture
                           </Badge>
                         )}
                       </div>
 
-                      {/* Duration Badge */}
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-mono px-2 py-0.5 rounded-none flex items-center gap-1">
+                      {/* Duration Tag */}
+                      <div className="absolute bottom-3 right-3 bg-black/80 text-white text-[10px] font-mono px-2.5 py-1 rounded-full backdrop-blur flex items-center gap-1 border border-white/20">
                         <Clock className="w-3 h-3 text-amber-400" />
                         {vid.duration_minutes || 45} mins
                       </div>
                     </div>
 
-                    {/* Card Content */}
-                    <CardContent className="p-4 space-y-2.5">
-                      <div className="flex items-center gap-2">
+                    {/* Card Body */}
+                    <CardContent className="p-5 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {vid.course_name && (
-                          <Badge variant="outline" className="rounded-none text-[10px] uppercase font-semibold">
+                          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-wider">
                             {vid.course_name}
-                          </Badge>
+                          </span>
                         )}
                         {vid.subject_name && (
-                          <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                             • {vid.subject_name}
                           </span>
                         )}
@@ -429,13 +375,13 @@ export default function StudentRecordedClassesPage() {
 
                       <h3
                         onClick={() => handleOpenPlayer(vid)}
-                        className="font-bold text-sm text-foreground line-clamp-2 hover:text-primary cursor-pointer leading-snug"
+                        className="font-heading font-black text-base text-foreground line-clamp-2 hover:text-red-500 cursor-pointer leading-snug uppercase tracking-tight"
                       >
                         {vid.title}
                       </h3>
 
                       {vid.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-medium">
                           {vid.description}
                         </p>
                       )}
@@ -443,19 +389,32 @@ export default function StudentRecordedClassesPage() {
                   </div>
 
                   {/* Card Footer */}
-                  <div className="p-4 pt-0 border-t border-border/50 mt-2 flex items-center justify-between gap-2">
-                    <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-primary" />
+                  <div className="p-5 pt-0 border-t border-border/50 mt-3 flex items-center justify-between gap-3">
+                    <div className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono font-bold">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
                       {formatDate(vid.scheduled_at)}
                     </div>
 
-                    <Button
-                      onClick={() => handleOpenPlayer(vid)}
-                      size="sm"
-                      className="rounded-none bg-red-600 hover:bg-red-700 text-white text-xs font-bold gap-1.5 h-8 px-3"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-white" /> Watch Lecture
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {!isYouTube && (
+                        <Button
+                          onClick={() => handleDownloadVideo(vid.join_url, vid.title)}
+                          size="sm"
+                          variant="outline"
+                          className="rounded-2xl text-xs font-bold gap-1 h-9 px-3 border-border"
+                          title="Download Video File"
+                        >
+                          <DownloadCloud className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => handleOpenPlayer(vid)}
+                        size="sm"
+                        className="rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider gap-1.5 h-9 px-4 shadow-md shadow-red-600/20"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-white" /> Watch Lecture
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -463,12 +422,12 @@ export default function StudentRecordedClassesPage() {
           </div>
         )}
 
-        {/* VIDEO PLAYER MODAL DIALOG */}
+        {/* Video Player Dialog Modal */}
         <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
-          <DialogContent className="max-w-4xl rounded-none p-0 overflow-hidden bg-slate-950 text-white border border-border">
+          <DialogContent className="max-w-4xl rounded-3xl p-0 overflow-hidden bg-slate-950 text-white border border-slate-800 shadow-2xl">
             {activeVideo && (
               <div>
-                {/* Embedded Video Area */}
+                {/* Embedded Player Frame */}
                 <div className="relative aspect-video w-full bg-black">
                   {extractYouTubeId(activeVideo.join_url) ? (
                     <iframe
@@ -488,40 +447,40 @@ export default function StudentRecordedClassesPage() {
                   )}
                 </div>
 
-                {/* Video Info Panel */}
+                {/* Player Metadata Panel */}
                 <div className="p-6 space-y-4 max-h-80 overflow-y-auto bg-slate-900 text-slate-100">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-red-600 text-white rounded-none uppercase text-[10px]">
+                      <Badge className="bg-red-600 text-white rounded-full uppercase text-[10px] font-black px-3 py-1">
                         {activeVideo.platform === "youtube" || extractYouTubeId(activeVideo.join_url)
                           ? "📺 YouTube Lecture"
                           : "📼 Video Recording"}
                       </Badge>
                       {activeVideo.course_name && (
-                        <Badge variant="outline" className="text-white border-white/30 text-[10px]">
+                        <Badge variant="outline" className="text-slate-300 border-slate-700 text-[10px] font-bold rounded-full px-3 py-1">
                           {activeVideo.course_name}
                         </Badge>
                       )}
                     </div>
 
-                    <div className="text-xs text-slate-400 flex items-center gap-3 font-mono">
-                      <span>⏱ {activeVideo.duration_minutes || 45} Minutes</span>
+                    <div className="text-xs text-slate-400 flex items-center gap-3 font-mono font-bold">
+                      <span>⏱ {activeVideo.duration_minutes || 45} Mins</span>
                       <span>📅 {formatDate(activeVideo.scheduled_at)}</span>
                     </div>
                   </div>
 
-                  <h2 className="text-lg md:text-xl font-bold leading-tight text-white">
+                  <h2 className="text-lg md:text-xl font-black uppercase tracking-tight leading-tight text-white">
                     {activeVideo.title}
                   </h2>
 
                   {activeVideo.description && (
-                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-none border border-white/10">
+                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed bg-slate-950/80 p-4 rounded-2xl border border-slate-800 font-medium">
                       {activeVideo.description}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10 text-xs">
-                    <div className="flex items-center gap-2 text-slate-300">
+                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
+                    <div className="flex items-center gap-2 text-slate-300 font-semibold">
                       <User className="w-4 h-4 text-amber-400" />
                       <span>Instructor: {activeVideo.instructor_name || "Center Academic Faculty"}</span>
                     </div>
@@ -530,9 +489,9 @@ export default function StudentRecordedClassesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => window.open(activeVideo.join_url, "_blank")}
-                      className="rounded-none text-xs border-white/20 text-white hover:bg-white/10 gap-1.5"
+                      className="rounded-2xl text-xs border-slate-700 text-white hover:bg-slate-800 gap-1.5 font-bold uppercase"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" /> Open Direct Link
+                      <ExternalLink className="w-3.5 h-3.5" /> Direct Link
                     </Button>
                   </div>
                 </div>
@@ -544,3 +503,4 @@ export default function StudentRecordedClassesPage() {
     </DashboardLayout>
   );
 }
+

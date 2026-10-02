@@ -862,31 +862,34 @@ const AddCenterPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">{step === 1 ? t("Add New Center") : t("Confirm Center Details")}</h1>
+            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight flex items-center gap-3">
+              <School className="w-8 h-8 text-primary" />
+              {step === 1 ? t("Add New Center") : t("Confirm Center Details")}
+            </h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">{step === 1 ? t("Create a new regional center and its administrative account.") : t("Review the information below and confirm to create the center.")}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {step === 1 && (
               <>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-none border-primary text-primary hover:bg-primary/5 font-black uppercase tracking-widest text-[10px]"
+                  className="rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-bold uppercase tracking-wider text-xs h-10 px-4"
                   onClick={() => setShowDrafts(!showDrafts)}
                 >
-                  <FileText className="w-3 h-3 mr-2" />
+                  <FileText className="w-4 h-4 mr-2" />
                   {t("Drafts")} ({drafts.length})
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-none border-border font-black uppercase tracking-widest text-[10px]"
+                  className="rounded-xl border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200 font-bold uppercase tracking-wider text-xs h-10 px-4"
                   onClick={() => saveDraft(false)}
                 >
-                  <Save className="w-3 h-3 mr-2" />
+                  <Save className="w-4 h-4 mr-2" />
                   {t("Save Draft")}
                 </Button>
               </>
@@ -895,10 +898,10 @@ const AddCenterPage = () => {
               <Button
                 variant="default"
                 size="sm"
-                className="rounded-none font-black uppercase tracking-widest text-[10px]"
+                className="rounded-xl font-bold uppercase tracking-wider text-xs h-10 px-4 shadow-lg shadow-primary/20"
                 onClick={handleDownloadPDF}
               >
-                <Download className="w-3 h-3 mr-2" />
+                <Download className="w-4 h-4 mr-2" />
                 {t("Download Form PDF")}
               </Button>
             )}
@@ -906,9 +909,9 @@ const AddCenterPage = () => {
         </div>
 
         {showDrafts && (
-          <Card className="rounded-none border-primary/30 shadow-lg bg-primary/5">
-            <CardHeader className="py-3 border-b border-primary/10">
-              <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-between">
+          <Card className="rounded-2xl border-primary/30 shadow-xl bg-zinc-900/90 backdrop-blur-xl">
+            <CardHeader className="py-4 border-b border-zinc-800 px-6">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-zinc-100 flex items-center justify-between">
                 <span>{t("Saved Drafts")}</span>
                 <div className="flex items-center gap-3">
                   {selectedDrafts.length > 0 && (
@@ -996,63 +999,63 @@ const AddCenterPage = () => {
         {step === 1 ? (
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Center Details Section */}
-            <Card className="rounded-none border-border shadow-md overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b border-border py-4">
-                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+            <Card className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
+              <CardHeader className="bg-muted/40 border-b border-border py-4">
+                <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-foreground">
                   <School className="w-4 h-4 text-primary" />
                   {t("Center Information")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Center Name")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Center Name")}</label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input name="name" required placeholder={t("Full Center Name")} spellCheck={true} lang="en" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.name} onChange={handleChange} />
+                    <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input name="name" required placeholder={t("Full Center Name")} spellCheck={true} lang="en" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold uppercase focus:border-primary focus:outline-none transition-all text-foreground" value={formData.name} onChange={handleChange} />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Owner / Manager Name")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Owner / Manager Name")}</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input name="owner_name" required placeholder={t("Full Name")} spellCheck={true} lang="en" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.owner_name} onChange={handleChange} />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input name="owner_name" required placeholder={t("Full Name")} spellCheck={true} lang="en" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold uppercase focus:border-primary focus:outline-none transition-all text-foreground" value={formData.owner_name} onChange={handleChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Phone Number")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Phone Number")}</label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input name="phone" required placeholder="+91 00000 00000" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.phone} onChange={handleChange} />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input name="phone" required placeholder="+91 00000 00000" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold uppercase focus:border-primary focus:outline-none transition-all text-foreground" value={formData.phone} onChange={handleChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Email Address")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Email Address")}</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input name="email" type="email" required placeholder="center@example.com" autoComplete="off" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.email} onChange={handleChange} />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input name="email" type="email" required placeholder="center@example.com" autoComplete="off" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-medium focus:border-primary focus:outline-none transition-all text-foreground" value={formData.email} onChange={handleChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("Center Code (Optional)")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("Center Code (Optional)")}</label>
                   <div className="relative">
-                    <input name="center_code" placeholder={t("Enter custom center code, leave blank for auto-generated")} spellCheck={true} lang="en" className={cn("w-full px-4 py-2.5 rounded-none border bg-background text-sm focus:border-primary focus:outline-none transition-all", centerCodeStatus === "taken" ? "border-red-500" : centerCodeStatus === "available" ? "border-green-500" : "border-border")} value={formData.center_code} onChange={handleChange} />
-                    {centerCodeStatus === "checking" && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />}
-                    {centerCodeStatus === "available" && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />}
-                    {centerCodeStatus === "taken" && <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />}
+                    <input name="center_code" placeholder={t("Enter custom center code, leave blank for auto-generated")} spellCheck={true} lang="en" className={cn("w-full px-4 py-3 rounded-2xl border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground", centerCodeStatus === "taken" ? "border-red-500" : centerCodeStatus === "available" ? "border-green-500" : "border-border")} value={formData.center_code} onChange={handleChange} />
+                    {centerCodeStatus === "checking" && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />}
+                    {centerCodeStatus === "available" && <CheckCircle className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />}
+                    {centerCodeStatus === "taken" && <XCircle className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />}
                   </div>
                   {centerCodeStatus === "available" && <p className="text-xs text-green-600 font-medium ml-1">Center code available!</p>}
                   {centerCodeStatus === "taken" && <p className="text-xs text-red-600 font-medium ml-1">Center code already taken!</p>}
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-1">{t("About Center")}</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">{t("About Center")}</label>
                   <textarea
                     name="about_center"
                     rows={4}
                     spellCheck={true}
                     lang="en"
                     placeholder={t("Write a short overview about this center...")}
-                    className="w-full px-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-medium focus:border-primary focus:outline-none transition-all resize-none text-foreground"
                     value={formData.about_center}
                     onChange={handleChange}
                   />

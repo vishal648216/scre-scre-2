@@ -10,6 +10,10 @@ pub struct Subject {
     pub subject_code: String,
     pub description: Option<String>,
     pub status: String, // "active", "inactive"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_id: Option<ObjectId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_name: Option<String>,
     #[serde(with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     #[serde(default = "chrono::Utc::now")]
     pub created_at: DateTime<Utc>,

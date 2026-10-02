@@ -17,6 +17,10 @@ pub struct CourseCategory {
     pub image_url: Option<String>,
     #[serde(default = "default_sort_order")]
     pub sort_order: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_id: Option<ObjectId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_name: Option<String>,
 }
 
 fn default_sort_order() -> i32 {

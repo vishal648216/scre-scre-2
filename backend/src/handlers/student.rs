@@ -1155,6 +1155,8 @@ pub async fn handle_create_student(
         is_deleted_by_center_final: false,
         internship_domain: None,
         internship_mode: None,
+        monthly_stipend: None,
+        stipend_status: None,
         total_fees: payload.total_fees,
         extra_charges: payload.extra_charges,
         grand_total: payload.grand_total,
@@ -1541,6 +1543,8 @@ pub async fn public_register_student(
         is_deleted_by_center_final: false,
         internship_domain: None,
         internship_mode: None,
+        monthly_stipend: None,
+        stipend_status: None,
         total_fees: payload.total_fees,
         extra_charges: payload.extra_charges,
         grand_total: payload.grand_total,
@@ -1843,6 +1847,14 @@ pub async fn list_students(
             }
         };
         filter.insert("parent_id", center_oid);
+    } else if claims.role == UserRole::Student {
+        let student_oid = match ObjectId::parse_str(&claims.sub) {
+            Ok(oid) => oid,
+            Err(_) => {
+                return (StatusCode::BAD_REQUEST, Json(serde_json::json!([])));
+            }
+        };
+        filter.insert("_id", student_oid);
     }
 
     if let Some(ref cid_str) = q.course_id {

@@ -226,6 +226,10 @@ const AdminCenterRequestsPage = () => {
     return !st.includes("accept") && !st.includes("approve") && st !== "active" && !st.includes("reject");
   });
 
+  const pendingCentersCount = centerRequests.filter(c => !c.active).length;
+  const pendingStudentsCount = pendingStudents.length;
+  const pendingUpdatesCount = updateRequests.filter(u => u.status === "pending").length;
+
   return (
     <DashboardLayout role="Admin">
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
@@ -239,42 +243,84 @@ const AdminCenterRequestsPage = () => {
           </p>
         </div>
 
+        {/* Executive KPI Summary Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Pending Center Registrations</p>
+                <h3 className="text-2xl font-black text-amber-400 mt-1">{pendingCentersCount}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Awaiting initial approval</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Building2 className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Pending Student Admissions</p>
+                <h3 className="text-2xl font-black text-sky-400 mt-1">{pendingStudentsCount}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Center allocation requests</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <Users className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Center Profile Updates</p>
+                <h3 className="text-2xl font-black text-violet-400 mt-1">{pendingUpdatesCount}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Franchise modification requests</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                <FileText className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Tab Navigation */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-zinc-900/90 border border-zinc-800 p-1.5 shadow-xl backdrop-blur-xl">
           <button
             onClick={() => setActiveTab("centers")}
-            className={`px-5 py-3 text-xs font-black uppercase tracking-wider transition-all border flex items-center gap-2 ${
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all rounded-xl flex items-center gap-2.5 ${
               activeTab === "centers"
-                ? "bg-primary text-primary-foreground border-primary shadow"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted border-border"
+                ? "bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20"
+                : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
             }`}
           >
             <Building2 className="w-4 h-4" />
-            New Center Registrations ({centerRequests.filter(c => !c.active).length})
+            New Center Registrations ({pendingCentersCount})
           </button>
           
           <button
             onClick={() => setActiveTab("students")}
-            className={`px-5 py-3 text-xs font-black uppercase tracking-wider transition-all border flex items-center gap-2 ${
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all rounded-xl flex items-center gap-2.5 ${
               activeTab === "students"
-                ? "bg-primary text-primary-foreground border-primary shadow"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted border-border"
+                ? "bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20"
+                : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
             }`}
           >
             <Users className="w-4 h-4" />
-            Student Admission Requests ({pendingStudents.length})
+            Student Admission Requests ({pendingStudentsCount})
           </button>
 
           <button
             onClick={() => setActiveTab("updates")}
-            className={`px-5 py-3 text-xs font-black uppercase tracking-wider transition-all border flex items-center gap-2 ${
+            className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all rounded-xl flex items-center gap-2.5 ${
               activeTab === "updates"
-                ? "bg-primary text-primary-foreground border-primary shadow"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted border-border"
+                ? "bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20"
+                : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
             }`}
           >
             <FileText className="w-4 h-4" />
-            Center Profile Updates ({updateRequests.filter(u => u.status === "pending").length})
+            Center Profile Updates ({pendingUpdatesCount})
           </button>
         </div>
 
@@ -284,35 +330,35 @@ const AdminCenterRequestsPage = () => {
             {loadingCenters ? (
               <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
             ) : centerRequests.length === 0 ? (
-              <Card className="rounded-none border-dashed border-2 border-border p-20 text-center">
-                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">No center registration requests found</p>
+              <Card className="rounded-2xl border-dashed border-2 border-zinc-800 bg-zinc-900/40 p-20 text-center">
+                <Clock className="w-12 h-12 text-zinc-500 mx-auto mb-4 opacity-30" />
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">No center registration requests found</p>
               </Card>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {centerRequests.map(c => (
-                  <Card key={c.id} className="rounded-none border-border hover:border-primary/40 transition-all bg-card">
+                  <Card key={c.id} className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
                     <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 mt-1">
-                          <Building2 className="w-6 h-6 text-primary" />
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 mt-1 text-primary">
+                          <Building2 className="w-6 h-6" />
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-3">
-                            <h3 className="text-base font-black uppercase tracking-tight text-foreground">{c.name}</h3>
+                            <h3 className="text-base font-bold tracking-tight text-zinc-100">{c.name}</h3>
                             <span className={cn(
-                              "px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest border",
-                              c.active ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                              "px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border",
+                              c.active ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"
                             )}>
                               {c.active ? "ACTIVE CENTER" : "PENDING APPROVAL"}
                             </span>
                           </div>
-                          <p className="text-xs font-bold text-muted-foreground">
-                            Code: <span className="text-foreground">{c.code}</span> • Owner: <span className="text-foreground">{c.owner_name}</span>
+                          <p className="text-xs text-zinc-400">
+                            Code: <span className="text-zinc-200 font-semibold">{c.code}</span> • Owner: <span className="text-zinc-200 font-semibold">{c.owner_name}</span>
                           </p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-4">
-                            <span><Phone className="w-3 h-3 inline mr-1" />{c.phone}</span>
-                            <span><MapPin className="w-3 h-3 inline mr-1" />{c.city}, {c.state}</span>
+                          <p className="text-xs text-zinc-400 flex items-center gap-4 mt-1">
+                            <span><Phone className="w-3.5 h-3.5 inline mr-1 text-zinc-500" />{c.phone}</span>
+                            <span><MapPin className="w-3.5 h-3.5 inline mr-1 text-primary" />{c.city}, {c.state}</span>
                           </p>
                         </div>
                       </div>
@@ -322,7 +368,7 @@ const AdminCenterRequestsPage = () => {
                           <Button
                             disabled={processing}
                             onClick={() => handleProcessCenter(c.id, "approve")}
-                            className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-black text-xs uppercase tracking-wider gap-2"
+                            className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider gap-2 shadow-lg shadow-emerald-600/20"
                           >
                             <CheckCircle2 className="w-4 h-4" /> Approve & Setup
                           </Button>
@@ -331,7 +377,7 @@ const AdminCenterRequestsPage = () => {
                           disabled={processing}
                           variant="outline"
                           onClick={() => handleProcessCenter(c.id, "reject")}
-                          className="flex-1 md:flex-none border-rose-500/40 text-rose-600 hover:bg-rose-500/10 rounded-none font-black text-xs uppercase tracking-wider gap-2"
+                          className="flex-1 md:flex-none border-rose-500/40 text-rose-400 bg-rose-500/10 hover:bg-rose-600 hover:text-white rounded-xl font-bold text-xs uppercase tracking-wider gap-2"
                         >
                           <XCircle className="w-4 h-4" /> Reject
                         </Button>
@@ -350,24 +396,24 @@ const AdminCenterRequestsPage = () => {
             {loadingStudents ? (
               <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
             ) : pendingStudents.length === 0 ? (
-              <Card className="rounded-none border-dashed border-2 border-border p-20 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">No pending student admission requests</p>
+              <Card className="rounded-2xl border-dashed border-2 border-zinc-800 bg-zinc-900/40 p-20 text-center">
+                <Users className="w-12 h-12 text-zinc-500 mx-auto mb-4 opacity-30" />
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">No pending student admission requests</p>
               </Card>
             ) : (
-              <Card className="rounded-none border-border overflow-hidden">
+              <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-xl">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-border bg-muted/20 text-muted-foreground uppercase text-[10px] font-black tracking-widest">
+                        <tr className="border-b border-zinc-800 bg-zinc-950/80 text-zinc-400 uppercase text-[11px] font-bold tracking-wider">
                           <th className="py-4 px-6">Student Details</th>
                           <th className="py-4 px-6">Course Enrolled</th>
                           <th className="py-4 px-6">Priority Center Choices</th>
                           <th className="py-4 px-6 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border">
+                      <tbody className="divide-y divide-zinc-800/60">
                         {pendingStudents.map(s => {
                           const sid = toId(s._id || s.id);
                           const name = s.full_name || s.fullName || s.username;
@@ -377,25 +423,25 @@ const AdminCenterRequestsPage = () => {
                           const curP = s.current_priority || 1;
 
                           return (
-                            <tr key={sid} className="hover:bg-muted/10 transition-colors">
-                              <td className="py-4 px-6 font-bold">
-                                <div className="font-black text-sm uppercase text-foreground">{name}</div>
-                                <span className="text-[10px] text-muted-foreground font-mono">@{s.username}</span>
+                            <tr key={sid} className="hover:bg-zinc-800/40 transition-colors">
+                              <td className="py-4 px-6 font-medium">
+                                <div className="font-bold text-sm text-zinc-100">{name}</div>
+                                <span className="text-[10px] text-zinc-400 font-mono">@{s.username}</span>
                               </td>
                               <td className="py-4 px-6 font-bold uppercase text-primary">
                                 {s.course || "General"}
                               </td>
                               <td className="py-4 px-6 space-y-1">
-                                <div className="flex items-center gap-1.5 text-[9px] font-bold">
-                                  <span className={`px-2 py-0.5 border ${curP === 1 ? "bg-amber-500/20 text-amber-700 border-amber-500/30 font-extrabold" : "bg-muted text-muted-foreground border-transparent"}`}>
+                                <div className="flex items-center gap-1.5 text-[10px] font-semibold">
+                                  <span className={`px-2.5 py-1 rounded-md border ${curP === 1 ? "bg-amber-500/15 text-amber-300 border-amber-500/30 font-bold" : "bg-zinc-950/60 text-zinc-400 border-zinc-800"}`}>
                                     P1: {p1Name}
                                   </span>
-                                  <ArrowRight className="w-2.5 h-2.5 text-slate-400" />
-                                  <span className={`px-2 py-0.5 border ${curP === 2 ? "bg-amber-500/20 text-amber-700 border-amber-500/30 font-extrabold" : "bg-muted text-muted-foreground border-transparent"}`}>
+                                  <ArrowRight className="w-3 h-3 text-zinc-600" />
+                                  <span className={`px-2.5 py-1 rounded-md border ${curP === 2 ? "bg-amber-500/15 text-amber-300 border-amber-500/30 font-bold" : "bg-zinc-950/60 text-zinc-400 border-zinc-800"}`}>
                                     P2: {p2Name}
                                   </span>
-                                  <ArrowRight className="w-2.5 h-2.5 text-slate-400" />
-                                  <span className={`px-2 py-0.5 border ${curP === 3 ? "bg-amber-500/20 text-amber-700 border-amber-500/30 font-extrabold" : "bg-muted text-muted-foreground border-transparent"}`}>
+                                  <ArrowRight className="w-3 h-3 text-zinc-600" />
+                                  <span className={`px-2.5 py-1 rounded-md border ${curP === 3 ? "bg-amber-500/15 text-amber-300 border-amber-500/30 font-bold" : "bg-zinc-950/60 text-zinc-400 border-zinc-800"}`}>
                                     P3: {p3Name}
                                   </span>
                                 </div>
@@ -404,17 +450,17 @@ const AdminCenterRequestsPage = () => {
                                 <Button
                                   size="sm"
                                   onClick={() => { setSelectedStudent(s); setStudentActionType("approve"); setAdminInstruction(""); }}
-                                  className="rounded-none font-black text-[10px] uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                  className="rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5 shadow-md shadow-emerald-600/20"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Accept & Allot
+                                  <CheckCircle2 className="w-4 h-4" /> Accept & Allot
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => { setSelectedStudent(s); setStudentActionType("reject"); setAdminInstruction(""); }}
-                                  className="rounded-none font-black text-[10px] uppercase tracking-wider border-rose-500/40 text-rose-600 hover:bg-rose-500/10 gap-1"
+                                  className="rounded-xl font-bold text-xs uppercase tracking-wider border-rose-500/40 text-rose-400 bg-rose-500/10 hover:bg-rose-600 hover:text-white gap-1.5"
                                 >
-                                  <XCircle className="w-3.5 h-3.5" /> Reject
+                                  <XCircle className="w-4 h-4" /> Reject
                                 </Button>
                               </td>
                             </tr>
@@ -435,38 +481,38 @@ const AdminCenterRequestsPage = () => {
             {loadingUpdates ? (
               <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
             ) : updateRequests.length === 0 ? (
-              <Card className="rounded-none border-dashed border-2 border-border p-20 text-center">
-                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">No profile update requests found</p>
+              <Card className="rounded-2xl border-dashed border-2 border-zinc-800 bg-zinc-900/40 p-20 text-center">
+                <Clock className="w-12 h-12 text-zinc-500 mx-auto mb-4 opacity-30" />
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">No profile update requests found</p>
               </Card>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {updateRequests.map(r => (
-                  <Card key={r._id} className="rounded-none border-border group hover:border-primary/40 transition-all bg-card">
+                  <Card key={r._id} className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
                     <CardContent className="p-6 flex items-center justify-between">
                       <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 bg-primary/10 flex items-center justify-center border border-primary/20">
-                          <Building2 className="w-6 h-6 text-primary" />
+                        <div className="w-12 h-12 bg-primary/10 flex items-center justify-center border border-primary/20 rounded-xl text-primary">
+                          <Building2 className="w-6 h-6" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-black uppercase tracking-tight">{r.old_data?.name || "Center"}</h3>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                            Code: {r.old_data?.code || "—"} • Requested: {new Date(r.requested_at).toLocaleDateString()}
+                          <h3 className="text-base font-bold text-zinc-100">{r.old_data?.name || "Center"}</h3>
+                          <p className="text-xs font-medium text-zinc-400 mt-0.5">
+                            Code: <span className="text-zinc-200">{r.old_data?.code || "—"}</span> • Requested: {new Date(r.requested_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <span className={cn(
-                          "px-3 py-1 text-[9px] font-black uppercase tracking-widest border",
-                          r.status === "pending" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : 
-                          r.status === "approved" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : 
-                          "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                          "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border",
+                          r.status === "pending" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : 
+                          r.status === "approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : 
+                          "bg-rose-500/10 text-rose-400 border-rose-500/30"
                         )}>
                           {r.status}
                         </span>
                         <button 
                           onClick={() => setSelectedUpdate(r)}
-                          className="p-2 bg-muted hover:bg-primary hover:text-white transition-all rounded-none"
+                          className="p-2.5 bg-zinc-950/60 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white transition-all rounded-xl"
                         >
                           <Eye className="w-4 h-4" />
                         </button>

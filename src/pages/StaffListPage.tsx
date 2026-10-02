@@ -120,6 +120,32 @@ const StaffListPage = () => {
 
   // View Staff Profile Modal State
   const [viewMember, setViewMember] = useState<StaffMember | null>(null);
+  const [staffPasswordInput, setStaffPasswordInput] = useState("");
+  const [savingStaffPassword, setSavingStaffPassword] = useState(false);
+
+  const handleSaveStaffPassword = async () => {
+    if (!viewMember || !staffPasswordInput) return;
+    setSavingStaffPassword(true);
+    try {
+      const res = await apiFetch(`/api/staff/${viewMember._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: staffPasswordInput })
+      });
+      if (res.ok) {
+        toast.success("Staff password updated successfully!");
+        setViewMember({ ...viewMember, raw_password: staffPasswordInput, password: staffPasswordInput });
+        fetchAllData();
+      } else {
+        toast.error("Failed to update staff password");
+      }
+    } catch {
+      toast.error("Error updating staff password");
+    } finally {
+      setSavingStaffPassword(false);
+    }
+  };
+
 
   // Edit Modal State
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
@@ -812,12 +838,12 @@ const StaffListPage = () => {
                     <span className="text-slate-500 text-[10px] uppercase font-bold block">Status</span>
                     <span className="font-bold text-emerald-400 uppercase">{viewMember.status || "active"}</span>
                   </div>
-                  <div className="col-span-2 pt-2 border-t border-slate-800">
+                  <div className="col-span-2 pt-2 border-t border-slate-800 space-y-2">
                     <span className="text-amber-400 text-[10px] uppercase font-bold flex items-center gap-1">
                       <Key className="w-3.5 h-3.5" /> Account Password
                     </span>
-                    <div className="flex items-center justify-between mt-1 bg-slate-900/90 px-3 py-2 rounded-xl border border-amber-500/20">
-                      <span className="font-mono font-bold text-white tracking-wider">
+                    <div className="flex items-center justify-between bg-slate-900/90 px-3 py-2 rounded-xl border border-amber-500/20">
+                      <span className="font-mono font-bold text-white tracking-wider text-xs">
                         {showStaffPassword ? (viewMember.raw_password || viewMember.password || "No plain password saved") : "••••••••••••"}
                       </span>
                       <div className="flex items-center gap-2">
@@ -843,7 +869,26 @@ const StaffListPage = () => {
                         )}
                       </div>
                     </div>
+                    {/* Inline Change Password Input */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        placeholder="Set new password..."
+                        className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                        value={staffPasswordInput}
+                        onChange={(e) => setStaffPasswordInput(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        disabled={savingStaffPassword || !staffPasswordInput}
+                        onClick={handleSaveStaffPassword}
+                        className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 flex items-center gap-1 shrink-0"
+                      >
+                        {savingStaffPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                      </button>
+                    </div>
                   </div>
+
                 </div>
 
                 <div className="space-y-2">

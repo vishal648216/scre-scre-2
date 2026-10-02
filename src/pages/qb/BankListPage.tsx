@@ -27,6 +27,7 @@ interface QuestionBank {
 interface Category {
   id: string;
   name: string;
+  category_code?: string;
 }
 
 interface Course {
@@ -40,6 +41,7 @@ interface Subject {
   id?: string;
   _id?: string;
   subject_name: string;
+  subject_code?: string;
 }
 
 const BankListPage = () => {
@@ -402,7 +404,7 @@ const BankListPage = () => {
                     <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id} className="text-xs font-bold uppercase">
-                          {cat.name}
+                          {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -440,7 +442,7 @@ const BankListPage = () => {
                     <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                       {getFilteredSubjects(createForm.course_id).map((subject) => (
                         <SelectItem key={subject.id || subject._id} value={subject.id || subject._id || ""} className="text-xs font-bold uppercase">
-                          {subject.subject_name}
+                          {subject.subject_name} {subject.subject_code ? `[${subject.subject_code}]` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -508,7 +510,7 @@ const BankListPage = () => {
               <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -543,7 +545,7 @@ const BankListPage = () => {
               <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                 <SelectItem value="all">All Subjects</SelectItem>
                 {filterSubjects.map((subject) => (
-                  <SelectItem key={subject.id || subject._id} value={subject.id || subject._id || ""}>{subject.subject_name}</SelectItem>
+                  <SelectItem key={subject.id || subject._id} value={subject.id || subject._id || ""}>{subject.subject_name} {subject.subject_code ? `[${subject.subject_code}]` : ''}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -712,7 +714,7 @@ const BankListPage = () => {
                   <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id} className="text-xs font-bold uppercase">
-                        {cat.name}
+                        {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -750,7 +752,7 @@ const BankListPage = () => {
                   <SelectContent className="rounded-2xl border-slate-800 bg-slate-950 text-slate-100">
                     {getFilteredSubjects(editForm.course_id).map((subject) => (
                       <SelectItem key={subject.id || subject._id} value={subject.id || subject._id || ""} className="text-xs font-bold uppercase">
-                        {subject.subject_name}
+                        {subject.subject_name} {subject.subject_code ? `[${subject.subject_code}]` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

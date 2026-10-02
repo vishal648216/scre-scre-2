@@ -1207,6 +1207,14 @@ pub async fn download_receipt_by_transaction_id(
     }
 
     let chromium_paths = [
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        "msedge.exe",
+        "chrome.exe",
+        "msedge",
+        "chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
@@ -1278,6 +1286,17 @@ pub async fn download_receipt_by_transaction_id(
             pdf_content,
         ).into_response()
     } else {
+        if let Ok(html_content) = fs::read(&abs_html_path) {
+            let _ = fs::remove_file(&abs_html_path);
+            let _ = fs::remove_file(&abs_pdf_path);
+            return (
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+                ],
+                html_content,
+            ).into_response();
+        }
         let _ = fs::remove_file(&abs_html_path);
         (
             StatusCode::INTERNAL_SERVER_ERROR,

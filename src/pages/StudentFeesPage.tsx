@@ -317,27 +317,32 @@ const StudentFeesPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
+      <div className="space-y-6 pb-12 text-zinc-100">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/90 p-6 rounded-2xl border border-zinc-800 shadow-xl backdrop-blur-md">
           <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Student Fee Management</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Manage fee collections and track student payments efficiently.</p>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                Center Fee Management & Collection
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-white mt-1">Student Fee Ledger</h1>
+            <p className="text-zinc-400 text-xs mt-1">Collect fees, manage installments, and track student dues across center programs.</p>
           </div>
           {countryFeeRules.length > 0 && (
-            <div className="flex items-center gap-2 bg-card border border-border px-3 py-2 rounded-xl shadow-sm">
-              <Globe className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Currency:</span>
+            <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded-xl shadow-sm">
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Currency:</span>
               <select
                 value={selectedCurrency.country_code}
                 onChange={(e) => {
                   const rule = countryFeeRules.find(r => r.country_code === e.target.value);
                   if (rule) setSelectedCurrency(rule);
                 }}
-                className="bg-transparent text-xs font-bold text-foreground outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-zinc-200 outline-none cursor-pointer"
               >
                 {countryFeeRules.map(rule => (
-                  <option key={rule.country_code} value={rule.country_code} className="bg-popover text-foreground">
+                  <option key={rule.country_code} value={rule.country_code} className="bg-zinc-900 text-zinc-200">
                     {rule.country_name} ({rule.currency_symbol} {rule.currency_code})
                   </option>
                 ))}
@@ -348,136 +353,115 @@ const StudentFeesPage = () => {
 
         {/* Search Bar */}
         <div className="relative w-full max-w-2xl">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
-            placeholder="Search by Student Name, Father Name, Enrollment No, Registration No, Course..."
+            placeholder="Search student by name, father's name, roll, course, or registration no..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-14 pr-6 py-4 bg-card border border-border rounded-xl shadow-sm text-sm font-medium focus:border-primary outline-none transition-all"
+            className="w-full pl-11 pr-4 py-3 bg-zinc-900/90 border border-zinc-800 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors shadow-lg"
           />
         </div>
 
-        {/* Student Table */}
-        <Card className="rounded-xl border-border shadow-lg overflow-hidden">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50 sticky top-0 z-10">
-                  <tr className="border-b border-border">
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">S.No</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Student Name</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Father Name</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Enrollment No</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Contact No</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Course</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Fee</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Paid Amount</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Balance Due</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Due Date</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground" >Remarks</th>
-                    <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">Action</th>
+        {/* Student Fee Ledger Table Card */}
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-zinc-950/80 border-b border-zinc-800 text-zinc-400 uppercase tracking-wider text-[10px]">
+                  <th className="py-3.5 px-4 font-bold">#</th>
+                  <th className="py-3.5 px-4 font-bold">Student Profile</th>
+                  <th className="py-3.5 px-4 font-bold">Guardian / Father</th>
+                  <th className="py-3.5 px-4 font-bold">Enrollment No</th>
+                  <th className="py-3.5 px-4 font-bold">Contact</th>
+                  <th className="py-3.5 px-4 font-bold">Course</th>
+                  <th className="py-3.5 px-4 font-bold">Total Fee</th>
+                  <th className="py-3.5 px-4 font-bold">Paid Fee</th>
+                  <th className="py-3.5 px-4 font-bold">Balance Dues</th>
+                  <th className="py-3.5 px-4 font-bold">Due Date</th>
+                  <th className="py-3.5 px-4 font-bold">Remarks</th>
+                  <th className="py-3.5 px-4 font-bold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/60">
+                {currentStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="py-12 text-center text-zinc-500 text-xs">
+                      No student fee records found
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {currentStudents.map((student, index) => {
+                ) : (
+                  currentStudents.map((student, index) => {
                     const studentFees = getStudentFees(student.id);
                     return (
-                      <tr
-                        key={student.id}
-                        className="hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="py-4 px-6 text-sm font-medium">
+                      <tr key={student.id} className="hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3 px-4 text-zinc-500 font-mono">
                           {indexOfFirstStudent + index + 1}
                         </td>
-                        <td className="py-4 px-6">
+                        <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                              <User className="w-4 h-4 text-primary" />
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                              <User className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-foreground">
-                                {student.fullName || student.username}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {student.registrationNumber}
-                              </p>
+                              <p className="font-bold text-zinc-100">{student.fullName || student.username}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono">{student.registrationNumber || `@${student.username}`}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-sm text-muted-foreground">
-                          {student.fatherName || "-"}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-muted-foreground">
-                          {student.enrollmentNumber || "-"}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-muted-foreground">
-                          {student.phone || "-"}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-muted-foreground">
-                          {student.course || "-"}
-                        </td>
-                        <td className="py-4 px-6 text-sm font-bold text-foreground">
-                          {formatFee(student.totalFee ?? 0)}
-                        </td>
-                        <td className="py-4 px-6 text-sm font-bold text-emerald-600">
-                          {formatFee(student.paidAmount ?? 0)}
-                        </td>
-                        <td className="py-4 px-6 text-sm font-bold text-orange-600">
-                          {formatFee(student.balanceDue ?? 0)}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-muted-foreground">
-                      <input
-                        type="date"
-                        value={student.dueDate || ""}
-                        onChange={async (e) => {
-                            const newDueDate = e.target.value || null;
-                            try {
+                        <td className="py-3 px-4 text-zinc-400">{student.fatherName || "-"}</td>
+                        <td className="py-3 px-4 text-zinc-400 font-mono">{student.enrollmentNumber || "-"}</td>
+                        <td className="py-3 px-4 text-zinc-400">{student.phone || "-"}</td>
+                        <td className="py-3 px-4 text-zinc-300 font-medium">{student.course || "-"}</td>
+                        <td className="py-3 px-4 text-zinc-200 font-bold">{formatFee(student.totalFee ?? 0)}</td>
+                        <td className="py-3 px-4 text-emerald-400 font-bold">{formatFee(student.paidAmount ?? 0)}</td>
+                        <td className="py-3 px-4 text-amber-400 font-bold">{formatFee(student.balanceDue ?? 0)}</td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="date"
+                            value={student.dueDate || ""}
+                            onChange={async (e) => {
+                              const newDueDate = e.target.value || null;
+                              try {
                                 const response = await apiFetch(`/api/students/${student.id}`, {
-                                    method: "PUT",
-                                    body: JSON.stringify({ dueDate: newDueDate }),
+                                  method: "PUT",
+                                  body: JSON.stringify({ dueDate: newDueDate }),
                                 });
                                 if (response.ok) {
-                                    // Update local state
-                                    setStudents(prev => prev.map(s => 
-                                      s.id === student.id ? { ...s, dueDate: newDueDate || undefined } : s
-                                    ));
+                                  setStudents(prev => prev.map(s => 
+                                    s.id === student.id ? { ...s, dueDate: newDueDate || undefined } : s
+                                  ));
                                 }
-                            } catch (error) {
+                              } catch (error) {
                                 console.error("Error updating due date", error);
-                            }
-                        }}
-                        className="w-full px-2 py-1 border border-border rounded-md bg-background text-sm focus:border-primary outline-none"
-                      />
-                    </td>
-                    <td className="py-4 px-6 text-sm text-muted-foreground" >
-                      <textarea
-                        value={localRemarks[student.id] ?? student.remarks ?? ""}
-                        onChange={(e) => {
-                          const newRemarks = e.target.value;
-                          // Update local state immediately
-                          setLocalRemarks(prev => ({
-                            ...prev,
-                            [student.id]: newRemarks
-                          }));
-                          // Debounce the API call
-                          updateStudentRemarks(student.id, newRemarks);
-                        }}
-                        placeholder="Add remarks..."
-                        className="w-full px-2 py-1 border border-border rounded-md bg-background text-sm focus:border-primary outline-none min-h-[50px] resize-vertical"
-                      />
-                    </td>
-                    <td className="py-4 px-6">
-                          <div className="flex items-center gap-2">
+                              }
+                            }}
+                            className="px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-emerald-500"
+                          />
+                        </td>
+                        <td className="py-3 px-4">
+                          <textarea
+                            value={localRemarks[student.id] ?? student.remarks ?? ""}
+                            onChange={(e) => {
+                              const newRemarks = e.target.value;
+                              setLocalRemarks(prev => ({ ...prev, [student.id]: newRemarks }));
+                              updateStudentRemarks(student.id, newRemarks);
+                            }}
+                            placeholder="Add remarks..."
+                            className="w-full px-2 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-300 focus:outline-none focus:border-emerald-500 min-h-[40px] resize-none"
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => openManageModal(student)}
-                              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all flex items-center gap-2"
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1"
                             >
-                              Manage
+                              Collect Fee
                             </button>
                             <button
                               onClick={() => void downloadReceipt(student.id)}
-                              className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-all"
-                              title="Download Fee Receipt"
+                              className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-emerald-400 rounded-xl transition-all border border-zinc-700"
+                              title="Download Receipt"
                             >
                               <Download className="w-4 h-4" />
                             </button>
@@ -485,191 +469,182 @@ const StudentFeesPage = () => {
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20">
-                <p className="text-sm text-muted-foreground">
-                  Showing {indexOfFirstStudent + 1} to {Math.min(indexOfLastStudent, filteredStudents.length)} of {filteredStudents.length} students
-                </p>
-                <div className="flex items-center gap-2">
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-800 bg-zinc-950/60">
+              <p className="text-xs text-zinc-400">
+                Showing {indexOfFirstStudent + 1} to {Math.min(indexOfLastStudent, filteredStudents.length)} of {filteredStudents.length} students
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-zinc-800 rounded-xl bg-zinc-900 text-zinc-300 hover:bg-zinc-800 transition-all disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 border border-border rounded-lg hover:bg-muted transition-all disabled:opacity-50"
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "w-8 h-8 rounded-xl text-xs font-bold transition-all",
+                      currentPage === page
+                        ? "bg-emerald-600 text-white"
+                        : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-800"
+                    )}
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    {page}
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={cn(
-                        "w-10 h-10 rounded-lg text-sm font-bold transition-all",
-                        currentPage === page
-                          ? "bg-primary text-white"
-                          : "bg-card border border-border hover:bg-muted"
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 border border-border rounded-lg hover:bg-muted transition-all disabled:opacity-50"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-zinc-800 rounded-xl bg-zinc-900 text-zinc-300 hover:bg-zinc-800 transition-all disabled:opacity-50"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
 
-        {/* Manage Modal */}
+        {/* Manage Fee Modal */}
         {isManageModalOpen && selectedStudent && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-border flex items-center justify-between">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="p-6 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-black text-foreground uppercase tracking-tight">Manage Fee</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedStudent.fullName || selectedStudent.username}
-                  </p>
+                  <h3 className="text-lg font-bold text-white uppercase tracking-tight">Collect Fee Payment</h3>
+                  <p className="text-xs text-zinc-400 mt-0.5">Candidate: <strong className="text-emerald-400">{selectedStudent.fullName || selectedStudent.username}</strong></p>
                 </div>
                 <button
                   onClick={() => setIsManageModalOpen(false)}
-                  className="p-2 hover:bg-muted rounded-lg transition-all"
+                  className="p-1.5 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl transition-all"
                 >
-                  <XCircle className="w-6 h-6 text-muted-foreground" />
+                  <XCircle className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-6 space-y-6">
+
+              <div className="p-6 space-y-5">
                 {/* Fee Summary */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Fee</p>
-                    <p className="text-2xl font-black text-primary">{formatFee(selectedStudent.totalFee ?? 0)}</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Course Fee</p>
+                    <p className="text-xl font-bold text-white mt-0.5">{formatFee(selectedStudent.totalFee ?? 0)}</p>
                   </div>
-                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/30">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Paid Amount</p>
-                    <p className="text-2xl font-black text-emerald-600">{formatFee(selectedStudent.paidAmount ?? 0)}</p>
+                  <div className="bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-500/20">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Amount Paid</p>
+                    <p className="text-xl font-bold text-emerald-300 mt-0.5">{formatFee(selectedStudent.paidAmount ?? 0)}</p>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 dark:border-orange-900/30">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Balance Due</p>
-                    <p className="text-2xl font-black text-orange-600">{formatFee(selectedStudent.balanceDue ?? 0)}</p>
+                  <div className="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/20">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Remaining Balance</p>
+                    <p className="text-xl font-bold text-amber-300 mt-0.5">{formatFee(selectedStudent.balanceDue ?? 0)}</p>
                   </div>
                 </div>
 
-                {/* Payment Type */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Type</label>
-                  <select
-                    value={paymentType}
-                    onChange={(e) => setPaymentType(e.target.value as PaymentType)}
-                    className="w-full px-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                  >
-                    <option value="one_time">One Time</option>
-                    <option value="installment">Installment</option>
-                    <option value="late_fee">Late Fee</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300">Payment Type</label>
+                    <select
+                      value={paymentType}
+                      onChange={(e) => setPaymentType(e.target.value as PaymentType)}
+                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="one_time">One Time Payment</option>
+                      <option value="installment">Installment Payment</option>
+                      <option value="late_fee">Late Fine Fee</option>
+                      <option value="other">Other Charge</option>
+                    </select>
+                  </div>
 
-                {/* Payment Name */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Name</label>
-                  <input
-                    type="text"
-                    value={paymentName}
-                    onChange={(e) => setPaymentName(e.target.value)}
-                    className="w-full px-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                  />
-                </div>
-
-                {/* Amount */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</label>
-                  <div className="relative">
-                    <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300">Payment Label</label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                      placeholder="Enter amount"
+                      type="text"
+                      value={paymentName}
+                      onChange={(e) => setPaymentName(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
-                </div>
 
-                {/* Payment Date */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="date"
-                      value={paymentDate}
-                      onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Payment Mode */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Mode</label>
-                  <select
-                    value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
-                    className="w-full px-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                    <option value="card">Card</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="cheque">Cheque</option>
-                  </select>
-                </div>
-
-                {/* Reference Number */}
-                {paymentMode !== "cash" && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Reference Number <span className="text-red-500">*</span>
-                    </label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300">Amount to Collect (₹)</label>
                     <div className="relative">
-                      <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                        placeholder="Enter collection amount"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300">Payment Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-300">Payment Mode</label>
+                    <select
+                      value={paymentMode}
+                      onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
+                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="cash">Cash Payment</option>
+                      <option value="upi">UPI / Online App</option>
+                      <option value="card">Credit / Debit Card</option>
+                      <option value="bank_transfer">Bank Transfer / NEFT</option>
+                      <option value="cheque">Demand Draft / Cheque</option>
+                    </select>
+                  </div>
+
+                  {paymentMode !== "cash" && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-300">Transaction Ref No *</label>
                       <input
                         type="text"
                         value={referenceNumber}
                         onChange={(e) => setReferenceNumber(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 border border-border rounded-xl bg-background text-sm font-bold focus:border-primary outline-none"
-                        placeholder="Enter reference number"
+                        className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                        placeholder="e.g. UTR / Transaction ID"
                       />
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-              <div className="p-6 border-t border-border flex justify-end gap-3">
+
+              <div className="p-5 border-t border-zinc-800 bg-zinc-950/60 flex justify-end gap-3">
                 <button
                   onClick={() => setIsManageModalOpen(false)}
-                  className="px-6 py-3 border border-border rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-muted transition-all"
+                  className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleMakePayment}
-                  className="px-6 py-3 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all"
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg"
                 >
-                  Make Payment
+                  Collect Fee Payment
                 </button>
               </div>
             </div>
@@ -678,37 +653,38 @@ const StudentFeesPage = () => {
 
         {/* Confirmation Dialog */}
         {isConfirmDialogOpen && selectedStudent && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-amber-600" />
-                </div>
-                <h3 className="text-xl font-black text-foreground uppercase tracking-tight mb-2">Confirm Payment</h3>
-                <p className="text-muted-foreground mb-4">
-                    Are you sure you want to collect <span className="font-bold text-emerald-600">₹{parseFloat(amount).toLocaleString()}</span> from {selectedStudent.fullName || selectedStudent.username}?
-                  </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setIsConfirmDialogOpen(false)}
-                    disabled={isSubmitting}
-                    className="px-6 py-3 border border-border rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-muted transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmAndSubmitPayment}
-                    disabled={isSubmitting}
-                    className="px-6 py-3 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-70 flex items-center gap-2"
-                  >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {isSubmitting ? "Processing..." : "Confirm"}
-                  </button>
-                </div>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+            <div className="bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 p-6 text-center space-y-4">
+              <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white uppercase tracking-tight">Confirm Fee Collection</h3>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Collect <strong className="text-emerald-400">₹{parseFloat(amount).toLocaleString()}</strong> for candidate <strong className="text-white">{selectedStudent.fullName || selectedStudent.username}</strong>?
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center pt-2">
+                <button
+                  onClick={() => setIsConfirmDialogOpen(false)}
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmAndSubmitPayment}
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSubmitting ? "Processing..." : "Confirm Collection"}
+                </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

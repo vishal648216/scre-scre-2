@@ -153,44 +153,64 @@ const AdminCenterFeesPage = () => {
         </div>
 
         {/* Top Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="rounded-none border-border bg-card p-6 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Student Fees Collected</p>
-            <div className="text-2xl font-extrabold text-emerald-600 flex items-center gap-1">
-              ₹{grandTotalCollected.toLocaleString("en-IN")}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold">Committed: ₹{grandTotalCommitted.toLocaleString("en-IN")}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Student Fees</p>
+                <h3 className="text-2xl font-black text-emerald-400 mt-1">₹{grandTotalCollected.toLocaleString("en-IN")}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Committed: ₹{grandTotalCommitted.toLocaleString("en-IN")}</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <IndianRupee className="w-6 h-6" />
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border bg-card p-6 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Super Admin Royalty Earned</p>
-            <div className="text-2xl font-extrabold text-primary flex items-center gap-1">
-              ₹{grandTotalRoyalty.toLocaleString("en-IN")}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold">Default Share: 15%</p>
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Super Admin Royalty</p>
+                <h3 className="text-2xl font-black text-primary mt-1">₹{grandTotalRoyalty.toLocaleString("en-IN")}</h3>
+                <p className="text-[10px] text-primary/80 mt-0.5">Default Share: 15%</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Percent className="w-6 h-6" />
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border bg-card p-6 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Registered Centers</p>
-            <div className="text-2xl font-extrabold text-foreground flex items-center gap-1">
-              {centers.length}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold">Active Franchise Partners</p>
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Registered Centers</p>
+                <h3 className="text-2xl font-black text-zinc-100 mt-1">{centers.length}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Active Franchise Partners</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                <Building2 className="w-6 h-6" />
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="rounded-none border-border bg-card p-6 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Enrolled Students</p>
-            <div className="text-2xl font-extrabold text-foreground flex items-center gap-1">
-              {students.length}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold">Across All Centers</p>
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Students</p>
+                <h3 className="text-2xl font-black text-sky-400 mt-1">{students.length}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Across All Centers</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <Users className="w-6 h-6" />
+              </div>
+            </CardContent>
           </Card>
         </div>
 
         {/* Center-wise Fees Table */}
-        <Card className="rounded-none border-border overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between py-4">
-            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+        <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-xl">
+          <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 flex flex-row items-center justify-between py-4 px-6">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
               <Building2 className="w-4 h-4 text-primary" />
               Center-Wise Fee Collection & Royalty Setup
             </CardTitle>
@@ -202,14 +222,14 @@ const AdminCenterFeesPage = () => {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : feeStatsByCenter.length === 0 ? (
-              <div className="py-16 text-center text-muted-foreground text-xs font-bold uppercase tracking-widest">
+              <div className="py-16 text-center text-zinc-400 text-xs font-bold uppercase tracking-widest">
                 No center fee data available.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-border bg-muted/20 text-muted-foreground uppercase text-[10px] font-black tracking-widest">
+                    <tr className="border-b border-zinc-800 bg-zinc-950/80 text-zinc-400 uppercase text-[11px] font-bold tracking-wider">
                       <th className="py-4 px-6">Center Details</th>
                       <th className="py-4 px-6">Students</th>
                       <th className="py-4 px-6">Student Fees Collected</th>
@@ -220,37 +240,37 @@ const AdminCenterFeesPage = () => {
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-zinc-800/60">
                     {feeStatsByCenter.map(({ center, studentCount, totalCollectedFees, royaltyRate, royaltyAmount, franchiseFeeAmount, netCenterEarnings }) => (
-                      <tr key={center.id} className="hover:bg-muted/10 transition-colors">
+                      <tr key={center.id} className="hover:bg-zinc-800/40 transition-colors">
                         <td className="py-4 px-6">
-                          <div className="font-black text-sm uppercase text-foreground">{center.name}</div>
-                          <span className="text-[10px] text-muted-foreground font-mono">CODE: {center.code} • Owner: {center.owner_name}</span>
+                          <div className="font-bold text-sm text-zinc-100">{center.name}</div>
+                          <span className="text-[10px] text-zinc-400 font-mono">CODE: {center.code} • Owner: {center.owner_name}</span>
                         </td>
 
                         <td className="py-4 px-6 font-bold">
-                          <span className="px-2.5 py-1 bg-muted border border-border text-[10px] font-mono">
+                          <span className="px-3 py-1 bg-zinc-950/60 border border-zinc-800 rounded-full text-zinc-300 text-[10px] font-mono">
                             {studentCount} Students
                           </span>
                         </td>
 
-                        <td className="py-4 px-6 font-extrabold text-emerald-600">
+                        <td className="py-4 px-6 font-black text-emerald-400 text-sm">
                           ₹{totalCollectedFees.toLocaleString("en-IN")}
                         </td>
 
-                        <td className="py-4 px-6 font-bold text-amber-600">
+                        <td className="py-4 px-6 font-bold text-amber-400">
                           {royaltyRate}%
                         </td>
 
-                        <td className="py-4 px-6 font-extrabold text-primary">
+                        <td className="py-4 px-6 font-black text-primary text-sm">
                           ₹{royaltyAmount.toLocaleString("en-IN")}
                         </td>
 
-                        <td className="py-4 px-6 font-extrabold text-foreground">
+                        <td className="py-4 px-6 font-bold text-zinc-200">
                           ₹{netCenterEarnings.toLocaleString("en-IN")}
                         </td>
 
-                        <td className="py-4 px-6 font-bold text-muted-foreground">
+                        <td className="py-4 px-6 font-semibold text-zinc-400">
                           ₹{franchiseFeeAmount.toLocaleString("en-IN")}
                         </td>
 
@@ -259,9 +279,9 @@ const AdminCenterFeesPage = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => openSetupModal(center)}
-                            className="rounded-none font-black text-[10px] uppercase tracking-wider border-primary/30 text-primary hover:bg-primary/10 gap-1"
+                            className="rounded-xl font-bold text-xs uppercase tracking-wider border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200 gap-1.5"
                           >
-                            <Settings className="w-3.5 h-3.5" /> Setup Fee
+                            <Settings className="w-3.5 h-3.5 text-primary" /> Setup Fee
                           </Button>
                         </td>
                       </tr>

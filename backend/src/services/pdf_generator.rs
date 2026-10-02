@@ -25,9 +25,23 @@ impl PdfGenerator {
             std::ffi::OsStr::new("--disable-web-security"),
         ]);
 
-        // Prefer apt-installed browsers FIRST — snap Chromium has sandbox/navigation issues
+        // Prefer apt-installed or local Windows browser binaries FIRST — snap Chromium has sandbox/navigation issues
         // even with --no-sandbox. Fall back to snap chromium only as last resort.
-        let paths = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium-browser", "/usr/bin/chromium", "/snap/bin/chromium"];
+        let paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            "msedge.exe",
+            "chrome.exe",
+            "msedge",
+            "chrome",
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+            "/snap/bin/chromium",
+        ];
         for path in paths {
             if std::path::Path::new(path).exists() {
                 println!("Using browser binary at: {}", path);

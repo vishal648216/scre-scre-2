@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface Subject {
   id: string;
   subject_name: string;
+  subject_code?: string;
 }
 
 interface Material {
@@ -227,7 +228,10 @@ const AdminStudyMaterialPage: React.FC = () => {
     }
   };
 
-  const getSubjectName = (id: string) => subjects.find((s) => s.id === id)?.subject_name || "Unknown Subject";
+  const getSubjectName = (id: string) => {
+    const s = subjects.find((sub) => sub.id === id);
+    return s ? `${s.subject_name}${s.subject_code ? ` [${s.subject_code}]` : ''}` : "Unknown Subject";
+  };
 
   // Filtered materials
   const filteredMaterials = useMemo(() => {
@@ -389,7 +393,7 @@ const AdminStudyMaterialPage: React.FC = () => {
                         <option value="">Select Subject</option>
                         {subjects.map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.subject_name}
+                            {s.subject_name} {s.subject_code ? `[${s.subject_code}]` : ''}
                           </option>
                         ))}
                       </select>

@@ -70,7 +70,7 @@ pub async fn create_subject(
     claims: Claims,
     Json(payload): Json<CreateSubjectRequest>,
 ) -> (StatusCode, Json<SubjectResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (
             StatusCode::FORBIDDEN,
             Json(SubjectResponse {
@@ -106,6 +106,13 @@ pub async fn create_subject(
         }
     };
 
+    let (created_by_center_id, created_by_center_name) = if claims.role == UserRole::Center || claims.role == UserRole::Staff {
+        let (cid, cname) = crate::handlers::course::resolve_center_info_for_claims(&db, &claims).await;
+        (cid, cname)
+    } else {
+        (None, None)
+    };
+
     let now = Utc::now();
     let sub = Subject {
         id: None,
@@ -114,6 +121,8 @@ pub async fn create_subject(
         description: payload.description,
         status: payload.status.unwrap_or_else(|| "active".to_string()),
         created_at: now,
+        created_by_center_id,
+        created_by_center_name,
     };
     match coll.insert_one(sub, None).await {
         Ok(_) => (
@@ -217,7 +226,7 @@ pub async fn update_subject(
     Path(id): Path<String>,
     Json(payload): Json<UpdateSubjectRequest>,
 ) -> (StatusCode, Json<SubjectResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (
             StatusCode::FORBIDDEN,
             Json(SubjectResponse {
@@ -289,7 +298,7 @@ pub async fn delete_subject(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<SubjectResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (
             StatusCode::FORBIDDEN,
             Json(SubjectResponse {

@@ -6,9 +6,6 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   BookOpen,
@@ -16,10 +13,11 @@ import {
   Clock,
   BookMarked,
   Flame,
-  ExternalLink,
   Loader2,
   X,
   Sparkles,
+  BookmarkCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, flattenBson } from "@/lib/api";
@@ -147,16 +145,13 @@ export default function StudentLibraryPage() {
     setReadingBook(book);
     setSessionSeconds(0);
 
-    // Stop existing timers
     if (timerRef.current) clearInterval(timerRef.current);
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
 
-    // Session seconds timer
     timerRef.current = setInterval(() => {
       setSessionSeconds((prev) => prev + 1);
     }, 1000);
 
-    // 30-second heartbeat to backend
     const bookId = book._id || book.id || "";
     heartbeatRef.current = setInterval(() => {
       sendHeartbeat(bookId, 30);
@@ -207,36 +202,113 @@ export default function StudentLibraryPage() {
     return matchesSearch && matchesCategory;
   });
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
-        {/* Header & Stats Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-background border-2 border-primary/20 flex flex-col justify-between">
+  const handleDownloadSlip = (issue: MyIssue) => {
+    const slipWindow = window.open("", "_blank", "width=800,height=600");
+    if (!slipWindow) {
+      toast.error("Please allow popups to download/print the library slip");
+      return;
+    }
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Library Book Issue Slip - ${issue.document_number || "SLIP"}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #f8fafc; color: #0f172a; }
+          .slip-card { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 16px; border: 2px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+          .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 20px; margin-bottom: 20px; }
+          .logo { font-size: 22px; font-weight: 900; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+          .sub-logo { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 4px; }
+          .title { font-size: 16px; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-top: 15px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+          .label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; }
+          .val { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: #e0e7ff; color: #4338ca; }
+          .barcode { text-align: center; padding: 15px; background: #f1f5f9; border-radius: 12px; font-family: monospace; font-weight: 700; letter-spacing: 4px; margin-top: 20px; }
+          .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #94a3b8; font-weight: 600; }
+          @media print {
+            body { padding: 0; background: #fff; }
+            .slip-card { border: 1px solid #000; box-shadow: none; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="slip-card">
+          <div class="header">
+            <div class="logo">SCRE ACADEMIC LIBRARY</div>
+            <div class="sub-logo">${issue.center_name || "Central Academic Center"}</div>
+            <div class="title">Physical Book Issue Slip</div>
+          </div>
+          <div class="grid">
             <div>
-              <div className="flex items-center gap-2 text-primary font-black uppercase text-xs tracking-widest mb-1">
+              <div class="label">Slip / Doc Number</div>
+              <div class="val">${issue.document_number || "LIB-" + Math.floor(100000 + Math.random() * 900000)}</div>
+            </div>
+            <div>
+              <div class="label">Status</div>
+              <div class="val"><span class="status-badge">${issue.status || "ISSUED"}</span></div>
+            </div>
+            <div style="grid-column: span 2;">
+              <div class="label">Book Title</div>
+              <div class="val" style="font-size: 15px; font-weight: 900;">${issue.book_title}</div>
+            </div>
+            <div>
+              <div class="label">Issue Date</div>
+              <div class="val">${issue.issue_date?.split("T")[0] || "N/A"}</div>
+            </div>
+            <div>
+              <div class="label">Return Due Date</div>
+              <div class="val" style="color: #dc2626;">${issue.due_date?.split("T")[0] || "N/A"}</div>
+            </div>
+          </div>
+          <div class="barcode">
+            ||||| ||| ||||||| |||| |||||| ||| ${issue.document_number || "LIB-894102"}
+          </div>
+          <div class="footer">
+            Please present this slip when returning the physical book to the library center desk.
+          </div>
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="padding: 10px 24px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer;">Print / Download Slip PDF</button>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    slipWindow.document.write(html);
+    slipWindow.document.close();
+  };
+
+  return (
+    <DashboardLayout role="Student">
+      <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-500">
+        {/* Header & Stats Banner */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 p-8 bg-gradient-to-br from-slate-900 via-primary/10 to-slate-900 border border-primary/20 rounded-3xl shadow-2xl flex flex-col justify-between space-y-6">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest mb-2">
                 <Sparkles className="w-4 h-4" />
                 SCRE Digital Knowledge Hub
               </div>
-              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-foreground">
+              <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white">
                 Digital E-Library & Physical Book Slip
               </h1>
-              <p className="text-xs text-muted-foreground font-medium mt-1 max-w-xl">
+              <p className="text-xs md:text-sm text-slate-300 font-medium mt-2 max-w-2xl leading-relaxed">
                 Access curated IT textbooks, study modules, and official reference material.
-                Track your physical library borrowed books, due dates, and study hours!
+                Track your physical library borrowed books, due dates, and live study hours!
               </p>
             </div>
 
-            {/* Category Pills */}
-            <div className="flex flex-wrap gap-2 pt-4">
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap gap-2 pt-2">
               {categories.map((c) => (
                 <button
                   key={c}
                   onClick={() => setSelectedCategory(c)}
-                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all border ${
+                  className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${
                     selectedCategory === c
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground hover:bg-muted border-border"
+                      ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
+                      : "bg-slate-950/60 text-slate-300 hover:bg-slate-900 border-slate-800"
                   }`}
                 >
                   {c === "all" ? "All Subjects" : c}
@@ -246,37 +318,37 @@ export default function StudentLibraryPage() {
           </div>
 
           {/* Reading Metrics Card */}
-          <div className="p-6 bg-card border-2 border-border flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-2">
+          <div className="p-6 bg-card/80 backdrop-blur-xl border border-border rounded-3xl shadow-sm flex flex-col justify-between space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-primary" />
                 Your Reading Tracker
               </span>
-              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+              <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                 ACTIVE
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-3 bg-muted/30 border border-border">
-                <p className="text-2xl font-black text-foreground">
+              <div className="p-4 bg-muted/30 rounded-2xl border border-border">
+                <p className="text-3xl font-black text-foreground">
                   {stats.total_minutes}
                 </p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">
                   Minutes Read
                 </p>
               </div>
-              <div className="p-3 bg-muted/30 border border-border">
-                <p className="text-2xl font-black text-primary">
+              <div className="p-4 bg-muted/30 rounded-2xl border border-border">
+                <p className="text-3xl font-black text-primary">
                   {stats.books_count}
                 </p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-1">
                   Books Explored
                 </p>
               </div>
             </div>
 
-            <p className="text-[9px] text-muted-foreground uppercase text-center font-bold">
+            <p className="text-[10px] text-muted-foreground uppercase text-center font-bold leading-normal">
               Time spent reading in the E-reader counts towards your course engagement credit!
             </p>
           </div>
@@ -284,24 +356,24 @@ export default function StudentLibraryPage() {
 
         {/* Physical Borrowed Books Section */}
         {myIssues.length > 0 && (
-          <div className="p-4 bg-amber-500/10 border-2 border-amber-500/30 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-black text-amber-600 uppercase text-xs tracking-wider flex items-center gap-1.5">
+          <div className="p-6 bg-amber-500/10 border border-amber-500/30 rounded-3xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="font-black text-amber-600 dark:text-amber-400 uppercase text-xs tracking-wider flex items-center gap-2">
                 <BookMarked className="w-4 h-4" /> My Issued Physical Center Books ({myIssues.length})
               </span>
               <span className="text-[10px] text-muted-foreground uppercase font-bold">
                 Return before Due Date to Avoid Late Fines
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myIssues.map((issue) => {
                 const isOverdue = issue.status?.toUpperCase() === "OVERDUE";
                 const isReturned = issue.status?.toUpperCase() === "RETURNED";
                 return (
-                  <div key={issue._id || issue.id} className="p-3 bg-card border border-border shadow-sm space-y-1">
+                  <div key={issue._id || issue.id} className="p-4 bg-card rounded-2xl border border-border shadow-sm space-y-3">
                     <div className="flex justify-between items-start gap-2">
                       <h4 className="font-black uppercase text-xs line-clamp-1">{issue.book_title}</h4>
-                      <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shrink-0 ${
+                      <span className={`px-2.5 py-0.5 text-[8px] font-black uppercase tracking-widest rounded-full shrink-0 ${
                         isReturned ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
                         isOverdue ? "bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse" :
                         "bg-amber-500/10 text-amber-600 border border-amber-500/20"
@@ -310,10 +382,19 @@ export default function StudentLibraryPage() {
                       </span>
                     </div>
                     <p className="text-[10px] text-muted-foreground font-bold">{issue.center_name || "Central Library"}</p>
-                    <div className="flex justify-between text-[10px] text-muted-foreground font-mono pt-1 border-t border-border mt-2">
+                    <div className="flex justify-between text-[10px] text-muted-foreground font-mono pt-2 border-t border-border">
                       <span>Slip: {issue.document_number || "N/A"}</span>
                       <span className={isOverdue ? "text-rose-600 font-bold" : "text-emerald-600"}>Due: {issue.due_date?.split("T")[0]}</span>
                     </div>
+
+                    <Button
+                      onClick={() => handleDownloadSlip(issue)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-xl text-[10px] font-black uppercase tracking-wider h-8 gap-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                    >
+                      <Sparkles className="w-3 h-3" /> Download Issue Slip
+                    </Button>
                   </div>
                 );
               })}
@@ -323,27 +404,27 @@ export default function StudentLibraryPage() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search textbook title, author, topic..."
-            className="pl-9 h-11 rounded-none border-border font-bold text-xs"
+            className="pl-11 h-12 rounded-2xl border-border bg-card/80 font-bold text-xs"
           />
         </div>
 
         {/* Books Grid */}
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
               Loading library catalog...
             </p>
           </div>
         ) : filteredBooks.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 bg-muted/20 py-16 text-center">
+          <Card className="rounded-3xl border-dashed border-2 bg-muted/20 py-16 text-center">
             <CardContent className="space-y-3">
-              <BookMarked className="w-12 h-12 text-muted-foreground mx-auto" />
+              <BookMarked className="w-12 h-12 text-muted-foreground/40 mx-auto" />
               <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">
                 No books match your selection
               </p>
@@ -354,7 +435,7 @@ export default function StudentLibraryPage() {
             {filteredBooks.map((b) => (
               <Card
                 key={b._id || b.id}
-                className="rounded-none border-border shadow-md hover:border-primary/50 transition-all flex flex-col justify-between overflow-hidden group"
+                className="rounded-3xl border-border/80 bg-card hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-2xl hover:shadow-primary/5 flex flex-col justify-between overflow-hidden group"
               >
                 <div>
                   {/* Cover */}
@@ -363,7 +444,7 @@ export default function StudentLibraryPage() {
                       <img
                         src={b.cover_url}
                         alt={b.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = "none";
                         }}
@@ -376,28 +457,28 @@ export default function StudentLibraryPage() {
                         </span>
                       </div>
                     )}
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest bg-black/70 text-white backdrop-blur">
+                    <span className="absolute bottom-3 left-3 px-3 py-1 text-[8px] font-black uppercase tracking-widest bg-black/80 text-white backdrop-blur rounded-full border border-white/20">
                       {b.category}
                     </span>
                   </div>
 
                   {/* Info */}
-                  <div className="p-4 space-y-1.5">
-                    <h3 className="font-black uppercase tracking-tight text-foreground line-clamp-1 text-sm">
+                  <div className="p-5 space-y-2">
+                    <h3 className="font-heading font-black uppercase tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-1 text-sm">
                       {b.title}
                     </h3>
                     <p className="text-[11px] font-bold text-muted-foreground uppercase line-clamp-1">
                       By {b.author}
                     </p>
                     {b.description && (
-                      <p className="text-[11px] text-muted-foreground/80 line-clamp-2 leading-relaxed pt-1">
+                      <p className="text-[11px] text-muted-foreground/80 line-clamp-2 leading-relaxed pt-1 font-medium">
                         {b.description}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="p-4 pt-0 border-t border-border mt-3 space-y-3">
+                <div className="p-5 pt-0 border-t border-border mt-3 space-y-3">
                   <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase pt-2">
                     <span>{b.total_pages || 100} Pages</span>
                     <span className="flex items-center gap-1 text-emerald-600">
@@ -406,7 +487,7 @@ export default function StudentLibraryPage() {
                   </div>
                   <Button
                     onClick={() => openReader(b)}
-                    className="w-full rounded-none font-black text-xs uppercase tracking-widest gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 shadow"
+                    className="w-full rounded-2xl font-black text-xs uppercase tracking-widest gap-2 bg-primary text-white hover:bg-primary/90 h-11 shadow-md shadow-primary/20"
                   >
                     <BookOpen className="w-4 h-4" />
                     Read Online Now
@@ -420,18 +501,18 @@ export default function StudentLibraryPage() {
         {/* Digital Reader Modal */}
         {readingBook && (
           <Dialog open={!!readingBook} onOpenChange={(open) => !open && closeReader()}>
-            <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 rounded-none border-2 border-border shadow-2xl flex flex-col justify-between">
+            <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 rounded-3xl border border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden bg-slate-950">
               {/* Top Reader Toolbar */}
-              <div className="p-4 bg-muted/40 border-b border-border flex flex-wrap items-center justify-between gap-4">
+              <div className="p-4 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                     <BookOpen className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-black uppercase tracking-tight text-sm line-clamp-1">
+                    <h3 className="font-heading font-black uppercase tracking-tight text-sm text-white line-clamp-1">
                       {readingBook.title}
                     </h3>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                       By {readingBook.author} • {readingBook.category}
                     </p>
                   </div>
@@ -439,9 +520,9 @@ export default function StudentLibraryPage() {
 
                 {/* Live Reading Timer Badge */}
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary">
-                    <Clock className="w-4 h-4 animate-pulse" />
-                    <span className="text-xs font-black uppercase tracking-widest">
+                  <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary">
+                    <Clock className="w-4 h-4 animate-pulse text-primary" />
+                    <span className="text-xs font-black uppercase tracking-widest font-mono">
                       Session: {formatTimer(sessionSeconds)}
                     </span>
                   </div>
@@ -449,7 +530,7 @@ export default function StudentLibraryPage() {
                     variant="outline"
                     size="sm"
                     onClick={closeReader}
-                    className="rounded-none font-black text-xs uppercase tracking-widest h-8"
+                    className="rounded-2xl font-bold text-xs uppercase tracking-widest h-9 border-slate-700 text-white hover:bg-slate-800"
                   >
                     <X className="w-4 h-4 mr-1" /> Close Reader
                   </Button>
@@ -457,7 +538,7 @@ export default function StudentLibraryPage() {
               </div>
 
               {/* Reader Viewport */}
-              <div className="flex-1 bg-zinc-900 overflow-hidden relative flex items-center justify-center">
+              <div className="flex-1 bg-zinc-950 overflow-hidden relative flex items-center justify-center">
                 {readingBook.pdf_url ? (
                   <iframe
                     src={readingBook.pdf_url}
@@ -465,20 +546,21 @@ export default function StudentLibraryPage() {
                     className="w-full h-full border-none"
                   />
                 ) : (
-                  <div className="max-w-xl text-center p-8 space-y-4 bg-card border border-border m-6">
-                    <BookOpen className="w-16 h-16 text-primary mx-auto opacity-70" />
-                    <h4 className="text-lg font-black uppercase tracking-tight">
+                  <div className="max-w-xl text-center p-8 space-y-5 bg-slate-900 border border-slate-800 rounded-3xl m-6">
+                    <BookOpen className="w-16 h-16 text-primary mx-auto opacity-80" />
+                    <h4 className="text-xl font-black uppercase tracking-tight text-white">
                       {readingBook.title}
                     </h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-slate-300 leading-relaxed font-medium">
                       {readingBook.description ||
                         "This reference module is currently in interactive reading mode. Track your study time using the header counter."}
                     </p>
-                    <div className="p-4 bg-muted/30 border border-border text-left space-y-2 text-xs">
-                      <p className="font-black uppercase tracking-widest text-[10px] text-primary">
+                    <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-left space-y-2 text-xs">
+                      <p className="font-black uppercase tracking-widest text-[10px] text-primary flex items-center gap-1.5">
+                        <BookmarkCheck className="w-4 h-4" />
                         Chapter Outline & Study Notes
                       </p>
-                      <ul className="list-disc pl-4 space-y-1 text-muted-foreground text-[11px]">
+                      <ul className="list-disc pl-5 space-y-1 text-slate-400 text-[11px] font-medium">
                         <li>Core Principles and Theoretical Framework</li>
                         <li>Practical Workflows and Applied Case Studies</li>
                         <li>Review Questions and Evaluation Checklists</li>
@@ -489,15 +571,16 @@ export default function StudentLibraryPage() {
               </div>
 
               {/* Bottom Reader Footer */}
-              <div className="p-3 bg-muted/40 border-t border-border flex justify-between items-center text-xs">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">
+              <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-between items-center text-xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   Reading heartbeat active • Synced to Student Study Portfolio
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={closeReader}
-                  className="rounded-none font-bold text-xs uppercase tracking-widest h-7 text-primary"
+                  className="rounded-2xl font-black text-xs uppercase tracking-widest h-8 text-primary hover:bg-primary/10"
                 >
                   Finished Reading & Save Progress
                 </Button>
@@ -509,3 +592,5 @@ export default function StudentLibraryPage() {
     </DashboardLayout>
   );
 }
+
+

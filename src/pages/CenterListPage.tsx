@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { School, Search, ShieldCheck, ShieldAlert, MapPin, Phone, Filter, Loader2, Plus, Edit, Trash2, X, Save, FileText, Image as ImageIcon, Clock, Landmark, Laptop, EyeOff, BookOpen, CheckCircle, XCircle, Eye, CheckCircle2, Building, User, Mail, Globe, Percent, ArrowRightLeft } from "lucide-react";
+import { School, Search, Shield, ShieldCheck, ShieldAlert, MapPin, Phone, Filter, Loader2, Plus, Edit, Trash2, X, Save, FileText, Image as ImageIcon, Clock, Landmark, Laptop, EyeOff, BookOpen, CheckCircle, XCircle, Eye, CheckCircle2, Building, User, Mail, Globe, Percent, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -146,6 +146,36 @@ const CenterListPage = () => {
   const [targetMergeCenterId, setTargetMergeCenterId] = useState("");
   const [transferReason, setTransferReason] = useState("");
   const [transferringCenter, setTransferringCenter] = useState(false);
+
+  // View Profile Modal State for Center
+  const [viewingCenter, setViewingCenter] = useState<Center | null>(null);
+  const [showViewPassword, setShowViewPassword] = useState(false);
+  const [viewPasswordInput, setViewPasswordInput] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const handleSaveCenterPassword = async () => {
+    if (!viewingCenter || !viewPasswordInput) return;
+    setSavingPassword(true);
+    try {
+      const cid = toId(viewingCenter._id);
+      const res = await apiFetch(`/api/centers/${cid}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: viewPasswordInput })
+      });
+      if (res.ok) {
+        toast.success("Center password updated successfully!");
+        setViewingCenter({ ...viewingCenter, password: viewPasswordInput });
+        fetchCenters();
+      } else {
+        toast.error("Failed to update center password");
+      }
+    } catch {
+      toast.error("Error updating password");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   const openTransferCenterModal = (c: Center) => {
     setTransferCenterItem(c);
@@ -793,66 +823,128 @@ const CenterListPage = () => {
     return v;
   };
 
+  const activeCentersCount = (centers || []).filter(c => c.active).length;
+  const suspendedCentersCount = (centers || []).filter(c => !c.active).length;
+  const uniqueCitiesCount = new Set((centers || []).map(c => (c.city || c.location?.city || "").trim()).filter(Boolean)).size;
+
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-in fade-in duration-500 pb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Center Management</h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">View and manage all regional educational centers.</p>
+            <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight flex items-center gap-3">
+              <School className="w-8 h-8 text-primary" />
+              Center Management
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">View, monitor, and configure all regional educational centers across the network.</p>
           </div>
           <Link
             to="/dashboard/centers/add"
-            className="bg-primary text-primary-foreground px-6 py-3 rounded-none font-heading font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all flex items-center gap-2"
+            className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-heading font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2 shrink-0"
           >
             <Plus className="w-4 h-4" />
             Register New Center
           </Link>
         </div>
 
+        {/* Executive KPI Summary Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Total Centers</p>
+                <h3 className="text-2xl font-black text-zinc-100 mt-1">{centers.length}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Registered franchises</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <School className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Active Centers</p>
+                <h3 className="text-2xl font-black text-emerald-400 mt-1">{activeCentersCount}</h3>
+                <p className="text-[10px] text-emerald-500/80 mt-0.5">Operational & verified</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Suspended / Drafts</p>
+                <h3 className="text-2xl font-black text-amber-400 mt-1">{suspendedCentersCount}</h3>
+                <p className="text-[10px] text-amber-500/80 mt-0.5">Needs action / verification</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl hover:border-zinc-700 transition-all">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Cities Covered</p>
+                <h3 className="text-2xl font-black text-sky-400 mt-1">{uniqueCitiesCount}</h3>
+                <p className="text-[10px] text-sky-500/80 mt-0.5">Geographic footprint</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <MapPin className="w-6 h-6" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Search and Filter Bar */}
-        <Card className="rounded-none border-border shadow-sm">
+        <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl backdrop-blur-xl">
           <CardContent className="p-4 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input
                 type="text"
-                placeholder="SEARCH BY NAME, CODE OR CITY..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-muted/30 text-xs font-bold uppercase tracking-wider focus:border-primary focus:outline-none transition-all"
+                placeholder="Search centers by name, center code, or city..."
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-zinc-800 bg-zinc-950/80 text-sm font-medium text-zinc-100 placeholder:text-zinc-500 focus:border-primary focus:outline-none transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-border bg-card text-[10px] font-black uppercase tracking-[0.2em] hover:bg-muted transition-all" type="button">
-              <Filter className="w-3.5 h-3.5" />
-              Filter
+            <button className="flex items-center justify-center gap-2 px-6 py-3 border border-zinc-700 bg-zinc-800/80 text-zinc-200 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-zinc-800 transition-all" type="button">
+              <Filter className="w-4 h-4 text-primary" />
+              Filter Network
             </button>
           </CardContent>
         </Card>
 
         {/* Centers Table */}
-        <Card className="rounded-none border-border shadow-md overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b border-border py-4">
-            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+        <Card className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-xl overflow-hidden backdrop-blur-xl">
+          <CardHeader className="bg-zinc-950/50 border-b border-zinc-800 py-4 px-6 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-zinc-100">
               <School className="w-4 h-4 text-primary" />
-              Registered Centers ({filteredCenters.length})
+              Registered Network Centers ({filteredCenters.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
               <div className="p-20 flex flex-col items-center justify-center gap-4">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Loading centers...</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading center records...</p>
               </div>
             ) : filteredCenters.length === 0 ? (
               <div className="p-20 text-center">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No centers found matching your search.</p>
+                <p className="text-sm font-bold text-zinc-400 tracking-wide">No centers found matching your search query.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-muted/10 text-muted-foreground uppercase text-[10px] font-black tracking-widest">
+                    <tr className="border-b border-zinc-800 bg-zinc-950/80 text-zinc-400 uppercase text-[11px] font-bold tracking-wider">
                       <th className="py-4 pl-6">Center Details</th>
                       <th className="py-4">Contact Person</th>
                       <th className="py-4">Location</th>
@@ -860,48 +952,47 @@ const CenterListPage = () => {
                       <th className="py-4 text-right pr-6">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="font-medium">
+                  <tbody className="font-medium divide-y divide-zinc-800/60">
                     {filteredCenters.map((center) => (
-                      <tr key={center._id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors group">
+                      <tr key={center._id} className="hover:bg-zinc-800/40 transition-colors group">
                         <td className="py-5 pl-6">
                           <div className="flex flex-col">
-                            <span className="font-black text-foreground uppercase tracking-tight group-hover:text-primary transition-colors">{center.name}</span>
-                            <span className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-[0.1em]">Code: {center.code}</span>
-                          </div>
-                        </td>
-                        <td className="py-5">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-foreground uppercase">{center.owner_name}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
-                              <Phone className="w-3 h-3" /> {center.phone}
+                            <span className="font-bold text-zinc-100 text-base group-hover:text-primary transition-colors">{center.name}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Code: {center.code}</span>
+                              {center.config_validity?.validity_date && (
+                                <span className="text-[10px] font-semibold text-zinc-400">Valid till: {validityText(center)}</span>
+                              )}
                             </div>
                           </div>
                         </td>
                         <td className="py-5">
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase">
-                              <MapPin className="w-3 h-3 text-primary" /> {(center.location?.country || "—")} / {(center.state || center.location?.state || "—")} / {(center.city || center.location?.city || "—")}
+                            <span className="text-sm font-bold text-zinc-200">{center.owner_name}</span>
+                            <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
+                              <Phone className="w-3.5 h-3.5 text-zinc-500" /> {center.phone}
                             </div>
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{center.address}</span>
-                            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
-                              <span className="px-2 py-1 border border-border bg-muted/20">POSTAL: {center.location?.pincode || "—"}</span>
-                              <span className="px-2 py-1 border border-border bg-muted/20">Valid: {validityText(center)}</span>
+                          </div>
+                        </td>
+                        <td className="py-5">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-xs font-bold text-zinc-200 uppercase">
+                              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" /> {(center.location?.country || "India")} / {(center.state || center.location?.state || "—")} / {(center.city || center.location?.city || "—")}
                             </div>
+                            <span className="text-xs text-zinc-400 truncate max-w-[220px]">{center.address}</span>
                           </div>
                         </td>
                         <td className="py-5">
                           <div className="flex items-center justify-center">
                             {center.active ? (
-                              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/5 border border-green-500/20 text-green-500 rounded-none">
-                                <ShieldCheck className="w-3 h-3" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Active</span>
+                              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full">
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Active</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/5 border border-red-500/20 text-red-500 rounded-none">
-                                <ShieldAlert className="w-3 h-3" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Suspended</span>
+                              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-full">
+                                <ShieldAlert className="w-3.5 h-3.5" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Suspended</span>
                               </div>
                             )}
                           </div>
@@ -909,16 +1000,28 @@ const CenterListPage = () => {
                         <td className="py-5 text-right pr-6">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handlePreview(center._id)}
-                              className="p-2 border border-border hover:border-primary hover:text-primary transition-all rounded-none"
-                              title="Preview Center Details"
+                              onClick={() => {
+                                setViewingCenter(center);
+                                setShowViewPassword(false);
+                                setViewPasswordInput(center.password || (center as any).raw_password || "");
+                              }}
+                              className="p-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary transition-all flex items-center gap-1.5"
+                              title="View Full Center Profile & Password"
                             >
                               <Eye className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase hidden xl:inline">View Profile</span>
+                            </button>
+                            <button
+                              onClick={() => handlePreview(center._id)}
+                              className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white transition-all"
+                              title="Preview Center Print Layout"
+                            >
+                              <FileText className="w-4 h-4 text-purple-400" />
                             </button>
                             <button
                               onClick={() => handlePrint(center._id)}
                               disabled={printingId === center._id}
-                              className="p-2 border border-border hover:border-primary hover:text-primary transition-all rounded-none disabled:opacity-50"
+                              className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white transition-all disabled:opacity-50"
                               title="Print Center Details"
                             >
                               {printingId === center._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
@@ -927,8 +1030,8 @@ const CenterListPage = () => {
                               onClick={() => toggleCenterStatus(center._id)}
                               disabled={togglingId === center._id}
                               className={cn(
-                                "p-2 border border-border transition-all rounded-none",
-                                center.active ? "hover:border-destructive hover:text-destructive" : "hover:border-emerald-500 hover:text-emerald-500"
+                                "p-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 transition-all",
+                                center.active ? "hover:bg-rose-500/10 hover:border-rose-500/40 text-rose-400" : "hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-400"
                               )}
                               title={center.active ? t("Disable Center") : t("Enable Center")}
                             >
@@ -947,7 +1050,7 @@ const CenterListPage = () => {
                                 setReferralApplied(false);
                                 setIsEditModalOpen(true);
                               }}
-                              className="p-2 border border-border hover:border-primary hover:text-primary transition-all rounded-none"
+                              className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 hover:bg-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white transition-all"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -2654,6 +2757,208 @@ const CenterListPage = () => {
                 Download PDF
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* VIEW CENTER PROFILE & CREDENTIALS MODAL */}
+        <Dialog open={!!viewingCenter} onOpenChange={(open) => !open && setViewingCenter(null)}>
+          <DialogContent className="max-w-3xl bg-zinc-950 text-zinc-100 border-zinc-800 rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[85vh] z-[20000]">
+            {viewingCenter && (
+              <div className="space-y-6">
+                <DialogHeader className="border-b border-zinc-800 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                        <School className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tight text-zinc-100">
+                          {viewingCenter.name}
+                        </DialogTitle>
+                        <p className="text-xs font-bold text-primary uppercase tracking-widest mt-0.5">
+                          Center Code: {viewingCenter.code || viewingCenter.center_code || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border",
+                        viewingCenter.active
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                          : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                      )}
+                    >
+                      {viewingCenter.active ? "● Active" : "○ Suspended"}
+                    </span>
+                  </div>
+                </DialogHeader>
+
+                {/* Credentials & Password Section */}
+                <div className="bg-zinc-900/90 border border-amber-500/30 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> Center Login Credentials
+                    </h4>
+                    <span className="text-[10px] text-zinc-400 font-medium">Use these to log into Center Portal</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium">
+                    <div className="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800 space-y-1">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase">Username / Email</span>
+                      <p className="font-mono font-bold text-zinc-100 text-sm">{viewingCenter.email}</p>
+                    </div>
+
+                    <div className="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800 space-y-1">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase">Raw Password</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-amber-300 text-sm tracking-widest">
+                          {showViewPassword ? (viewingCenter.password || (viewingCenter as any).raw_password || "No plain password stored") : "••••••••••••"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowViewPassword(!showViewPassword)}
+                            className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors"
+                            title={showViewPassword ? "Hide Password" : "Show Raw Password"}
+                          >
+                            {showViewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                          {(viewingCenter.password || (viewingCenter as any).raw_password) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(viewingCenter.password || (viewingCenter as any).raw_password || "");
+                                toast.success("Password copied to clipboard!");
+                              }}
+                              className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-[10px] font-bold uppercase"
+                            >
+                              Copy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Inline Change Password Form */}
+                  <div className="pt-3 border-t border-zinc-800 flex flex-col sm:flex-row items-center gap-3">
+                    <div className="relative flex-1 w-full">
+                      <input
+                        type="text"
+                        placeholder="Enter new password to update..."
+                        className="w-full pl-4 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs font-bold text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 outline-none"
+                        value={viewPasswordInput}
+                        onChange={(e) => setViewPasswordInput(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingPassword || !viewPasswordInput}
+                      onClick={handleSaveCenterPassword}
+                      className="w-full sm:w-auto px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+                    >
+                      {savingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Password
+                    </button>
+                  </div>
+                </div>
+
+                {/* General Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800 space-y-2">
+                    <h5 className="font-bold uppercase tracking-wider text-primary text-[11px] flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" /> Owner & Contact Information
+                    </h5>
+                    <div className="space-y-1 text-zinc-300">
+                      <p><span className="text-zinc-500">Owner / Manager Name:</span> <strong className="text-zinc-100">{viewingCenter.owner_name}</strong></p>
+                      <p><span className="text-zinc-500">Phone Number:</span> <strong className="text-zinc-100">{viewingCenter.phone}</strong></p>
+                      <p><span className="text-zinc-500">Official Email:</span> <strong className="text-zinc-100">{viewingCenter.email}</strong></p>
+                      {viewingCenter.about_center && (
+                        <p><span className="text-zinc-500">About Center:</span> <span className="text-zinc-300">{viewingCenter.about_center}</span></p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800 space-y-2">
+                    <h5 className="font-bold uppercase tracking-wider text-primary text-[11px] flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" /> Center Location
+                    </h5>
+                    <div className="space-y-1 text-zinc-300">
+                      <p><span className="text-zinc-500">Country:</span> <strong className="text-zinc-100">{viewingCenter.location?.country || "India"}</strong></p>
+                      <p><span className="text-zinc-500">State / Province:</span> <strong className="text-zinc-100">{viewingCenter.state || viewingCenter.location?.state || "—"}</strong></p>
+                      <p><span className="text-zinc-500">City:</span> <strong className="text-zinc-100">{viewingCenter.city || viewingCenter.location?.city || "—"}</strong></p>
+                      <p><span className="text-zinc-500">District:</span> <strong className="text-zinc-100">{viewingCenter.district || viewingCenter.location?.district || "—"}</strong></p>
+                      <p><span className="text-zinc-500">Full Address:</span> <span className="text-zinc-300">{viewingCenter.address}</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Infrastructure & Banking */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800 space-y-2">
+                    <h5 className="font-bold uppercase tracking-wider text-sky-400 text-[11px] flex items-center gap-1.5">
+                      <Laptop className="w-3.5 h-3.5" /> Infrastructure & Facilities
+                    </h5>
+                    <div className="grid grid-cols-2 gap-2 text-zinc-300">
+                      <p><span className="text-zinc-500">Computers:</span> <strong>{viewingCenter.infrastructure?.computers ?? 0}</strong></p>
+                      <p><span className="text-zinc-500">Classrooms:</span> <strong>{viewingCenter.infrastructure?.classrooms ?? 0}</strong></p>
+                      <p><span className="text-zinc-500">Staff Count:</span> <strong>{viewingCenter.infrastructure?.staff ?? 0}</strong></p>
+                      <p><span className="text-zinc-500">Lab Type:</span> <strong>{viewingCenter.infrastructure?.lab_type || "Standard"}</strong></p>
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800 space-y-2">
+                    <h5 className="font-bold uppercase tracking-wider text-purple-400 text-[11px] flex items-center gap-1.5">
+                      <Landmark className="w-3.5 h-3.5" /> Banking & Validity
+                    </h5>
+                    <div className="space-y-1 text-zinc-300">
+                      <p><span className="text-zinc-500">Bank Name:</span> <strong>{viewingCenter.bank_details?.bank_name || "—"}</strong></p>
+                      <p><span className="text-zinc-500">Account No:</span> <strong>{viewingCenter.bank_details?.account_number || "—"}</strong></p>
+                      <p><span className="text-zinc-500">IFSC Code:</span> <strong>{viewingCenter.bank_details?.ifsc_code || "—"}</strong></p>
+                      <p><span className="text-zinc-500">Validity Until:</span> <strong className="text-amber-400">{viewingCenter.config_validity?.validity_date || "—"}</strong></p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Allotted Courses */}
+                <div className="bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800 space-y-2">
+                  <h5 className="font-bold uppercase tracking-wider text-amber-400 text-[11px] flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5" /> Allotted Courses
+                  </h5>
+                  <div className="flex flex-wrap gap-2">
+                    {(viewingCenter.course_allotment || []).map((c) => (
+                      <span key={c} className="px-2.5 py-1 bg-primary/10 border border-primary/20 text-[10px] font-black uppercase text-primary rounded-lg">
+                        {c}
+                      </span>
+                    ))}
+                    {(!viewingCenter.course_allotment || viewingCenter.course_allotment.length === 0) && (
+                      <span className="text-zinc-500 text-xs italic">No courses allotted yet</span>
+                    )}
+                  </div>
+                </div>
+
+                <DialogFooter className="border-t border-zinc-800 pt-4 flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingCenter(null)}
+                    className="rounded-xl font-bold uppercase text-xs"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const centerToEdit = viewingCenter;
+                      setViewingCenter(null);
+                      setExpandedCenter(centerToEdit);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="rounded-xl font-black uppercase text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Edit className="w-4 h-4 mr-2" /> Edit Center Details
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

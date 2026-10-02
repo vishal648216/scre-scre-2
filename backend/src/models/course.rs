@@ -68,6 +68,19 @@ pub struct Course {
     pub linked_typing_tests: Vec<ObjectId>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub linked_mock_tests: Vec<ObjectId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_id: Option<ObjectId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_by_center_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval_status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejection_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reviewed_by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(with = "crate::models::serde_helpers::optional_rfc3339_datetime")]
+    pub reviewed_at: Option<DateTime<Utc>>,
     #[serde(default = "chrono::Utc::now")]
     #[serde(with = "crate::models::serde_helpers::rfc3339_datetime")]
     pub created_at: DateTime<Utc>,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Pencil, Trash2, BookOpen, CheckCircle2, Clock, Code, AlertTriangle, ArrowRight, Upload, Image as ImageIcon, Star, Filter, Search, X, FileSpreadsheet } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, BookOpen, CheckCircle2, Clock, Code, AlertTriangle, ArrowRight, Upload, Image as ImageIcon, Star, Filter, Search, X, FileSpreadsheet, Building2 } from "lucide-react";
 import { BulkCsvUploadModal } from "@/components/BulkCsvUploadModal";
 import { toast } from "sonner";
 import { cn, normalizeAssetUrl } from "@/lib/utils";
@@ -42,6 +42,10 @@ interface Course {
   custom_unit_name?: string;
   eligibility?: string;
   status: string;
+  approval_status?: string;
+  rejection_reason?: string;
+  created_by_center_id?: string;
+  created_by_center_name?: string;
   created_at: string;
   featured_on_home?: boolean;
   home_feature_order?: number;
@@ -55,6 +59,7 @@ interface Category {
   id: string;
   _id?: string;
   name: string;
+  category_code?: string;
 }
 
 const AdminCoursesPage = () => {
@@ -289,7 +294,10 @@ const AdminCoursesPage = () => {
   };
 
   const featuredCount = courses.filter((c) => c.featured_on_home).length;
-  const getCategoryName = (id: string) => categories.find(c => (c.id === id || c._id === id))?.name || "Unknown";
+  const getCategoryName = (id: string) => {
+    const c = categories.find(cat => (cat.id === id || cat._id === id));
+    return c ? `${c.name}${c.category_code ? ` [${c.category_code}]` : ''}` : "Unknown";
+  };
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -511,7 +519,7 @@ const AdminCoursesPage = () => {
                               <option value="">Select category</option>
                               {categories.map((c) => (
                                 <option key={c._id || c.id} value={c._id || c.id}>
-                                  {c.name}
+                                  {c.name} {c.category_code ? `[${c.category_code}]` : ''}
                                 </option>
                               ))}
                             </select>
@@ -684,23 +692,23 @@ const AdminCoursesPage = () => {
                                   const currMap: Record<string, string> = {
                                     India: "INR (₹)",
                                     Nepal: "NPR (रू)",
-                                    USA: "USD ($)",
+                                    USA: "INR (₹)",
                                     UAE: "AED (د.إ)",
                                     UK: "GBP (£)",
                                     Bangladesh: "BDT (৳)",
-                                    International: "USD ($)"
+                                    International: "INR (₹)"
                                   };
-                                  setForm({ ...form, fee_country: c, fee_currency: currMap[c] || "USD ($)" });
+                                  setForm({ ...form, fee_country: c, fee_currency: currMap[c] || "INR (₹)" });
                                 }}
                                 className="w-full mt-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-100 outline-none focus:border-indigo-500"
                               >
                                 <option value="India">🇮🇳 India (INR ₹)</option>
                                 <option value="Nepal">🇳🇵 Nepal (NPR रू)</option>
-                                <option value="USA">🇺🇸 United States (USD $)</option>
+                                <option value="USA">🇺🇸 United States (INR ₹)</option>
                                 <option value="UAE">🇦🇪 United Arab Emirates (AED د.إ)</option>
                                 <option value="UK">🇬🇧 United Kingdom (GBP £)</option>
                                 <option value="Bangladesh">🇧🇩 Bangladesh (BDT ৳)</option>
-                                <option value="International">🌐 International / Other</option>
+                                <option value="International">🌐 International (INR ₹)</option>
                               </select>
                             </div>
 
@@ -971,7 +979,7 @@ const AdminCoursesPage = () => {
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
                   <option key={cat.id || cat._id} value={cat.id || cat._id}>
-                    {cat.name}
+                    {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
                   </option>
                 ))}
               </select>
@@ -1048,25 +1056,43 @@ const AdminCoursesPage = () => {
                   </div>
 
                   {/* Status Indicator */}
-                  <div className="absolute top-3 right-3">
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border backdrop-blur-md shadow-lg",
-                      course.status === "active"
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                        : "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                    )}>
+                  <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                    {(course.approval_status === "pending" || course.status === "pending_approval") ? (
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border backdrop-blur-md shadow-lg bg-amber-500/20 border-amber-500/40 text-amber-300">
+                        <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
+                        Pending Approval
+                      </span>
+                    ) : course.approval_status === "rejected" || course.status === "rejected" ? (
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border backdrop-blur-md shadow-lg bg-rose-500/20 border-rose-500/40 text-rose-300" title={course.rejection_reason || "Rejected by Super Admin"}>
+                        <AlertTriangle className="w-3 h-3 text-rose-400" />
+                        Rejected
+                      </span>
+                    ) : (
                       <span className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        course.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
-                      )} />
-                      {course.status}
-                    </span>
+                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border backdrop-blur-md shadow-lg",
+                        course.status === "active"
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                          : "bg-slate-500/10 border-slate-500/30 text-slate-400"
+                      )}>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          course.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-slate-400"
+                        )} />
+                        {course.status}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Card Content */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
                   <div>
+                    {course.created_by_center_name && (
+                      <div className="mb-2 text-[10px] font-bold text-amber-300 flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
+                        <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Proposed By: <strong>{course.created_by_center_name}</strong></span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
                         {courseTypeLabel(course.course_type)}

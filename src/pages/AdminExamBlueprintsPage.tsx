@@ -716,7 +716,9 @@ const AdminExamBlueprintsPage = () => {
             >
               <option value="all">All Categories</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -948,7 +950,7 @@ const AdminExamBlueprintsPage = () => {
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                             <div>
                               <h4 className="font-heading font-black text-base text-white">
-                                {subObj?.subject_name || `Subject ID: ${sConfig.subject_id}`}
+                                {subObj?.subject_name ? `${subObj.subject_name}${subObj.subject_code ? ` [${subObj.subject_code}]` : ''}` : `Subject ID: ${sConfig.subject_id}`}
                               </h4>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
                                 Question Bank: <span className="text-indigo-400">{defaultBank?.name || "Default Question Bank"}</span>
@@ -1082,7 +1084,7 @@ const AdminExamBlueprintsPage = () => {
                       <SelectContent>
                         {categories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id} className="text-xs font-bold">
-                            {cat.name}
+                            {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -678,7 +678,7 @@ const AdminLocationsPage = () => {
   };
 
   const panelClass =
-    "rounded-2xl border border-slate-200/70 bg-white/90 backdrop-blur-sm shadow-[0_6px_28px_-10px_rgba(15,23,42,0.1)] overflow-hidden flex flex-col min-h-[420px] max-h-[min(70vh,640px)] flex-shrink-0 w-[320px]";
+    "rounded-2xl border border-zinc-800 bg-zinc-900/90 backdrop-blur-xl shadow-xl overflow-hidden flex flex-col min-h-[440px] max-h-[min(72vh,660px)] flex-shrink-0 w-[320px] transition-all";
 
   if (loading) {
     return (
@@ -704,11 +704,11 @@ const AdminLocationsPage = () => {
           <Button
             type="button"
             variant="outline"
-            className="shrink-0 border-primary/30 hover:bg-primary/5"
+            className="shrink-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all rounded-xl"
             onClick={() => void seedIndia()}
             disabled={saving === "seed"}
           >
-            {saving === "seed" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Globe className="w-4 h-4 mr-2" />}
+            {saving === "seed" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Globe className="w-4 h-4 mr-2 text-primary" />}
             {t("Seed India + states")}
           </Button>
         </div>
@@ -720,45 +720,45 @@ const AdminLocationsPage = () => {
               {b.onClick ? (
                 <button
                   type="button"
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline font-bold"
                   onClick={b.onClick}
                 >
                   {b.label}
                 </button>
               ) : (
-                <span className="text-foreground">{b.label}</span>
+                <span className="text-foreground font-bold">{b.label}</span>
               )}
             </span>
           ))}
         </nav>
 
-        <div className="flex gap-6 overflow-x-auto pb-4">
+        <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar">
           {/* Countries */}
           <Card className={panelClass}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-sky-50/60 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <Globe className="w-4 h-4 text-sky-600" />
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-sky-500/10 via-sky-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-sky-400">
+                <Globe className="w-4 h-4 text-sky-400" />
                 {t("Countries")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               <div className="space-y-2 shrink-0">
-                <Input placeholder={t("Country name")} value={countryName} onChange={(e) => setCountryName(e.target.value)} className="rounded-xl" />
-                <Input placeholder={t("Code (optional, e.g. IN)")} value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="rounded-xl" />
-                <Button type="button" className="w-full rounded-xl" onClick={() => void addCountry()} disabled={saving === "country"}>
+                <Input placeholder={t("Country name")} value={countryName} onChange={(e) => setCountryName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-sky-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                <Input placeholder={t("Code (optional, e.g. IN)")} value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-sky-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                <Button type="button" className="w-full rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold tracking-wide" onClick={() => void addCountry()} disabled={saving === "country"}>
                   {saving === "country" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                   {t("Add country")}
                 </Button>
               </div>
-              <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+              <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                 {countries.map((c) => (
                   <div
                     key={c.id}
                     className={cn(
                       "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border transition-all cursor-pointer",
                       selectedCountry?.id === c.id
-                        ? "border-primary bg-primary/10 shadow-md"
-                        : "border-transparent hover:bg-muted/50 hover:border-border",
+                        ? "border-sky-500/60 bg-sky-500/15 text-sky-300 shadow-sm"
+                        : "border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300",
                     )}
                     onClick={() => {
                       setSelectedCountry(c);
@@ -770,11 +770,11 @@ const AdminLocationsPage = () => {
                   >
                     <span className="font-semibold text-sm truncate">
                       {c.name}
-                      {c.code ? <span className="text-muted-foreground font-normal ml-1">({c.code})</span> : null}
+                      {c.code ? <span className="text-zinc-500 font-normal ml-1">({c.code})</span> : null}
                     </span>
                     <button
                       type="button"
-                      className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 transition-opacity"
+                      className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         void del("country", c.id);
@@ -786,28 +786,28 @@ const AdminLocationsPage = () => {
                   </div>
                 ))}
                 {countries.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-6 text-center">{t("No countries yet. Add one or use \"Seed India\".")}</p>
+                  <p className="text-xs text-zinc-500 py-6 text-center">{t("No countries yet. Add one or use \"Seed India\".")}</p>
                 )}
               </div>
             </CardContent>
           </Card>
 
           {/* States */}
-          <Card className={cn(panelClass, !selectedCountry && "opacity-60 pointer-events-none")}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-violet-50/50 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <MapIcon className="w-4 h-4 text-violet-600" />
+          <Card className={cn(panelClass, !selectedCountry && "opacity-50 pointer-events-none")}>
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-violet-500/10 via-violet-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-violet-400">
+                <MapIcon className="w-4 h-4 text-violet-400" />
                 {t("States")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               {!selectedCountry ? (
-                <p className="text-sm text-muted-foreground">{t("Select a country to manage states.")}</p>
+                <p className="text-sm text-zinc-500">{t("Select a country to manage states.")}</p>
               ) : (
                 <>
                   <div className="space-y-2 shrink-0">
-                    <Input placeholder={t("State name")} value={stateName} onChange={(e) => setStateName(e.target.value)} className="rounded-xl" />
-                    <Button type="button" variant="secondary" className="w-full rounded-xl" onClick={() => void addState()} disabled={saving === "state"}>
+                    <Input placeholder={t("State name")} value={stateName} onChange={(e) => setStateName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-violet-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                    <Button type="button" className="w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold tracking-wide" onClick={() => void addState()} disabled={saving === "state"}>
                       {saving === "state" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add state")}
                     </Button>
@@ -815,22 +815,22 @@ const AdminLocationsPage = () => {
                       placeholder={t("Bulk: one state per line, or separate with commas / semicolons")}
                       value={stateBulk}
                       onChange={(e) => setStateBulk(e.target.value)}
-                      className="rounded-xl min-h-[72px] text-sm"
+                      className="rounded-xl min-h-[72px] text-sm bg-zinc-950/80 border-zinc-800 focus:border-violet-500/50 text-zinc-100 placeholder:text-zinc-500"
                     />
-                    <Button type="button" className="w-full rounded-xl" variant="outline" onClick={() => void bulkStates()} disabled={saving === "state-bulk"}>
+                    <Button type="button" className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200" variant="outline" onClick={() => void bulkStates()} disabled={saving === "state-bulk"}>
                       {saving === "state-bulk" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add bulk states")}
                     </Button>
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                     {states.map((s) => (
                       <div
                         key={s.id}
                         className={cn(
                           "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border transition-all cursor-pointer",
                           selectedState?.id === s.id
-                            ? "border-violet-500 bg-violet-500/10 shadow-md"
-                            : "border-transparent hover:bg-muted/50",
+                            ? "border-violet-500/60 bg-violet-500/15 text-violet-300 shadow-sm"
+                            : "border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300",
                         )}
                         onClick={() => {
                           setSelectedState(s);
@@ -839,10 +839,10 @@ const AdminLocationsPage = () => {
                           setSelectedPincode(null);
                         }}
                       >
-                        <span className="font-medium text-sm truncate">{s.name}</span>
+                        <span className="font-semibold text-sm truncate">{s.name}</span>
                         <button
                           type="button"
-                          className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                          className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             void del("state", s.id);
@@ -853,7 +853,7 @@ const AdminLocationsPage = () => {
                         </button>
                       </div>
                     ))}
-                    {states.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">{t("No states for this country.")}</p>}
+                    {states.length === 0 && <p className="text-xs text-zinc-500 py-4 text-center">{t("No states for this country.")}</p>}
                   </div>
                 </>
               )}
@@ -861,21 +861,21 @@ const AdminLocationsPage = () => {
           </Card>
 
           {/* Districts */}
-          <Card className={cn(panelClass, !selectedState && "opacity-60 pointer-events-none")}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-cyan-50/50 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <MapPinned className="w-4 h-4 text-cyan-600" />
+          <Card className={cn(panelClass, !selectedState && "opacity-50 pointer-events-none")}>
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-cyan-400">
+                <MapPinned className="w-4 h-4 text-cyan-400" />
                 {t("Districts")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               {!selectedState ? (
-                <p className="text-sm text-muted-foreground">{t("Select a state to manage districts.")}</p>
+                <p className="text-sm text-zinc-500">{t("Select a state to manage districts.")}</p>
               ) : (
                 <>
                   <div className="space-y-2 shrink-0">
-                    <Input placeholder={t("District name")} value={districtName} onChange={(e) => setDistrictName(e.target.value)} className="rounded-xl" />
-                    <Button type="button" variant="secondary" className="w-full rounded-xl" onClick={() => void addDistrict()} disabled={saving === "district"}>
+                    <Input placeholder={t("District name")} value={districtName} onChange={(e) => setDistrictName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-cyan-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                    <Button type="button" className="w-full rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold tracking-wide" onClick={() => void addDistrict()} disabled={saving === "district"}>
                       {saving === "district" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add district")}
                     </Button>
@@ -883,22 +883,22 @@ const AdminLocationsPage = () => {
                       placeholder={t("Bulk districts (lines or commas)")}
                       value={districtBulk}
                       onChange={(e) => setDistrictBulk(e.target.value)}
-                      className="rounded-xl min-h-[72px] text-sm"
+                      className="rounded-xl min-h-[72px] text-sm bg-zinc-950/80 border-zinc-800 focus:border-cyan-500/50 text-zinc-100 placeholder:text-zinc-500"
                     />
-                    <Button type="button" className="w-full rounded-xl" variant="outline" onClick={() => void bulkDistricts()} disabled={saving === "district-bulk"}>
+                    <Button type="button" className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200" variant="outline" onClick={() => void bulkDistricts()} disabled={saving === "district-bulk"}>
                       {saving === "district-bulk" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add bulk districts")}
                     </Button>
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                     {districts.map((d) => (
                       <div
                         key={d.id}
                         className={cn(
                           "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border transition-all cursor-pointer",
                           selectedDistrict?.id === d.id
-                            ? "border-cyan-500 bg-cyan-500/10 shadow-md"
-                            : "border-transparent hover:bg-muted/50",
+                            ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-300 shadow-sm"
+                            : "border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300",
                         )}
                         onClick={() => {
                           setSelectedDistrict(d);
@@ -906,10 +906,10 @@ const AdminLocationsPage = () => {
                           setSelectedPincode(null);
                         }}
                       >
-                        <span className="font-medium text-sm truncate">{d.name}</span>
+                        <span className="font-semibold text-sm truncate">{d.name}</span>
                         <button
                           type="button"
-                          className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                          className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             void del("district", d.id);
@@ -920,7 +920,7 @@ const AdminLocationsPage = () => {
                         </button>
                       </div>
                     ))}
-                    {districts.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">{t("No districts yet.")}</p>}
+                    {districts.length === 0 && <p className="text-xs text-zinc-500 py-4 text-center">{t("No districts yet.")}</p>}
                   </div>
                 </>
               )}
@@ -928,21 +928,21 @@ const AdminLocationsPage = () => {
           </Card>
 
           {/* Cities */}
-          <Card className={cn(panelClass, !selectedDistrict && "opacity-60 pointer-events-none")}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-emerald-50/50 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-600" />
+          <Card className={cn(panelClass, !selectedDistrict && "opacity-50 pointer-events-none")}>
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-emerald-400">
+                <MapPin className="w-4 h-4 text-emerald-400" />
                 {t("Cities")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               {!selectedDistrict ? (
-                <p className="text-sm text-muted-foreground">{t("Select a district to manage cities.")}</p>
+                <p className="text-sm text-zinc-500">{t("Select a district to manage cities.")}</p>
               ) : (
                 <>
                   <div className="space-y-2 shrink-0">
-                    <Input placeholder={t("City name")} value={cityName} onChange={(e) => setCityName(e.target.value)} className="rounded-xl" />
-                    <Button type="button" variant="secondary" className="w-full rounded-xl" onClick={() => void addCity()} disabled={saving === "city"}>
+                    <Input placeholder={t("City name")} value={cityName} onChange={(e) => setCityName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-emerald-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                    <Button type="button" className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold tracking-wide" onClick={() => void addCity()} disabled={saving === "city"}>
                       {saving === "city" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add city")}
                     </Button>
@@ -950,32 +950,32 @@ const AdminLocationsPage = () => {
                       placeholder={t("Bulk cities (lines or commas)")}
                       value={cityBulk}
                       onChange={(e) => setCityBulk(e.target.value)}
-                      className="rounded-xl min-h-[72px] text-sm"
+                      className="rounded-xl min-h-[72px] text-sm bg-zinc-950/80 border-zinc-800 focus:border-emerald-500/50 text-zinc-100 placeholder:text-zinc-500"
                     />
-                    <Button type="button" className="w-full rounded-xl" variant="outline" onClick={() => void bulkCities()} disabled={saving === "city-bulk"}>
+                    <Button type="button" className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200" variant="outline" onClick={() => void bulkCities()} disabled={saving === "city-bulk"}>
                       {saving === "city-bulk" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add bulk cities")}
                     </Button>
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                     {cities.map((c) => (
                       <div
                         key={c.id}
                         className={cn(
                           "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border transition-all cursor-pointer",
                           selectedCity?.id === c.id
-                            ? "border-emerald-500 bg-emerald-500/10 shadow-md"
-                            : "border-transparent hover:bg-muted/50",
+                            ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-300 shadow-sm"
+                            : "border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300",
                         )}
                         onClick={() => {
                           setSelectedCity(c);
                           setSelectedPincode(null);
                         }}
                       >
-                        <span className="font-medium text-sm truncate">{c.name}</span>
+                        <span className="font-semibold text-sm truncate">{c.name}</span>
                         <button
                           type="button"
-                          className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                          className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             void del("city", c.id);
@@ -986,7 +986,7 @@ const AdminLocationsPage = () => {
                         </button>
                       </div>
                     ))}
-                    {cities.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">{t("No cities yet.")}</p>}
+                    {cities.length === 0 && <p className="text-xs text-zinc-500 py-4 text-center">{t("No cities yet.")}</p>}
                   </div>
                 </>
               )}
@@ -994,21 +994,21 @@ const AdminLocationsPage = () => {
           </Card>
 
           {/* Pincodes */}
-          <Card className={cn(panelClass, !selectedCity && "opacity-60 pointer-events-none")}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-orange-50/50 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <Compass className="w-4 h-4 text-orange-600" />
+          <Card className={cn(panelClass, !selectedCity && "opacity-50 pointer-events-none")}>
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-orange-400">
+                <Compass className="w-4 h-4 text-orange-400" />
                 {t("Pincodes")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               {!selectedCity ? (
-                <p className="text-sm text-muted-foreground">{t("Select a city to manage pincodes.")}</p>
+                <p className="text-sm text-zinc-500">{t("Select a city to manage pincodes.")}</p>
               ) : (
                 <>
                   <div className="space-y-2 shrink-0">
-                    <Input placeholder={t("Pincode name")} value={pincodeName} onChange={(e) => setPincodeName(e.target.value)} className="rounded-xl" />
-                    <Button type="button" variant="secondary" className="w-full rounded-xl" onClick={() => void addPincode()} disabled={saving === "pincode"}>
+                    <Input placeholder={t("Pincode name")} value={pincodeName} onChange={(e) => setPincodeName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-orange-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                    <Button type="button" className="w-full rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold tracking-wide" onClick={() => void addPincode()} disabled={saving === "pincode"}>
                       {saving === "pincode" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add pincode")}
                     </Button>
@@ -1016,29 +1016,29 @@ const AdminLocationsPage = () => {
                       placeholder={t("Bulk pincodes (lines or commas)")}
                       value={pincodeBulk}
                       onChange={(e) => setPincodeBulk(e.target.value)}
-                      className="rounded-xl min-h-[72px] text-sm"
+                      className="rounded-xl min-h-[72px] text-sm bg-zinc-950/80 border-zinc-800 focus:border-orange-500/50 text-zinc-100 placeholder:text-zinc-500"
                     />
-                    <Button type="button" className="w-full rounded-xl" variant="outline" onClick={() => void bulkPincodes()} disabled={saving === "pincode-bulk"}>
+                    <Button type="button" className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200" variant="outline" onClick={() => void bulkPincodes()} disabled={saving === "pincode-bulk"}>
                       {saving === "pincode-bulk" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {t("Add bulk pincodes")}
                     </Button>
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                     {pincodes.map((p) => (
                       <div
                         key={p.id}
                         className={cn(
                           "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border transition-all cursor-pointer",
                           selectedPincode?.id === p.id
-                            ? "border-orange-500 bg-orange-500/10 shadow-md"
-                            : "border-transparent hover:bg-muted/50",
+                            ? "border-orange-500/60 bg-orange-500/15 text-orange-300 shadow-sm"
+                            : "border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300",
                         )}
                         onClick={() => setSelectedPincode(p)}
                       >
-                        <span className="font-medium text-sm truncate">{p.name}</span>
+                        <span className="font-semibold text-sm truncate">{p.name}</span>
                         <button
                           type="button"
-                          className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                          className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             void del("pincode", p.id);
@@ -1049,7 +1049,7 @@ const AdminLocationsPage = () => {
                         </button>
                       </div>
                     ))}
-                    {pincodes.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">{t("No pincodes yet.")}</p>}
+                    {pincodes.length === 0 && <p className="text-xs text-zinc-500 py-4 text-center">{t("No pincodes yet.")}</p>}
                   </div>
                 </>
               )}
@@ -1057,23 +1057,23 @@ const AdminLocationsPage = () => {
           </Card>
 
           {/* Areas */}
-          <Card className={cn(panelClass, !selectedCountry && "opacity-60 pointer-events-none")}>
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-amber-50/50 to-transparent py-4 shrink-0">
-              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <Layers className="w-4 h-4 text-amber-600" />
+          <Card className={cn(panelClass, !selectedCountry && "opacity-50 pointer-events-none")}>
+            <CardHeader className="border-b border-zinc-800 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent py-4 shrink-0">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-amber-400">
+                <Layers className="w-4 h-4 text-amber-400" />
                 {t("Areas / localities")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 flex flex-col gap-3 flex-1 min-h-0">
               {!selectedCountry ? (
-                <p className="text-sm text-muted-foreground">{t("Select a country to manage areas.")}</p>
+                <p className="text-sm text-zinc-500">{t("Select a country to manage areas.")}</p>
               ) : (
                 <>
                   <div className="space-y-2 shrink-0">
                     {selectedPincode || selectedCity ? (
                       <>
-                        <Input placeholder={t("Area or locality")} value={areaName} onChange={(e) => setAreaName(e.target.value)} className="rounded-xl" />
-                        <Button type="button" variant="secondary" className="w-full rounded-xl" onClick={() => void addArea()} disabled={saving === "area"}>
+                        <Input placeholder={t("Area or locality")} value={areaName} onChange={(e) => setAreaName(e.target.value)} className="rounded-xl bg-zinc-950/80 border-zinc-800 focus:border-amber-500/50 text-zinc-100 placeholder:text-zinc-500" />
+                        <Button type="button" className="w-full rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold tracking-wide" onClick={() => void addArea()} disabled={saving === "area"}>
                           {saving === "area" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                           {t("Add area")}
                         </Button>
@@ -1081,24 +1081,24 @@ const AdminLocationsPage = () => {
                           placeholder={t("Bulk areas (lines or commas)")}
                           value={areaBulk}
                           onChange={(e) => setAreaBulk(e.target.value)}
-                          className="rounded-xl min-h-[72px] text-sm"
+                          className="rounded-xl min-h-[72px] text-sm bg-zinc-950/80 border-zinc-800 focus:border-amber-500/50 text-zinc-100 placeholder:text-zinc-500"
                         />
-                        <Button type="button" className="w-full rounded-xl" variant="outline" onClick={() => void bulkAreas()} disabled={saving === "area-bulk"}>
+                        <Button type="button" className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-200" variant="outline" onClick={() => void bulkAreas()} disabled={saving === "area-bulk"}>
                           {saving === "area-bulk" ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                           {t("Add bulk areas")}
                         </Button>
                       </>
                     ) : (
-                      <p className="text-sm text-muted-foreground">{t("Select a pincode or city to add new areas; viewing all areas for {country}.", { country: selectedCountry.name })}</p>
+                      <p className="text-sm text-zinc-500">{t("Select a pincode or city to add new areas; viewing all areas for {country}.", { country: selectedCountry.name })}</p>
                     )}
                   </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-1 -mr-1">
+                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 -mr-1">
                     {areas.map((a) => (
-                      <div key={a.id} className="group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-transparent hover:bg-muted/50">
-                        <span className="font-medium text-sm truncate">{a.name}</span>
+                      <div key={a.id} className="group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-zinc-800/40 hover:bg-zinc-800/50 hover:border-zinc-700 text-zinc-300 transition-all">
+                        <span className="font-semibold text-sm truncate">{a.name}</span>
                         <button
                           type="button"
-                          className="p-1.5 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 hover:bg-red-500/10"
+                          className="p-1.5 rounded-lg text-rose-400 opacity-0 group-hover:opacity-100 hover:bg-rose-500/20 transition-opacity"
                           onClick={() => void del("area", a.id)}
                           aria-label={`${t("Delete")} ${a.name}`}
                         >
@@ -1106,7 +1106,7 @@ const AdminLocationsPage = () => {
                         </button>
                       </div>
                     ))}
-                    {areas.length === 0 && <p className="text-xs text-muted-foreground py-4 text-center">{t("No areas yet.")}</p>}
+                    {areas.length === 0 && <p className="text-xs text-zinc-500 py-4 text-center">{t("No areas yet.")}</p>}
                   </div>
                 </>
               )}

@@ -306,7 +306,11 @@ const AdminSessionsPage = () => {
                 className="rounded-2xl border border-slate-800 bg-slate-950/80 text-slate-200 px-4 py-3 text-xs font-bold uppercase tracking-wider focus:outline-none focus:border-indigo-500"
               >
                 <option value="all">All Categories</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
+                  </option>
+                ))}
               </select>
             </div>
 

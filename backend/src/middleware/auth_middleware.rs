@@ -514,7 +514,16 @@ pub async fn auth_middleware(
     // ---------------------------------------------------------
 
     if requires_admin(&path) {
-        // Allow GET subjects for authenticated users
+        // Allow GET for academic resources for all authenticated roles
+        let is_academics_read =
+            (path.starts_with("/api/admin/categories")
+                || path.starts_with("/api/admin/courses")
+                || path.starts_with("/api/admin/subjects")
+                || path.starts_with("/api/admin/study-materials")
+                || path.starts_with("/api/admin/sessions")
+                || path.starts_with("/api/academic/"))
+                && method == Method::GET;
+
         let is_subjects_get =
             path == "/api/admin/subjects"
                 && method == Method::GET;
@@ -529,7 +538,9 @@ pub async fn auth_middleware(
             UserRole::SuperAdmin
                 | UserRole::Admin
                 | UserRole::Center
-        ) || is_subjects_get
+                | UserRole::Staff
+        ) || is_academics_read
+            || is_subjects_get
             || is_batches_get;
 
         if !allowed {

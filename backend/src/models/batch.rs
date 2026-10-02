@@ -18,6 +18,12 @@ pub struct Batch {
     pub max_capacity: i32,
     pub current_count: i32,  // Number of students currently in this batch
     pub status: String,      // "active", "inactive"
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<DateTime<Utc>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

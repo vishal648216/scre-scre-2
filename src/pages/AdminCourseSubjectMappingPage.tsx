@@ -15,6 +15,7 @@ interface Course {
 interface Subject {
   id: string;
   subject_name: string;
+  subject_code?: string;
 }
 
 interface Mapping {
@@ -46,7 +47,7 @@ const AdminCourseSubjectMappingPage = () => {
 
   // All mappings for overview
   const [allMappings, setAllMappings] = useState<Mapping[]>([]);
-  const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string, name: string, category_code?: string }[]>([]);
 
   // Filter courses based on selected category
   const filteredCourses = useMemo(() => {
@@ -225,7 +226,10 @@ const AdminCourseSubjectMappingPage = () => {
     }
   };
 
-  const getSubjectName = (id: string) => subjects.find(s => (s.id || (s as any)._id) === id)?.subject_name || "Unknown";
+  const getSubjectName = (id: string) => {
+    const s = subjects.find(sub => (sub.id || (sub as any)._id) === id);
+    return s ? `${s.subject_name}${s.subject_code ? ` [${s.subject_code}]` : ''}` : "Unknown";
+  };
   const getCourseName = (id: string) => courses.find(c => (c.id || (c as any)._id) === id)?.course_name || "Unknown";
 
   return (
@@ -325,7 +329,7 @@ const AdminCourseSubjectMappingPage = () => {
                       className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                     >
                       <option value="">Select Category</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name} {c.category_code ? `[${c.category_code}]` : ''}</option>)}
                     </select>
                   </div>
                 )}
@@ -349,7 +353,7 @@ const AdminCourseSubjectMappingPage = () => {
                       onChange={(e) => setSelectedSubjectId(e.target.value)}
                       className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-all"
                     >
-                      {subjects.map(s => <option key={s.id || (s as any)._id} value={s.id || (s as any)._id}>{s.subject_name}</option>)}
+                      {subjects.map(s => <option key={s.id || (s as any)._id} value={s.id || (s as any)._id}>{s.subject_name} {s.subject_code ? `[${s.subject_code}]` : ''}</option>)}
                     </select>
                   )}
                 </div>
@@ -374,7 +378,7 @@ const AdminCourseSubjectMappingPage = () => {
                                 : "bg-slate-950/80 border-slate-800/80 text-slate-300 hover:border-slate-700"
                           )}
                         >
-                          <span>{s.subject_name}</span>
+                          <span>{s.subject_name} {s.subject_code ? `[${s.subject_code}]` : ''}</span>
                           {isAlreadyMapped(s.id || (s as any)._id) ? (
                             <CheckCircle2 className="w-4 h-4 text-slate-500" />
                           ) : selectedItems.includes(s.id || (s as any)._id) ? (
@@ -507,7 +511,7 @@ const AdminCourseSubjectMappingPage = () => {
                   return (
                     <div key={cat.id} className="space-y-6">
                       <h3 className="text-sm font-black uppercase tracking-wider text-indigo-400 border-l-4 border-indigo-500 pl-4">
-                        {cat.name}
+                        {cat.name} {cat.category_code ? `[${cat.category_code}]` : ''}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {catCourses.map(course => {
@@ -579,7 +583,7 @@ const AdminCourseSubjectMappingPage = () => {
                     >
                       <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
                         <h4 className="text-xs font-bold text-white uppercase tracking-tight group-hover:text-indigo-300 transition-colors">
-                          {subject.subject_name}
+                          {subject.subject_name} {subject.subject_code ? `[${subject.subject_code}]` : ''}
                         </h4>
                         <span className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                           {subjectMappings.length} Courses

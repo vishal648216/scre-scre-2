@@ -95,7 +95,7 @@ pub async fn create_category(
     claims: Claims,
     Json(payload): Json<CreateCourseCategoryRequest>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
@@ -155,6 +155,13 @@ pub async fn create_category(
         );
     }
 
+    let (c_id, c_name) = if claims.role == UserRole::Center || claims.role == UserRole::Staff {
+        let oid = ObjectId::parse_str(&claims.sub).ok();
+        (oid, Some(claims.username.clone()))
+    } else {
+        (None, None)
+    };
+
     let now = Utc::now();
     let cat = CourseCategory {
         id: None,
@@ -165,6 +172,8 @@ pub async fn create_category(
         created_at: now,
         image_url: normalize_image_url(payload.image_url),
         sort_order: payload.sort_order.unwrap_or(0),
+        created_by_center_id: c_id,
+        created_by_center_name: c_name,
     };
     match coll.insert_one(cat, None).await {
         Ok(_) => (
@@ -375,7 +384,7 @@ pub async fn update_category(
     Path(id): Path<String>,
     Json(payload): Json<UpdateCourseCategoryRequest>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
@@ -504,7 +513,7 @@ pub async fn delete_category(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
@@ -572,7 +581,7 @@ pub async fn bulk_create_categories(
     claims: Claims,
     Json(payload): Json<BulkCategoryPayload>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
@@ -611,6 +620,8 @@ pub async fn bulk_create_categories(
             created_at: now,
             image_url: normalize_image_url(item.image_url),
             sort_order: item.sort_order.unwrap_or(0),
+            created_by_center_id: None,
+            created_by_center_name: None,
         });
     }
 

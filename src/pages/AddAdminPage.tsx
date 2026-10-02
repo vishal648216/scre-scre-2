@@ -21,11 +21,11 @@ import {
   Headset, 
   Globe, 
   Settings, 
-  Check, 
   Sparkles 
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 
 interface ActionPermissions {
   view: boolean;
@@ -104,7 +104,6 @@ const AddAdminPage = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    // Fetch pre-configured custom roles if any exist
     apiFetch("/api/admin/roles")
       .then(res => res.ok ? res.json() : [])
       .then(data => {
@@ -127,6 +126,7 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: true, add: true, edit: true, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
+        library: { view: true, add: true, edit: true, delete: false },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else if (presetKey === "exam_controller") {
@@ -139,6 +139,7 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: false, add: false, edit: false, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
+        library: { view: true, add: true, edit: true, delete: false },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else if (presetKey === "accounts") {
@@ -151,10 +152,10 @@ const AddAdminPage = () => {
         staff: { view: false, add: false, edit: false, delete: false },
         leads: { view: false, add: false, edit: false, delete: false },
         cms: { view: false, add: false, edit: false, delete: false },
+        library: { view: false, add: false, edit: false, delete: false },
         settings: { view: false, add: false, edit: false, delete: false },
       });
     } else {
-      // Check if it's a custom saved role from DB
       const matchedRole = roles.find(r => r._id === presetKey || r.id === presetKey);
       if (matchedRole && matchedRole.permissions) {
         setPermissions(matchedRole.permissions);
@@ -168,11 +169,9 @@ const AddAdminPage = () => {
       const currentMod = prev[module];
       const newActionVal = !currentMod[action];
       const updatedMod = { ...currentMod, [action]: newActionVal };
-      // If adding/editing/deleting, view must automatically be true
       if (action !== "view" && newActionVal) {
         updatedMod.view = true;
       }
-      // If disabling view, disable all write actions
       if (action === "view" && !newActionVal) {
         updatedMod.add = false;
         updatedMod.edit = false;
@@ -206,7 +205,6 @@ const AddAdminPage = () => {
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!emailRegex.test(formData.email.trim())) {
       toast.error("Please enter a valid email address (e.g. admin@domain.com)");
@@ -236,7 +234,6 @@ const AddAdminPage = () => {
 
       if (response.ok && data.success) {
         const createdUserId = data.user_id || data._id;
-        // Also persist permissions via permissions endpoint if user_id is returned
         if (createdUserId) {
           await apiFetch(`/api/admin/users/${createdUserId}/permissions`, {
             method: "PUT",
@@ -281,75 +278,83 @@ const AddAdminPage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-        <div>
-          <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight">Add New Admin</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">Create a new sub-administrator and select specific permissions & module access.</p>
+        {/* Banner */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest">
+            <Sparkles className="w-3.5 h-3.5" /> Administrator Onboarding Portal
+          </div>
+          <h1 className="font-heading font-black text-3xl sm:text-4xl text-foreground uppercase tracking-tight">
+            Add New Sub-Admin
+          </h1>
+          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider max-w-xl mx-auto">
+            Create a new sub-administrator account with custom role-based privileges & granular module permissions
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Admin Identity Section */}
-          <Card className="rounded-none border-border shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-border py-4">
-              <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+          <Card className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
+            <CardHeader className="bg-muted/40 border-b border-border py-4">
+              <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-foreground">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                Admin Identity
+                Admin Profile & Contact Info
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Full Name</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Full Name *</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input name="fullName" required placeholder="Administrator Name" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.fullName} onChange={handleChange} />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input name="fullName" required placeholder="ADMINISTRATOR NAME" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold uppercase focus:border-primary focus:outline-none transition-all text-foreground" value={formData.fullName} onChange={handleChange} />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Portal Username</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Portal Username *</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input name="username" required placeholder="admin_username" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.username} onChange={handleChange} />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input name="username" required placeholder="admin_username" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground" value={formData.username} onChange={handleChange} />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Email Address *</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input name="email" type="email" required placeholder="admin@institute.com" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.email} onChange={handleChange} />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input name="email" type="email" required placeholder="admin@institute.com" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-medium focus:border-primary focus:outline-none transition-all text-foreground" value={formData.email} onChange={handleChange} />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Phone Number</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Phone Number *</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input name="phone" required placeholder="+91 00000 00000" className="w-full pl-10 pr-4 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.phone} onChange={handleChange} />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input name="phone" required placeholder="+91 00000 00000" className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold uppercase focus:border-primary focus:outline-none transition-all text-foreground" value={formData.phone} onChange={handleChange} />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Security Section */}
-          <Card className="rounded-none border-border shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-border py-4">
-              <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+          <Card className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
+            <CardHeader className="bg-muted/40 border-b border-border py-4">
+              <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-foreground">
                 <Lock className="w-4 h-4 text-primary" />
                 Security Credentials
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Password</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Password *</label>
                 <div className="relative">
-                  <input name="password" type={showPwd ? "text" : "password"} required placeholder="••••••••" className="w-full pl-4 pr-10 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.password} onChange={handleChange} />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                  <input name="password" type={showPwd ? "text" : "password"} required placeholder="••••••••" className="w-full pl-4 pr-10 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground" value={formData.password} onChange={handleChange} />
+                  <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
                     {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1">Confirm Password</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block ml-1">Confirm Password *</label>
                 <div className="relative">
-                  <input name="confirmPassword" type={showConfirm ? "text" : "password"} required placeholder="••••••••" className="w-full pl-4 pr-10 py-2.5 rounded-none border border-border bg-background text-sm focus:border-primary focus:outline-none transition-all" value={formData.confirmPassword} onChange={handleChange} />
-                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+                  <input name="confirmPassword" type={showConfirm ? "text" : "password"} required placeholder="••••••••" className="w-full pl-4 pr-10 py-3 rounded-2xl border border-border bg-muted/20 text-xs font-bold focus:border-primary focus:outline-none transition-all text-foreground" value={formData.confirmPassword} onChange={handleChange} />
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -358,15 +363,15 @@ const AddAdminPage = () => {
           </Card>
 
           {/* Granular Module Permissions Section */}
-          <Card className="rounded-none border-border shadow-md overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-border py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <Card className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
+            <CardHeader className="bg-muted/40 border-b border-border py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-foreground">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  Access & Permissions Control
+                  Access & Granular Permissions Control
                 </CardTitle>
-                <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                  Select which modules and features this administrator is authorized to see and manage.
+                <CardDescription className="text-xs text-muted-foreground mt-0.5 font-medium">
+                  Select module privileges or pick a pre-configured role template below.
                 </CardDescription>
               </div>
 
@@ -376,8 +381,8 @@ const AddAdminPage = () => {
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("full")}
-                  className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                    selectedPreset === "full" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all rounded-xl border ${
+                    selectedPreset === "full" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
                   }`}
                 >
                   Full Access
@@ -385,8 +390,8 @@ const AddAdminPage = () => {
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("center_manager")}
-                  className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                    selectedPreset === "center_manager" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all rounded-xl border ${
+                    selectedPreset === "center_manager" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
                   }`}
                 >
                   Center Manager
@@ -394,8 +399,8 @@ const AddAdminPage = () => {
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("exam_controller")}
-                  className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                    selectedPreset === "exam_controller" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all rounded-xl border ${
+                    selectedPreset === "exam_controller" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
                   }`}
                 >
                   Exam Incharge
@@ -403,24 +408,12 @@ const AddAdminPage = () => {
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("accounts")}
-                  className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                    selectedPreset === "accounts" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all rounded-xl border ${
+                    selectedPreset === "accounts" ? "bg-primary text-primary-foreground border-primary shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
                   }`}
                 >
                   Accounts Lead
                 </button>
-                {roles.map(r => (
-                  <button
-                    key={r._id || r.id}
-                    type="button"
-                    onClick={() => handleApplyPreset(r._id || r.id)}
-                    className={`px-3 py-1 text-[11px] font-bold uppercase transition-all rounded-none border ${
-                      selectedPreset === (r._id || r.id) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {r.name}
-                  </button>
-                ))}
               </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -434,30 +427,30 @@ const AddAdminPage = () => {
                   return (
                     <div 
                       key={mod.key} 
-                      className={`p-4 border transition-all rounded-none ${
-                        isPartiallyActive ? "border-primary/40 bg-card shadow-sm" : "border-border/60 bg-muted/10 opacity-75"
+                      className={`p-4 border transition-all rounded-2xl ${
+                        isPartiallyActive ? "border-primary/40 bg-primary/5 text-foreground shadow-sm" : "border-border bg-muted/20 text-muted-foreground opacity-80"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-border/50">
+                      <div className="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-border/60">
                         <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-none ${isPartiallyActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          <div className={`p-2 rounded-xl ${isPartiallyActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                             <Icon className="w-4 h-4" />
                           </div>
                           <div>
-                            <h4 className="font-bold text-xs uppercase tracking-tight text-foreground">{mod.label}</h4>
+                            <h4 className="font-black text-xs uppercase tracking-tight text-foreground">{mod.label}</h4>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => toggleAllInModule(mod.key)}
-                          className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 border ${
+                          className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border ${
                             isFullyActive ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"
                           }`}
                         >
                           {isFullyActive ? "All On" : "Toggle"}
                         </button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mb-3 line-clamp-2 h-7">{mod.desc}</p>
+                      <p className="text-[10px] text-muted-foreground mb-3 line-clamp-2 h-7 font-medium">{mod.desc}</p>
 
                       {/* Action Toggles */}
                       <div className="grid grid-cols-4 gap-1.5 text-center">
@@ -468,10 +461,10 @@ const AddAdminPage = () => {
                               key={act}
                               type="button"
                               onClick={() => toggleAction(mod.key, act)}
-                              className={`py-1.5 text-[10px] font-black uppercase tracking-widest border transition-all ${
+                              className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg border transition-all ${
                                 isActive 
-                                  ? "bg-primary/15 border-primary text-primary font-extrabold" 
-                                  : "border-border/60 text-muted-foreground/60 hover:border-border hover:text-foreground"
+                                  ? "bg-primary text-primary-foreground border-primary font-black shadow-sm" 
+                                  : "border-border text-muted-foreground/70 hover:border-border hover:text-foreground bg-background"
                               }`}
                             >
                               {act}
@@ -486,13 +479,13 @@ const AddAdminPage = () => {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end pt-4 pb-10">
+          <div className="flex justify-center pt-4 pb-10">
             <button
               type="submit"
               disabled={loading}
-              className="bg-primary text-primary-foreground px-10 py-4 rounded-none font-heading font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all flex items-center gap-3 disabled:opacity-50"
+              className="bg-primary text-primary-foreground px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-3 disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               Create Admin with Assigned Access
             </button>
           </div>
@@ -503,3 +496,4 @@ const AddAdminPage = () => {
 };
 
 export default AddAdminPage;
+

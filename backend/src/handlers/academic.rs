@@ -43,7 +43,7 @@ pub async fn bulk_map_subjects_to_course(
     claims: Claims,
     Json(payload): Json<BulkMapSubjectsToCourseRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -89,7 +89,7 @@ pub async fn bulk_map_courses_to_subject(
     claims: Claims,
     Json(payload): Json<BulkMapCoursesToSubjectRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -132,7 +132,7 @@ pub async fn map_subject_to_course(
     claims: Claims,
     Json(payload): Json<MapSubjectRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -253,7 +253,7 @@ pub async fn delete_course_subject_mapping(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -285,7 +285,7 @@ pub async fn create_session(
     claims: Claims,
     Json(payload): Json<CreateSessionRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -349,7 +349,7 @@ pub async fn update_session(
     Path(id): Path<String>,
     Json(payload): Json<CreateSessionRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -402,7 +402,7 @@ pub async fn delete_session(
     claims: Claims,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -469,7 +469,7 @@ pub async fn upload_study_material(
     claims: Claims,
     Json(payload): Json<CreateMaterialRequest>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 
@@ -511,6 +511,7 @@ pub struct StudyMaterialListItem {
     pub description: Option<String>,
     pub file_url: String,
     pub uploaded_by: String,
+    pub uploaded_by_name: Option<String>,
     pub class_level: Option<String>,
     pub media_type: Option<String>,
     pub chapter_name: Option<String>,
@@ -523,6 +524,8 @@ pub async fn list_study_materials(
     Query(q): Query<serde_json::Value>,
 ) -> (StatusCode, Json<Vec<StudyMaterialListItem>>) {
     let coll = db.collection::<StudyMaterial>("study_materials");
+    let users_coll = db.collection::<mongodb::bson::Document>("users");
+
     let mut filter = doc! {};
     if let Some(sub_id) = q.get("subject_id").and_then(|v| v.as_str()) {
         if let Ok(oid) = ObjectId::parse_str(sub_id) {
@@ -540,6 +543,17 @@ pub async fn list_study_materials(
     let mut items = Vec::new();
     while let Some(result) = cursor.next().await {
         if let Ok(item) = result {
+            let uploader_name = if let Ok(Some(u_doc)) = users_coll.find_one(doc! { "_id": item.uploaded_by }, None).await {
+                u_doc.get_str("full_name")
+                    .or_else(|_| u_doc.get_str("name"))
+                    .or_else(|_| u_doc.get_str("username"))
+                    .or_else(|_| u_doc.get_str("email"))
+                    .ok()
+                    .map(|s| s.to_string())
+            } else {
+                None
+            };
+
             items.push(StudyMaterialListItem {
                 id: item.id.map(|id| id.to_hex()).unwrap_or_default(),
                 subject_id: item.subject_id.to_hex(),
@@ -547,6 +561,7 @@ pub async fn list_study_materials(
                 description: item.description,
                 file_url: item.file_url,
                 uploaded_by: item.uploaded_by.to_hex(),
+                uploaded_by_name: uploader_name,
                 class_level: item.class_level,
                 media_type: item.media_type,
                 chapter_name: item.chapter_name,
@@ -567,7 +582,7 @@ pub async fn bulk_create_sessions(
     claims: Claims,
     Json(payload): Json<BulkSessionPayload>,
 ) -> (StatusCode, Json<AcademicResponse>) {
-    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin {
+    if claims.role != UserRole::Admin && claims.role != UserRole::SuperAdmin && claims.role != UserRole::Center && claims.role != UserRole::Staff {
         return (StatusCode::FORBIDDEN, Json(AcademicResponse { success: false, message: "Unauthorized".to_string() }));
     }
 

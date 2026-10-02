@@ -222,11 +222,11 @@ const AdminRecycleBinPage = () => {
           </div>
 
           <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
               placeholder="Search deleted centers and students..."
-              className="w-full pl-11 pr-4 py-3 bg-card border border-border rounded-none focus:outline-none focus:border-primary transition-all text-sm font-bold uppercase tracking-widest"
+              className="w-full pl-11 pr-4 py-3 bg-zinc-900/90 border border-zinc-800 rounded-xl focus:outline-none focus:border-primary transition-all text-sm font-semibold tracking-wide text-zinc-100 placeholder:text-zinc-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -239,13 +239,13 @@ const AdminRecycleBinPage = () => {
             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Loading bin contents...</p>
           </div>
         ) : filteredItems.length === 0 ? (
-          <Card className="rounded-none border-dashed border-2 border-border bg-muted/20">
+          <Card className="rounded-2xl border-dashed border-2 border-zinc-800 bg-zinc-900/40">
             <CardContent className="py-20 flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-background border border-border flex items-center justify-center mb-6">
-                <Trash2 className="w-8 h-8 text-muted-foreground opacity-20" />
+              <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center mb-6">
+                <Trash2 className="w-8 h-8 text-zinc-500 opacity-40" />
               </div>
-              <h3 className="text-lg font-bold uppercase tracking-tight">Recycle Bin is Empty</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2 uppercase tracking-widest font-medium">
+              <h3 className="text-lg font-bold uppercase tracking-tight text-zinc-200">Recycle Bin is Empty</h3>
+              <p className="text-zinc-500 text-sm max-w-xs mx-auto mt-2 tracking-wide font-medium">
                 Deleted centers and students will appear here.
               </p>
             </CardContent>
@@ -263,44 +263,44 @@ const AdminRecycleBinPage = () => {
 
                 return (
                   <Card key={id} className={cn(
-                    "rounded-none border-border transition-all overflow-hidden",
-                    isDeleting ? "border-red-500 bg-red-50/10" : "hover:border-primary"
+                    "rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur-xl transition-all overflow-hidden hover:border-zinc-700",
+                    isDeleting && "border-rose-500/50 bg-rose-950/20"
                   )}>
                     <CardContent className="p-0">
                       <div className="flex flex-col md:flex-row items-stretch">
                         <div className={cn(
                           "p-6 flex-1 flex items-center gap-6",
-                          isDeleting && "bg-red-500/5"
+                          isDeleting && "bg-rose-500/5"
                         )}>
-                          <div className="w-12 h-12 bg-muted border border-border flex items-center justify-center">
-                            <School className="w-6 h-6 text-muted-foreground" />
+                          <div className="w-12 h-12 bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+                            <School className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[9px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded">Center</span>
-                              <span className="text-xs font-bold text-muted-foreground">{center.code}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">Center</span>
+                              <span className="text-xs font-bold text-zinc-400">{center.code}</span>
                             </div>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{center.name}</h3>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight mt-1">
+                            <h3 className="text-base font-bold tracking-tight text-zinc-100">{center.name}</h3>
+                            <p className="text-xs text-zinc-400 tracking-wide mt-1 font-medium">
                               {center.city}, {center.state} • Deleted: {center.deleted_at ? new Date(center.deleted_at).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
 
                           {isDeleting && (
-                            <div className="px-4 py-2 bg-red-500 text-white flex items-center gap-3 animate-pulse">
+                            <div className="px-4 py-2 bg-rose-600 text-white rounded-xl flex items-center gap-3 animate-pulse shrink-0">
                               <Timer className="w-4 h-4" />
-                              <span className="text-[10px] font-black uppercase tracking-widest">{timerText}</span>
+                              <span className="text-xs font-bold tracking-wider">{timerText}</span>
                             </div>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-px bg-border border-l border-border">
+                        <div className="flex items-center gap-px bg-zinc-800/80 border-t md:border-t-0 md:border-l border-zinc-800">
                           {!isDeleting ? (
                             <>
                               <button
                                 onClick={() => handleRestoreCenter(id)}
                                 disabled={!!actionLoading}
-                                className="flex-1 md:flex-none px-8 py-6 bg-background hover:bg-green-50 text-green-600 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                className="flex-1 md:flex-none px-6 py-6 bg-zinc-900 hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50"
                               >
                                 {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                                 Restore
@@ -308,7 +308,7 @@ const AdminRecycleBinPage = () => {
                               <button
                                 onClick={() => initiatePermanentDeleteCenter(id)}
                                 disabled={!!actionLoading}
-                                className="flex-1 md:flex-none px-8 py-6 bg-background hover:bg-red-50 text-red-600 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                className="flex-1 md:flex-none px-6 py-6 bg-zinc-900 hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50 border-l border-zinc-800"
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Permanent Delete
@@ -319,7 +319,7 @@ const AdminRecycleBinPage = () => {
                               <button
                                 onClick={() => cancelPermanentDeleteCenter(id)}
                                 disabled={!!actionLoading}
-                                className="flex-1 md:flex-none px-8 py-6 bg-background hover:bg-blue-50 text-blue-600 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                className="flex-1 md:flex-none px-6 py-6 bg-zinc-900 hover:bg-sky-500/10 text-sky-400 hover:text-sky-300 flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50"
                               >
                                 {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
                                 Stop Deletion
@@ -328,7 +328,7 @@ const AdminRecycleBinPage = () => {
                                 <button
                                   onClick={() => finalizePermanentDeleteCenter(id)}
                                   disabled={!!actionLoading}
-                                  className="flex-1 md:flex-none px-8 py-6 bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                  className="flex-1 md:flex-none px-6 py-6 bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50 border-l border-zinc-800"
                                 >
                                   {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
                                   Confirm Final Delete
@@ -346,29 +346,29 @@ const AdminRecycleBinPage = () => {
                 const name = student.full_name || student.fullName || "Unnamed Student";
 
                 return (
-                  <Card key={id} className="rounded-none border-border hover:border-primary transition-all overflow-hidden">
+                  <Card key={id} className="rounded-2xl border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur-xl hover:border-zinc-700 transition-all overflow-hidden">
                     <CardContent className="p-0">
                       <div className="flex flex-col md:flex-row items-stretch">
                         <div className="p-6 flex-1 flex items-center gap-6">
-                          <div className="w-12 h-12 bg-primary/10 border border-primary/20 flex items-center justify-center">
+                          <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center shrink-0">
                             <User className="w-6 h-6 text-primary" />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[9px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded">Student</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">Student</span>
                             </div>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{name}</h3>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight mt-1">
-                              Username: {student.username} • Course: {student.course || "N/A"} • Deleted: {student.deleted_at ? new Date(student.deleted_at).toLocaleDateString() : 'N/A'}
+                            <h3 className="text-base font-bold tracking-tight text-zinc-100">{name}</h3>
+                            <p className="text-xs text-zinc-400 tracking-wide mt-1 font-medium">
+                              Username: <span className="text-zinc-200">{student.username}</span> • Course: <span className="text-zinc-200">{student.course || "N/A"}</span> • Deleted: {student.deleted_at ? new Date(student.deleted_at).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-px bg-border border-l border-border">
+                        <div className="flex items-center gap-px bg-zinc-800/80 border-t md:border-t-0 md:border-l border-zinc-800">
                           <button
                             onClick={() => handleRestoreStudent(id)}
                             disabled={!!actionLoading}
-                            className="flex-1 md:flex-none px-8 py-6 bg-background hover:bg-green-50 text-green-600 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                            className="flex-1 md:flex-none px-6 py-6 bg-zinc-900 hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50"
                           >
                             {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                             Restore
@@ -376,7 +376,7 @@ const AdminRecycleBinPage = () => {
                           <button
                             onClick={() => handlePermanentDeleteStudent(id)}
                             disabled={!!actionLoading}
-                            className="flex-1 md:flex-none px-8 py-6 bg-background hover:bg-red-50 text-red-600 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                            className="flex-1 md:flex-none px-6 py-6 bg-zinc-900 hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2 text-xs font-bold tracking-wide transition-all disabled:opacity-50 border-l border-zinc-800"
                           >
                             {actionLoading === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                             Permanent Delete

@@ -24,8 +24,7 @@ pub async fn create_category(
     claims: Claims,
     Json(payload): Json<CreateCategoryRequest>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    // Only admins/superadmins can create categories
-    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin) {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
@@ -152,8 +151,7 @@ pub async fn delete_category(
     claims: Claims,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> (StatusCode, Json<CategoryResponse>) {
-    // Only admins/superadmins can delete categories
-    if !matches!(claims.role, UserRole::Admin | UserRole::SuperAdmin) {
+    if claims.role == UserRole::Student {
         return (
             StatusCode::FORBIDDEN,
             Json(CategoryResponse {
