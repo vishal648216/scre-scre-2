@@ -23,7 +23,7 @@ export async function syncServerTime() {
       const response = await apiFetch("/api/public/system/time");
       const endTime = Date.now();
       
-      if (response.ok) {
+      if (response && response.ok) {
         const data = await response.json();
         const serverTime = data.timestamp;
         
