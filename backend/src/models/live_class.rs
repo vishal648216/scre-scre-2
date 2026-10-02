@@ -50,6 +50,16 @@ pub struct LiveClass {
     pub pdf_attachment_url: Option<String>, // PDF Notes Link
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visibility_state: Option<String>, // "published" | "center_scoped" | "hidden"
+
+    // --- Multi-Audience Meeting Engine Extensions ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meeting_type: Option<String>, // "academic_class" | "ptm_parent_meeting" | "staff_director_meeting"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_audience: Option<String>, // "all_students" | "course_students" | "batch_students" | "parents_students" | "center_staff" | "all_center_directors"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_instant: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub joined_count: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,7 +67,7 @@ pub struct CreateLiveClassPayload {
     pub title: String,
     pub description: Option<String>,
     pub platform: Option<String>,
-    pub join_url: String,
+    pub join_url: Option<String>,
     pub course_id: Option<String>,
     pub center_id: Option<String>,
     pub scheduled_at: Option<String>, // ISO8601 string from frontend
@@ -75,6 +85,11 @@ pub struct CreateLiveClassPayload {
     pub keyword: Option<String>,
     pub pdf_attachment_url: Option<String>,
     pub visibility_state: Option<String>,
+
+    // Multi-Audience Meeting Extensions
+    pub meeting_type: Option<String>,
+    pub target_audience: Option<String>,
+    pub is_instant: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,4 +114,10 @@ pub struct UpdateLiveClassPayload {
     pub keyword: Option<String>,
     pub pdf_attachment_url: Option<String>,
     pub visibility_state: Option<String>,
+
+    // Multi-Audience Meeting Extensions
+    pub meeting_type: Option<String>,
+    pub target_audience: Option<String>,
+    pub is_instant: Option<bool>,
+    pub joined_count: Option<i32>,
 }

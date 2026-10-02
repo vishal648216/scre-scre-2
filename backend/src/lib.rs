@@ -510,6 +510,7 @@ pub async fn run_server() {
         // --- LIVE CLASSES ---
         .route("/api/live-classes", get(handlers::live_class::list_live_classes).post(handlers::live_class::create_live_class))
         .route("/api/live-classes/:id", put(handlers::live_class::update_live_class).delete(handlers::live_class::delete_live_class))
+        .route("/api/live-classes/:id/join", post(handlers::live_class::join_live_class))
         // --- TRANSPORT SYSTEM ---
         .route("/api/transport/buses", get(handlers::transport::list_buses).post(handlers::transport::create_bus))
         .route("/api/transport/buses/:id", delete(handlers::transport::delete_bus))

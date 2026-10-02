@@ -164,17 +164,30 @@ pub async fn create_live_class(
     let course_id = payload.course_id.as_deref()
         .and_then(|s| ObjectId::parse_str(s).ok());
 
+    let final_join_url = match payload.join_url.as_deref() {
+        Some(url) if !url.trim().is_empty() => url.trim().to_string(),
+        _ => format!("https://meet.jit.si/scre-live-{}-{}", center_id.to_hex(), Utc::now().timestamp_millis()),
+    };
+
+    let computed_status = if payload.is_hidden.unwrap_or(false) {
+        "hidden".to_string()
+    } else if payload.is_instant.unwrap_or(false) {
+        "ongoing".to_string()
+    } else {
+        "upcoming".to_string()
+    };
+
     let cls = LiveClass {
         id: None,
         title: payload.title,
         description: payload.description,
-        platform: payload.platform.unwrap_or_else(|| "youtube".to_string()),
-        join_url: payload.join_url,
+        platform: payload.platform.unwrap_or_else(|| "jitsi".to_string()),
+        join_url: final_join_url,
         course_id,
         center_id,
         scheduled_at,
         duration_minutes: payload.duration_minutes.unwrap_or(45),
-        status: if payload.is_hidden.unwrap_or(false) { "hidden".to_string() } else { "completed".to_string() },
+        status: computed_status,
         created_by: creator_oid,
         created_at: Utc::now(),
         is_hidden: payload.is_hidden,
@@ -188,13 +201,17 @@ pub async fn create_live_class(
         keyword: payload.keyword,
         pdf_attachment_url: payload.pdf_attachment_url,
         visibility_state: payload.visibility_state,
+        meeting_type: payload.meeting_type.or(Some("academic_class".to_string())),
+        target_audience: payload.target_audience.or(Some("course_students".to_string())),
+        is_instant: payload.is_instant,
+        joined_count: Some(0),
     };
 
     let coll = db.collection::<LiveClass>("live_classes");
     match coll.insert_one(cls, None).await {
         Ok(_) => (StatusCode::CREATED, Json(LiveClassResponse {
             success: true,
-            message: "Course video published successfully".to_string(),
+            message: "Live class meeting scheduled & broadcast room created successfully".to_string(),
         })),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(LiveClassResponse {
             success: false,
@@ -243,6 +260,10 @@ pub async fn update_live_class(
     if let Some(kw) = payload.keyword { update_doc.insert("keyword", kw); }
     if let Some(pdf) = payload.pdf_attachment_url { update_doc.insert("pdf_attachment_url", pdf); }
     if let Some(vstate) = payload.visibility_state { update_doc.insert("visibility_state", vstate); }
+    if let Some(mtype) = payload.meeting_type { update_doc.insert("meeting_type", mtype); }
+    if let Some(taud) = payload.target_audience { update_doc.insert("target_audience", taud); }
+    if let Some(is_inst) = payload.is_instant { update_doc.insert("is_instant", is_inst); }
+    if let Some(jcnt) = payload.joined_count { update_doc.insert("joined_count", jcnt); }
     if let Some(sched) = payload.scheduled_at {
         if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&sched) {
             update_doc.insert("scheduled_at", mongodb::bson::DateTime::from_millis(dt.timestamp_millis()));
@@ -267,6 +288,51 @@ pub async fn update_live_class(
             message: format!("Update failed: {}", e),
         })),
     }
+}
+
+/// POST /api/live-classes/:id/join — Mark attendance & return join URL for live room
+pub async fn join_live_class(
+    State(db): State<Database>,
+    claims: Claims,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let oid = match ObjectId::parse_str(&id) {
+        Ok(o) => o,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"success": false, "message": "Invalid class ID"}))),
+    };
+
+    let coll = db.collection::<LiveClass>("live_classes");
+    let cls = match coll.find_one(doc! {"_id": oid}, None).await {
+        Ok(Some(c)) => c,
+        _ => return (StatusCode::NOT_FOUND, Json(serde_json::json!({"success": false, "message": "Live class not found"}))),
+    };
+
+    // Increment joined_count
+    let doc_coll = db.collection::<Document>("live_classes");
+    let _ = doc_coll.update_one(doc! {"_id": oid}, doc! {"$inc": {"joined_count": 1}}, None).await;
+
+    // Log attendance if caller is a Student
+    if claims.role == UserRole::Student {
+        let att_coll = db.collection::<Document>("attendance");
+        if let Ok(student_oid) = ObjectId::parse_str(&claims.sub) {
+            let att_doc = doc! {
+                "student_id": student_oid,
+                "class_id": oid,
+                "center_id": cls.center_id,
+                "date": Utc::now().to_rfc3339(),
+                "status": "Present",
+                "remarks": format!("Joined Live Session: {}", cls.title),
+                "created_at": Utc::now().to_rfc3339(),
+            };
+            let _ = att_coll.insert_one(att_doc, None).await;
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "join_url": cls.join_url,
+        "message": "Attendance marked successfully. Redirecting to live room..."
+    })))
 }
 
 /// DELETE /api/live-classes/:id — Cancel/delete a live class
