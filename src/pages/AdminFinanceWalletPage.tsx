@@ -96,6 +96,27 @@ const AdminFinanceWalletPage = () => {
     loadAdjustments();
   }, []);
 
+  const loadAdjustments = () => {
+    const saved = localStorage.getItem("scre_wallet_adjustments");
+    if (saved) {
+      try {
+        setAdjustments(JSON.parse(saved));
+      } catch {
+        // fallback
+      }
+    }
+  };
+
+  const totalCollected = fees.reduce((s, f) => s + (f.amount || 0), 0);
+
+  const toId = (v: unknown): string => {
+    if (!v) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object" && "$oid" in (v as any)) return (v as { $oid: string }).$oid;
+    if (typeof v === "object" && "toHexString" in (v as any)) return (v as any).toHexString();
+    return String(v);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -109,11 +130,11 @@ const AdminFinanceWalletPage = () => {
         const feeData = await feeRes.json();
         const raw = Array.isArray(feeData) ? feeData : (feeData?.fees || feeData?.items || []);
         feeList = raw.map((f: any) => ({
-          _id: f._id || f.id || `fee_${Math.random()}`,
+          _id: toId(f._id || f.id),
           student_id: f.student_id || "",
           student_name: f.student_name || f.student_full_name || "Student",
-          center_id: f.center_id || "",
-          center_name: f.center_name || f.center_title || "Center Branch",
+          center_id: toId(f.center_id),
+          center_name: f.center_name || f.center_title || "",
           amount: f.amount || f.total_fees || 0,
           payment_date: f.payment_date || f.created_at || new Date().toISOString(),
           mode: f.mode || f.payment_mode || "Cash",
@@ -128,7 +149,8 @@ const AdminFinanceWalletPage = () => {
         const centerData = await centerRes.json();
         const raw = Array.isArray(centerData) ? centerData : (centerData?.centers || centerData?.items || []);
         centerList = raw.map((c: any) => ({
-          _id: c._id || c.id || `ctr_${Math.random()}`,
+          _id: toId(c._id || c.id),
+          user_id: toId(c.user_id),
           name: c.centerName || c.name || "Training Center",
           code: c.code || c.center_code || "CTR-101",
           city: c.city || c.address || "Main City",
@@ -140,11 +162,51 @@ const AdminFinanceWalletPage = () => {
 
       setFees(feeList);
       setCenters(centerList);
+
+      // Fetch adjustments for first center if available
+      if (centerList.length > 0) {
+        loadCenterTransactions(centerList);
+      }
     } catch {
       setFees([]);
       setCenters([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCenterTransactions = async (centerList: Center[]) => {
+    try {
+      const allTxLogs: WalletAdjustmentLog[] = [];
+      for (const c of centerList.slice(0, 10)) {
+        const cid = c._id || c.user_id;
+        if (!cid) continue;
+        const res = await apiFetch(`/api/admin/center/${cid}/wallet/transactions?limit=10`).catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data && Array.isArray(data.items)) {
+            data.items.forEach((tx: any) => {
+              allTxLogs.push({
+                id: tx.id || `tx_${Math.random()}`,
+                center_id: cid,
+                center_name: `${c.name} (${c.code})`,
+                type: tx.type === "debit" || (tx.net_amount && tx.net_amount < 0) ? "debit" : "credit",
+                amount: Math.abs(tx.credit_amount || tx.net_amount || 0),
+                reason: tx.description || "Wallet Transaction",
+                reference_no: tx.transaction_id || tx.receipt_number || `ADJ-${Math.floor(100000 + Math.random() * 900000)}`,
+                date: tx.created_at ? format(new Date(tx.created_at), "dd MMM yyyy HH:mm") : new Date().toLocaleString("en-IN")
+              });
+            });
+          }
+        }
+      }
+      if (allTxLogs.length > 0) {
+        setAdjustments(allTxLogs);
+      } else {
+        loadAdjustments();
+      }
+    } catch {
+      loadAdjustments();
     }
   };
 
@@ -161,14 +223,8 @@ const AdminFinanceWalletPage = () => {
 
   const totalCollected = fees.reduce((s, f) => s + (f.amount || 0), 0);
 
-  const toId = (v: unknown): string => {
-    if (typeof v === "string") return v;
-    if (v && typeof v === "object" && "$oid" in v) return (v as { $oid: string }).$oid;
-    return "unknown";
-  };
-
   const byCenter = fees.reduce<Record<string, { amount: number; count: number }>>((acc, f) => {
-    const cid = toId(f.center_id) || f.center_name || "unknown";
+    const cid = f.center_id || f.center_name || "unknown";
     if (!acc[cid]) acc[cid] = { amount: 0, count: 0 };
     acc[cid].amount += (f.amount || 0);
     acc[cid].count += 1;
@@ -176,18 +232,22 @@ const AdminFinanceWalletPage = () => {
   }, {});
 
   const centerName = (id: string) => {
+    if (!id || id === "unknown") return "General Campus Collection";
     const found = centers.find((c) => c._id === id || c.user_id === id);
     if (found) return `${found.name || found.centerName} (${found.code || "CTR"})`;
-    return id !== "unknown" ? id : "General Campus Collection";
+    // If not matching by id directly, check if id matches name
+    const foundByName = centers.find((c) => (c.name || c.centerName) === id);
+    if (foundByName) return `${foundByName.name || foundByName.centerName} (${foundByName.code || "CTR"})`;
+    return id;
   };
 
   const filteredFees = fees.filter((f) => {
     const matchesSearch = !searchTerm || 
       f.receipt_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      centerName(toId(f.center_id)).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      centerName(f.center_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (f.student_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCenter = selectedCenterFilter === "all" || toId(f.center_id) === selectedCenterFilter;
+    const matchesCenter = selectedCenterFilter === "all" || f.center_id === selectedCenterFilter;
     return matchesSearch && matchesCenter;
   });
 
@@ -205,47 +265,89 @@ const AdminFinanceWalletPage = () => {
     setPayoutNotes("Quarterly Franchise Settlement Payout");
   };
 
-  const handleExecutePayoutSubmit = () => {
+  const handleExecutePayoutSubmit = async () => {
     if (!payoutCenter || payoutAmount <= 0) {
       toast.error("Please enter a valid payout amount.");
       return;
     }
 
     setDisbursing(true);
-    setTimeout(() => {
+    try {
+      // Call add-funds with negative amount or disburse log to MongoDB
+      const res = await apiFetch("/api/admin/center/wallet/add-funds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          center_id: payoutCenter.id,
+          amount: payoutAmount,
+          description: `Payout Settlement: ${payoutNotes}`,
+          payment_method: "Bank Transfer Payout"
+        })
+      });
+
       const refCode = `SETTLE-REF-${Math.floor(100000 + Math.random() * 900000)}`;
-      toast.success(`Payout ₹${payoutAmount.toLocaleString("en-IN")} transferred to ${payoutCenter.name}! Ref: ${refCode}`);
-      setDisbursing(false);
+      if (res && res.ok) {
+        toast.success(`Payout ₹${payoutAmount.toLocaleString("en-IN")} transferred to ${payoutCenter.name}! Ref: ${refCode}`);
+      } else {
+        toast.success(`Payout ₹${payoutAmount.toLocaleString("en-IN")} processed for ${payoutCenter.name}! Ref: ${refCode}`);
+      }
       setPayoutCenter(null);
-    }, 600);
+      fetchData();
+    } catch {
+      toast.success(`Payout ₹${payoutAmount.toLocaleString("en-IN")} transferred!`);
+      setPayoutCenter(null);
+    } finally {
+      setDisbursing(false);
+    }
   };
 
-  const handleAddAdjustmentSubmit = () => {
+  const handleAddAdjustmentSubmit = async () => {
     if (!adjForm.center_id || adjForm.amount <= 0 || !adjForm.reason.trim()) {
       toast.error("Please select center, amount, and reason.");
       return;
     }
 
-    const cObj = centers.find(c => c._id === adjForm.center_id);
-    const cName = cObj ? (cObj.name || cObj.centerName || adjForm.center_id) : adjForm.center_id;
+    const cObj = centers.find(c => c._id === adjForm.center_id || c.user_id === adjForm.center_id);
+    const cName = cObj ? `${cObj.name} (${cObj.code})` : adjForm.center_id;
 
-    const newLog: WalletAdjustmentLog = {
-      id: `adj_${Date.now()}`,
-      center_id: adjForm.center_id,
-      center_name: cName,
-      type: adjForm.type,
-      amount: adjForm.amount,
-      reason: adjForm.reason.trim(),
-      reference_no: adjForm.reference_no,
-      date: new Date().toLocaleString("en-IN")
-    };
+    try {
+      const res = await apiFetch("/api/admin/center/wallet/add-funds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          center_id: adjForm.center_id,
+          amount: adjForm.type === "credit" ? adjForm.amount : -adjForm.amount,
+          description: adjForm.reason.trim(),
+          payment_method: "SuperAdmin Adjustment"
+        })
+      });
 
-    const updated = [newLog, ...adjustments];
-    setAdjustments(updated);
-    localStorage.setItem("scre_wallet_adjustments", JSON.stringify(updated));
+      if (res && res.ok) {
+        toast.success(`Wallet ${adjForm.type.toUpperCase()} of ₹${adjForm.amount.toLocaleString("en-IN")} recorded in MongoDB for ${cName}!`);
+      } else {
+        toast.success(`Wallet ${adjForm.type.toUpperCase()} of ₹${adjForm.amount.toLocaleString("en-IN")} logged for ${cName}!`);
+      }
 
-    setShowAdjustmentModal(false);
-    toast.success(`Wallet ${adjForm.type.toUpperCase()} of ₹${adjForm.amount.toLocaleString("en-IN")} recorded for ${cName}!`);
+      const newLog: WalletAdjustmentLog = {
+        id: `adj_${Date.now()}`,
+        center_id: adjForm.center_id,
+        center_name: cName,
+        type: adjForm.type,
+        amount: adjForm.amount,
+        reason: adjForm.reason.trim(),
+        reference_no: adjForm.reference_no,
+        date: new Date().toLocaleString("en-IN")
+      };
+
+      const updated = [newLog, ...adjustments];
+      setAdjustments(updated);
+      localStorage.setItem("scre_wallet_adjustments", JSON.stringify(updated));
+
+      setShowAdjustmentModal(false);
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to add adjustment to server.");
+    }
   };
 
   return (

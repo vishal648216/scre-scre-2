@@ -5,6 +5,8 @@ import { Settings, Bell, Lock, Eye, EyeOff, Globe, Save, Loader2, Languages } fr
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
+import { setLanguage } from "@/lib/translator";
+
 
 const LANG_OPTIONS = [
   { code: "en", label: "English (International)" },
@@ -227,10 +229,11 @@ const SettingsPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleLanguageChange = async (lang: string) => {
-    await i18n.changeLanguage(lang);
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang);
     toast.success(t("Language changed successfully"));
   };
+
 
   const handleSave = () => {
     setLoading(true);

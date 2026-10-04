@@ -12,7 +12,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className = "" }) =
     initGoogleTranslateScript();
   }, []);
 
-  const storedLang = (localStorage.getItem("lang") || i18n.language || "en").trim().toLowerCase();
+  const storedLang = (localStorage.getItem("lang") || "en").trim().toLowerCase();
+
   
   // Match exact stored code or base code
   const currentLang = POPULAR_LANGUAGES.find(
@@ -30,9 +31,10 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className = "" }) =
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {/* Official Google Translate Dropdown Widget */}
-      <div id="google_translate_element" className="inline-block" />
+      <div id="google_translate_element" className="hidden" />
 
       {/* Custom Universal Language Selector */}
+
       <div className="relative inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 px-3 py-1.5 shadow-xs transition-all hover:bg-slate-200/60 dark:hover:bg-slate-700/90">
         <Globe className="w-4 h-4 text-primary shrink-0 mr-2" />
         <select

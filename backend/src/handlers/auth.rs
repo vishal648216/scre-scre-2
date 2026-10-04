@@ -281,32 +281,69 @@ pub async fn login(
         );
     }
 
-    let raw_users = db.collection::<mongodb::bson::Document>("users");
-    let raw_filter = doc! {
-        "$or": [
-            { "username": &payload.username },
-            { "email": &payload.username }
-        ],
-        "is_deleted": false
-    };
-
-    println!("[login] Raw filter: {:?}", raw_filter);
-    let raw_user = raw_users.find_one(raw_filter, None).await;
-    println!("[login] Raw user result: {:?}", raw_user);
-
+    let clean_un = payload.username.trim();
     let users = db.collection::<User>("users");
-    let user_result = users
+
+    // 1. Try exact match first
+    let mut user_result = users
         .find_one(
             doc! {
                 "$or": [
-                    { "username": &payload.username },
-                    { "email": &payload.username }
+                    { "username": clean_un },
+                    { "email": clean_un.to_lowercase() },
+                    { "enrollment_number": clean_un },
+                    { "registration_number": clean_un },
+                    { "roll_number": clean_un }
                 ],
                 "is_deleted": false
             },
             None,
         )
         .await;
+
+    // 2. Case-insensitive regex fallback
+    if matches!(&user_result, Ok(None)) {
+        let pattern = format!("^{}$", regex::escape(clean_un));
+        let regex_doc = doc! { "$regex": &pattern, "$options": "i" };
+        user_result = users
+            .find_one(
+                doc! {
+                    "$or": [
+                        { "username": &regex_doc },
+                        { "email": &regex_doc },
+                        { "enrollment_number": &regex_doc },
+                        { "registration_number": &regex_doc },
+                        { "roll_number": &regex_doc }
+                    ],
+                    "is_deleted": false
+                },
+                None,
+            )
+            .await;
+    }
+
+    // 3. Center Code fallback (e.g. logging in with Center Code "CLNT999")
+    if matches!(&user_result, Ok(None)) {
+        let center_coll = db.collection::<crate::models::center::Center>("centers");
+        let pattern = format!("^{}$", regex::escape(clean_un));
+        if let Ok(Some(center)) = center_coll
+            .find_one(
+                doc! {
+                    "$or": [
+                        { "code": doc! { "$regex": &pattern, "$options": "i" } },
+                        { "center_code": doc! { "$regex": &pattern, "$options": "i" } }
+                    ]
+                },
+                None,
+            )
+            .await
+        {
+            user_result = users
+                .find_one(doc! { "_id": center.user_id, "is_deleted": false }, None)
+                .await;
+        }
+    }
+
     println!("[login] User find result: {:?}", user_result);
 
     let user = match user_result {

@@ -34,6 +34,8 @@ import { Upload, FileUp, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
+import { useExamProctoring } from "@/hooks/useExamProctoring";
+import { LiveProctorWidget } from "@/components/exam/LiveProctorWidget";
 
 interface Question {
   _id: string;
@@ -258,72 +260,51 @@ function LegacyTakeExamPage() {
     return () => clearInterval(timer);
   }, [isWaiting, secondsUntilStart, fetchPaper]);
 
-  // Lockdown & Security
-  useEffect(() => {
-    if (paper?.status !== "InProgress") return;
+  const handleSubmit = useCallback(async (terminateReason?: string) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const finalSecurityEvents = terminateReason 
+        ? [...securityEvents, { event_type: "InstantTermination", reason: terminateReason, timestamp: getServerNow().toISOString() }]
+        : securityEvents;
 
-    // Prevent navigation away & Anti-cheat
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
+      const payload = {
+        responses: Object.entries(responses).map(([question_id, response]) => ({
+          question_id,
+          response
+        })),
+        security_events: finalSecurityEvents
+      };
+      
+      const res = await apiFetch(`/api/exam/attempt/${id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        const event = { event_type: "TabSwitch", timestamp: getServerNow().toISOString() };
-        setSecurityEvents(prev => [...prev, event]);
-        setWarningCount(prev => {
-          const newCount = prev + 1;
-          if (newCount >= 3) {
-            toast.error("EXAM AUTO-SUBMITTED: Maximum tab switch limit reached!");
-            handleSubmit();
-          } else {
-            toast.warning(`⚠️ CHEATING WARNING (${newCount}/3): TAB SWITCH DETECTED! Exam will auto-submit after 3 switches.`, { duration: 6000 });
-          }
-          return newCount;
-        });
+      if (res.ok) {
+        toast.success(terminateReason ? `Exam Auto-Submitted (${terminateReason})` : "Exam submitted successfully!");
+        if (document.fullscreenElement) document.exitFullscreen();
+        navigate(`/dashboard/student/exams/results/${id}`);
+      } else {
+        toast.error("Failed to submit exam");
       }
-    };
+    } catch (error) {
+      toast.error("An error occurred during submission");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitting, responses, securityEvents, id, navigate]);
 
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+  // Strict Hardware & Proctoring Hook
+  const proctoring = useExamProctoring({
+    active: paper?.status === "InProgress",
+    onInstantTerminate: (reason) => {
+      handleSubmit(reason);
+    }
+  });
 
-    const handleCopyCutPaste = (e: ClipboardEvent) => {
-      e.preventDefault();
-      toast.error("Copying, pasting, or cutting is strictly prohibited during exams!");
-    };
-
-    const handleKeyCombo = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "p", "u", "s"].includes(key)) {
-        e.preventDefault();
-        toast.error("Keyboard shortcut disabled during exam!");
-      }
-      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && (key === "i" || key === "c" || key === "j"))) {
-        e.preventDefault();
-        toast.error("Developer Tools inspection disabled!");
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("contextmenu", handleContextMenu);
-    document.addEventListener("copy", handleCopyCutPaste);
-    document.addEventListener("paste", handleCopyCutPaste);
-    document.addEventListener("cut", handleCopyCutPaste);
-    document.addEventListener("keydown", handleKeyCombo);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("contextmenu", handleContextMenu);
-      document.removeEventListener("copy", handleCopyCutPaste);
-      document.removeEventListener("paste", handleCopyCutPaste);
-      document.removeEventListener("cut", handleCopyCutPaste);
-      document.removeEventListener("keydown", handleKeyCombo);
-    };
-  }, [paper?.status]);
-
-  // Exam Timer
+  // Exam Timer - Instant auto submit at 0
   useEffect(() => {
     if (timeLeft <= 0 || paper?.status !== "InProgress") return;
     
@@ -331,7 +312,7 @@ function LegacyTakeExamPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit();
+          handleSubmit("Timer Expired");
           return 0;
         }
         return prev - 1;
@@ -339,9 +320,13 @@ function LegacyTakeExamPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, paper?.status]);
+  }, [timeLeft, paper?.status, handleSubmit]);
 
   const handleStart = async () => {
+    if (!proctoring.hasHardwarePermission) {
+      toast.error("Camera & Microphone access is mandatory before starting the exam!");
+      return;
+    }
     try {
       const res = await apiFetch(`/api/exam/attempt/${id}/start`, { method: "POST" });
       if (res.ok) {
@@ -352,39 +337,6 @@ function LegacyTakeExamPage() {
       }
     } catch (error) {
       toast.error("Failed to start exam");
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const payload = {
-        responses: Object.entries(responses).map(([question_id, response]) => ({
-          question_id,
-          response
-        })),
-        security_events: securityEvents
-      };
-      
-      const res = await apiFetch(`/api/exam/attempt/${id}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        toast.success("Exam submitted successfully!");
-        if (document.fullscreenElement) document.exitFullscreen();
-        // Redirect to the result page so they see the Thank You and Review flow immediately
-        navigate(`/dashboard/student/exams/results/${id}`);
-      } else {
-        toast.error("Failed to submit exam");
-      }
-    } catch (error) {
-      toast.error("An error occurred during submission");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -877,6 +829,9 @@ function LegacyTakeExamPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* LIVE PROCTORING & HARDWARE WIDGET */}
+      <LiveProctorWidget {...proctoring} />
     </div>
   );
 }

@@ -91,12 +91,7 @@ pub async fn list_live_classes(
         }
     }
 
-    if let Some(status) = &q.status {
-        filter.insert("status", status.as_str());
-    } else {
-        // Default: show upcoming and ongoing (and completed for recorded videos)
-        filter.insert("status", doc! {"$in": ["upcoming", "ongoing", "completed"]});
-    }
+    let target_status = q.status.clone();
 
     let opts = FindOptions::builder()
         .sort(doc! {"scheduled_at": -1})
@@ -123,6 +118,13 @@ pub async fn list_live_classes(
             } else {
                 "completed".to_string()
             };
+
+            // If a specific status filter was requested (and not 'all'), match against computed_status
+            if let Some(req_st) = &target_status {
+                if req_st != "all" && req_st != &computed_status {
+                    continue;
+                }
+            }
 
             let mut val = serde_json::to_value(&cls).unwrap_or_default();
             if let Some(obj) = val.as_object_mut() {

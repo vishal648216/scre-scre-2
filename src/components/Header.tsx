@@ -194,11 +194,6 @@ const Header = () => {
                   <div className="flex items-center gap-2 md:gap-4">
                     <Clock className="h-3 w-3" />
                     <span>{t("Mon - Fri: 10.00 am - 06.00 pm")}</span>
-
-                    <div className="flex items-center gap-1.5 ml-2 group">
-                      {/* <Globe className="h-3 w-3 text-primary transition-all" /> */}
-                      <LanguageSwitcher />
-                    </div>
                   </div>
 
                   <div className="flex flex-wrap justify-center md:justify-end items-center gap-2 md:gap-4">
@@ -340,17 +335,18 @@ const Header = () => {
             : "bg-card"
             }`}
         >
-          <div className="container mx-auto flex items-center justify-center py-2 px-2">
-            <nav className="flex flex-wrap justify-center items-center gap-1 xl:gap-2">
+          <div className="container mx-auto flex items-center justify-center py-2 px-2 no-scrollbar">
+
+            <nav className="flex items-center justify-center gap-1 xl:gap-2 whitespace-nowrap shrink-0">
               {navLinks.map((link, index) => (
-                <div key={index} className="relative group">
+                <div key={index} className="relative group shrink-0">
                   {link.submenu ? (
                     <>
-                      <button className="flex items-center gap-1 xl:gap-2 px-2 xl:px-3 py-2 text-sm font-semibold text-foreground hover:text-primary transition rounded-lg hover:bg-primary-light">
-                        {link.icon && <link.icon className="w-3.5 h-3.5 xl:w-4 xl:h-4 stroke-[2.5px]" />}
+                      <button className="flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 text-xs xl:text-sm font-semibold text-foreground hover:text-primary transition rounded-lg hover:bg-primary-light whitespace-nowrap">
+                        {link.icon && <link.icon className="w-3.5 h-3.5 xl:w-4 xl:h-4 stroke-[2.5px] shrink-0" />}
                         {t(link.label)}
 
-                        <ChevronDown className="w-3.5 h-3.5 xl:w-4 xl:h-4 transition-transform duration-300 group-hover:rotate-180" />
+                        <ChevronDown className="w-3 h-3 xl:w-3.5 xl:h-3.5 transition-transform duration-300 group-hover:rotate-180 shrink-0" />
                       </button>
 
                       <div className="absolute left-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-xl opacity-0 invisible translate-y-3 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300 z-50">
@@ -364,9 +360,9 @@ const Header = () => {
                                 setShowLogin(true);
                               }
                             }}
-                            className="flex items-center gap-2 px-5 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition"
+                            className="flex items-center gap-2 px-5 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition whitespace-nowrap"
                           >
-                            {item.icon && <item.icon className="w-4 h-4 text-muted-foreground stroke-[2.5px]" />}
+                            {item.icon && <item.icon className="w-4 h-4 text-muted-foreground stroke-[2.5px] shrink-0" />}
                             {t(item.label)}
                           </a>
                         ))}
@@ -375,9 +371,9 @@ const Header = () => {
                   ) : (
                     <a
                       href={link.href}
-                      className="flex items-center gap-1 xl:gap-2 px-2 xl:px-3 py-2 text-sm font-semibold text-foreground hover:text-primary transition rounded-lg hover:bg-primary-light"
+                      className="flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 text-xs xl:text-sm font-semibold text-foreground hover:text-primary transition rounded-lg hover:bg-primary-light whitespace-nowrap"
                     >
-                      {link.icon && <link.icon className="w-3.5 h-3.5 xl:w-4 xl:h-4 stroke-[2.5px]" />}
+                      {link.icon && <link.icon className="w-3.5 h-3.5 xl:w-4 xl:h-4 stroke-[2.5px] shrink-0" />}
                       {t(link.label)}
                     </a>
                   )}
@@ -386,17 +382,17 @@ const Header = () => {
 
               <a
                 href="/downloads"
-                className="ml-1 flex items-center gap-1 xl:gap-2 rounded-lg bg-secondary px-3 xl:px-5 py-2 text-sm font-heading font-bold text-secondary-foreground shadow-md hover:bg-secondary-dark transition"
+                className="ml-1 flex items-center gap-1 xl:gap-1.5 rounded-lg bg-secondary px-2.5 xl:px-4 py-1.5 text-xs xl:text-sm font-heading font-bold text-secondary-foreground shadow-sm hover:bg-secondary-dark transition whitespace-nowrap shrink-0"
               >
-                <Download className="w-3.5 h-3.5 xl:w-4 xl:h-4" />
+                <Download className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
                 {t("Downloads")}
               </a>
 
               <a
                 href="/shop"
-                className="ml-1 flex items-center gap-1 xl:gap-2 rounded-lg bg-accent px-3 xl:px-5 py-2 text-sm font-heading font-bold text-accent-foreground shadow-md hover:bg-accent-dark transition"
+                className="ml-1 flex items-center gap-1 xl:gap-1.5 rounded-lg bg-accent px-2.5 xl:px-4 py-1.5 text-xs xl:text-sm font-heading font-bold text-accent-foreground shadow-sm hover:bg-accent-dark transition whitespace-nowrap shrink-0"
               >
-                <Briefcase className="w-3.5 h-3.5 xl:w-4 xl:h-4" />
+                <Briefcase className="w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0" />
                 {t("Shop")}
               </a>
 
@@ -408,12 +404,12 @@ const Header = () => {
                     setShowLogin(true);
                   }
                 }}
-                className="ml-1 flex items-center gap-1 xl:gap-2 rounded-lg bg-primary px-3 xl:px-5 py-2 text-sm font-heading font-bold text-primary-foreground shadow-md hover:bg-primary-dark transition"
+                className="ml-1 flex items-center gap-1 xl:gap-1.5 rounded-lg bg-primary px-2.5 xl:px-4 py-1.5 text-xs xl:text-sm font-heading font-bold text-primary-foreground shadow-sm hover:bg-primary-dark transition whitespace-nowrap shrink-0"
               >
-                <LogIn className="h-3.5 w-3.5 xl:h-4 xl:w-4" /> {t("login")}
+                <LogIn className="h-3.5 w-3.5 xl:h-4 xl:w-4 shrink-0" /> {t("login")}
               </button>
 
-              <LanguageSwitcher className="ml-2" />
+              <LanguageSwitcher className="ml-1 shrink-0" />
             </nav>
           </div>
         </div>

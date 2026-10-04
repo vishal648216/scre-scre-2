@@ -129,7 +129,7 @@ export const POPULAR_LANGUAGES: LangOption[] = [
 ];
 
 export function triggerGoogleTranslateSync(langCode?: string) {
-  const targetLang = (langCode || localStorage.getItem("lang") || i18n.language || "en")
+  const targetLang = (langCode || localStorage.getItem("lang") || "en")
     .trim()
     .toLowerCase();
 
@@ -139,6 +139,9 @@ export function triggerGoogleTranslateSync(langCode?: string) {
   if (targetLang === "en") {
     if (combo.selectedIndex !== 0) {
       combo.selectedIndex = 0;
+      if (combo.options[0]) {
+        combo.value = combo.options[0].value;
+      }
       combo.dispatchEvent(new Event("change", { bubbles: true }));
     }
     return;
@@ -182,24 +185,20 @@ export function setLanguage(langCode: string) {
   // 2. Update localStorage
   localStorage.setItem("lang", normalized);
 
-  // 3. Update cookies (googtrans and lang)
-  if (normalized === "en") {
-    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "lang=en; path=/; max-age=31536000; SameSite=Lax";
-  } else {
-    const googTransVal = `/en/${normalized}`;
-    const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+  // 3. Update cookies (googtrans and lang) across all paths and domain levels
+  const googTransVal = normalized === "en" ? "/en/en" : `/en/${normalized}`;
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
 
-    document.cookie = `googtrans=${googTransVal}; path=/; max-age=31536000; SameSite=Lax`;
-    document.cookie = `googtrans=${googTransVal}; path=/`;
-    document.cookie = `lang=${normalized}; path=/; max-age=31536000; SameSite=Lax`;
+  document.cookie = `googtrans=${googTransVal}; path=/; max-age=31536000; SameSite=Lax`;
+  document.cookie = `googtrans=${googTransVal}; path=/`;
+  document.cookie = `lang=${normalized}; path=/; max-age=31536000; SameSite=Lax`;
 
-    if (hostname && hostname.includes(".") && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-      const rootDomain = hostname.replace(/^www\./, "");
-      [hostname, `.${hostname}`, rootDomain, `.${rootDomain}`].forEach((d) => {
-        document.cookie = `googtrans=${googTransVal}; path=/; domain=${d}; max-age=31536000; SameSite=Lax`;
-      });
-    }
+  if (hostname && hostname.includes(".") && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    const rootDomain = hostname.replace(/^www\./, "");
+    [hostname, `.${hostname}`, rootDomain, `.${rootDomain}`].forEach((d) => {
+      document.cookie = `googtrans=${googTransVal}; path=/; domain=${d}; max-age=31536000; SameSite=Lax`;
+      document.cookie = `lang=${normalized}; path=/; domain=${d}; max-age=31536000; SameSite=Lax`;
+    });
   }
 
   // 4. Update HTML lang & dir
@@ -237,12 +236,11 @@ export function initGoogleTranslateScript() {
     document.body.appendChild(elementDiv);
   }
 
-  const savedLang = (localStorage.getItem("lang") || i18n.language || "en").trim().toLowerCase();
-  if (savedLang !== "en") {
-    const googTransVal = `/en/${savedLang}`;
-    document.cookie = `googtrans=${googTransVal}; path=/; max-age=31536000; SameSite=Lax`;
-    document.cookie = `googtrans=${googTransVal}; path=/`;
-  }
+  const savedLang = (localStorage.getItem("lang") || "en").trim().toLowerCase();
+  const googTransVal = savedLang === "en" ? "/en/en" : `/en/${savedLang}`;
+  
+  document.cookie = `googtrans=${googTransVal}; path=/; max-age=31536000; SameSite=Lax`;
+  document.cookie = `googtrans=${googTransVal}; path=/`;
 
   if (document.getElementById("google-translate-script")) return;
 
@@ -257,11 +255,9 @@ export function initGoogleTranslateScript() {
         "google_translate_element"
       );
 
-      if (savedLang && savedLang !== "en") {
-        setTimeout(() => {
-          triggerGoogleTranslateSync(savedLang);
-        }, 300);
-      }
+      setTimeout(() => {
+        triggerGoogleTranslateSync(savedLang);
+      }, 300);
     }
   };
 

@@ -252,12 +252,16 @@ fn is_public_path(path: &str) -> bool {
         || path == "/api/internships"
         || path == "/api/ai/doubt-solver"
         || path == "/api/student/resume/ats-score"
+        || path.starts_with("/api/practicals")
 
         // Public certificate download
         || path.starts_with("/api/certificates/download/")
 }
 
 fn is_allowed_public_method(path: &str, method: &Method) -> bool {
+    if path.starts_with("/api/practicals") {
+        return true;
+    }
     if (path == "/api/ai/doubt-solver" || path == "/api/student/resume/ats-score") && *method == Method::POST {
         return true;
     }
@@ -442,8 +446,15 @@ pub async fn auth_middleware(
         }
 
         // -----------------------------------------------------
-        // PUBLIC REQUEST → SKIP JWT AUTHENTICATION
+        // PUBLIC REQUEST → SKIP MANDATORY JWT AUTHENTICATION
         // -----------------------------------------------------
+        if let Some(auth_val) = req.headers().get(AUTHORIZATION).and_then(|v| v.to_str().ok()) {
+            if let Some(token) = auth_val.strip_prefix("Bearer ") {
+                if let Ok(claims) = decode_jwt(token) {
+                    req.extensions_mut().insert(claims);
+                }
+            }
+        }
         return next.run(req).await;
     }
 

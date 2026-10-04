@@ -62,6 +62,14 @@ const AdminFinanceTransactionsPage = () => {
     fetchData();
   }, []);
 
+  const toId = (v: unknown): string => {
+    if (!v) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object" && "$oid" in (v as any)) return (v as { $oid: string }).$oid;
+    if (typeof v === "object" && "toHexString" in (v as any)) return (v as any).toHexString();
+    return String(v);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -75,11 +83,11 @@ const AdminFinanceTransactionsPage = () => {
         const feeData = await feeRes.json();
         const raw = Array.isArray(feeData) ? feeData : (feeData?.fees || feeData?.items || []);
         feeList = raw.map((f: any) => ({
-          _id: f._id || f.id || `fee_${Math.random()}`,
+          _id: toId(f._id || f.id),
           student_id: f.student_id || f.registration_no || "STU-1001",
           student_name: f.student_name || f.student_full_name || "Enrolled Student",
-          center_id: f.center_id || "",
-          center_name: f.center_name || f.center_title || "Training Center Branch",
+          center_id: toId(f.center_id),
+          center_name: f.center_name || f.center_title || "",
           amount: f.amount || f.total_fees || 0,
           payment_date: f.payment_date || f.created_at || new Date().toISOString(),
           mode: f.mode || f.payment_mode || "UPI",
@@ -96,7 +104,8 @@ const AdminFinanceTransactionsPage = () => {
         const centerData = await centerRes.json();
         const raw = Array.isArray(centerData) ? centerData : (centerData?.centers || centerData?.items || []);
         centerList = raw.map((c: any) => ({
-          _id: c._id || c.id || `ctr_${Math.random()}`,
+          _id: toId(c._id || c.id),
+          user_id: toId(c.user_id),
           name: c.centerName || c.name || "Training Center",
           code: c.code || c.center_code || "CTR-101"
         }));
@@ -113,9 +122,12 @@ const AdminFinanceTransactionsPage = () => {
   };
 
   const centerName = (f: FeeRecord) => {
+    const cid = f.center_id;
+    if (cid) {
+      const found = centers.find((c: any) => c._id === cid || c.user_id === cid);
+      if (found) return `${found.name || (found as any).centerName} (${found.code || "CTR"})`;
+    }
     if (f.center_name && f.center_name !== "Center Branch") return f.center_name;
-    const found = centers.find((c) => c._id === f.center_id);
-    if (found) return `${found.name || found.centerName} (${found.code || "CTR"})`;
     return "HQ Central Campus";
   };
 

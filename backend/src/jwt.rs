@@ -38,3 +38,26 @@ pub fn decode_jwt(token: &str) -> Result<Claims, StatusCode> {
     Ok(decoded.claims)
 }
 
+pub fn encode_jwt(sub: &str, username: &str, role: crate::models::user::UserRole) -> Result<String, StatusCode> {
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret_key_change_me".to_string());
+    let expiration = chrono::Utc::now()
+        .checked_add_signed(chrono::Duration::hours(24))
+        .expect("valid timestamp")
+        .timestamp() as usize;
+
+    let claims = Claims {
+        sub: sub.to_string(),
+        username: username.to_string(),
+        role,
+        exp: expiration,
+    };
+
+    jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(jwt_secret.as_ref()),
+    )
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+

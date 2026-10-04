@@ -109,7 +109,7 @@ export default function StudentLiveClassesPage() {
 
   useEffect(() => {
     fetchClasses();
-    const interval = setInterval(fetchClasses, 30000);
+    const interval = setInterval(fetchClasses, 10000);
     return () => clearInterval(interval);
   }, [fetchClasses]);
 

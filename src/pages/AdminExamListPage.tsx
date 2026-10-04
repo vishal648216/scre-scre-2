@@ -23,6 +23,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useExamProctoring } from "@/hooks/useExamProctoring";
+import { LiveProctorWidget } from "@/components/exam/LiveProctorWidget";
 
 interface StudentPaper {
   _id: string;
@@ -372,6 +374,36 @@ const AdminExamListPage = () => {
     }
     setActiveQuestions(MOCK_QUESTION_BANKS.default);
   };
+
+  const isCbtActive = paperModalOpen && modalViewMode === "online_cbt" && !cbtSubmitted;
+  const proctoring = useExamProctoring({
+    active: isCbtActive,
+    onInstantTerminate: (reason) => {
+      setCbtSubmitted(true);
+      toast.error(`CBT Terminated: ${reason}`);
+    },
+  });
+
+  useEffect(() => {
+    if (!paperModalOpen || modalViewMode !== "online_cbt" || cbtSubmitted) return;
+    if (cbtTimer <= 0) {
+      setCbtSubmitted(true);
+      toast.info("Timer expired! CBT Examination auto-submitted.");
+      return;
+    }
+    const timer = setInterval(() => {
+      setCbtTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setCbtSubmitted(true);
+          toast.info("Timer expired! CBT Examination auto-submitted.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [paperModalOpen, modalViewMode, cbtSubmitted, cbtTimer]);
 
   const handleOpenPaperModal = (bp: Blueprint) => {
     setSelectedBlueprintForPaper(bp);
@@ -1528,6 +1560,9 @@ const AdminExamListPage = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* LIVE PROCTORING WIDGET & HARDWARE LOCK */}
+        <LiveProctorWidget {...proctoring} />
       </div>
     </DashboardLayout>
   );

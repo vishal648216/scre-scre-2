@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ import {
   GraduationCap,
   ShieldCheck,
   Zap,
+  CheckCircle2,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -102,15 +105,25 @@ const PLATFORM_LABELS: Record<string, { label: string; icon: string }> = {
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   upcoming: { label: "Upcoming", variant: "secondary" },
   ongoing: { label: "🔴 Live Studio Active", variant: "default" },
-  completed: { label: "Completed", variant: "outline" },
+  completed: { label: "✓ Completed", variant: "outline" },
   cancelled: { label: "Cancelled", variant: "destructive" },
 };
 
 export default function CenterLiveClassesPage() {
+  const location = useLocation();
+  const isHistoryRoute = location.pathname.includes("history");
+
   const [classes, setClasses] = useState<LiveClass[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAll, setShowAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<"active" | "completed" | "all">(
+    isHistoryRoute ? "completed" : "active"
+  );
+
+  // Sync tab with route changes
+  useEffect(() => {
+    setActiveTab(isHistoryRoute ? "completed" : "active");
+  }, [isHistoryRoute]);
 
   // Live Studio Modal state
   const [studioOpen, setStudioOpen] = useState(false);
@@ -153,11 +166,7 @@ export default function CenterLiveClassesPage() {
   const fetchClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const statusParam = showAll ? "all" : undefined;
-      const url = statusParam
-        ? `/api/live-classes?status=${statusParam}`
-        : "/api/live-classes";
-      const res = await apiFetch(url);
+      const res = await apiFetch("/api/live-classes?status=all");
       if (res.ok) {
         const data = await res.json();
         setClasses(data.classes || []);
@@ -167,7 +176,7 @@ export default function CenterLiveClassesPage() {
     } finally {
       setLoading(false);
     }
-  }, [showAll]);
+  }, []);
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -182,6 +191,8 @@ export default function CenterLiveClassesPage() {
   useEffect(() => {
     fetchClasses();
     fetchCourses();
+    const interval = setInterval(fetchClasses, 15000);
+    return () => clearInterval(interval);
   }, [fetchClasses, fetchCourses]);
 
   const openCreateWithPreset = (mType: string) => {
@@ -381,10 +392,14 @@ export default function CenterLiveClassesPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success("✅ Live meeting ended & marked Completed!");
+        toast.success("✅ Live meeting ended & moved to Class History!");
         if (activeStudioMeeting?.id === cls.id) {
           setStudioOpen(false);
+          setActiveStudioMeeting(null);
         }
+        setClasses((prev) =>
+          prev.map((c) => (c.id === cls.id ? { ...c, status: "completed" } : c))
+        );
         fetchClasses();
       } else {
         toast.error(data.message || "Failed to end meeting");
@@ -423,6 +438,16 @@ export default function CenterLiveClassesPage() {
   const ptmCount = classes.filter((c) => c.meeting_type === "ptm_parent_meeting").length;
   const staffCount = classes.filter((c) => c.meeting_type === "staff_director_meeting").length;
 
+  const activeClasses = classes.filter((c) => c.status !== "completed" && c.status !== "cancelled");
+  const completedClasses = classes.filter((c) => c.status === "completed");
+
+  let displayClasses = classes;
+  if (activeTab === "active") {
+    displayClasses = activeClasses;
+  } else if (activeTab === "completed") {
+    displayClasses = completedClasses;
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
@@ -431,21 +456,25 @@ export default function CenterLiveClassesPage() {
           <div>
             <div className="flex items-center gap-2">
               <Badge className="bg-primary/20 text-primary border-primary/30 uppercase tracking-widest text-[10px] font-bold">
-                Universal Live Studio
+                {isHistoryRoute ? "Meeting Archives & History" : "Universal Live Studio"}
               </Badge>
               <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400">
                 ⚡ Password-Free Direct Studio
               </Badge>
             </div>
             <h1 className="font-heading font-extrabold text-3xl text-foreground uppercase tracking-tight mt-1">
-              {userRole === "staff"
+              {isHistoryRoute
+                ? "Class History & Completed Recordings"
+                : userRole === "staff"
                 ? "Faculty & Staff Live Studio"
                 : userRole === "admin" || userRole === "superadmin"
                 ? "Global Multi-Center Live Engine"
                 : "Live Classes & Meetings Studio"}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">
-              {userRole === "staff"
+              {isHistoryRoute
+                ? "View completed live lectures, past Parent-Teacher meetings & staff sync recordings."
+                : userRole === "staff"
                 ? "Host Academic Course Lectures for your enrolled students or sync with center faculty."
                 : userRole === "admin" || userRole === "superadmin"
                 ? "Host franchise director syncs, staff meetings & system-wide masterclasses."
@@ -453,14 +482,6 @@ export default function CenterLiveClassesPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAll(!showAll)}
-              className="rounded-lg"
-            >
-              {showAll ? "Show Active" : "Show All"}
-            </Button>
             <Button onClick={() => openCreateWithPreset("academic_class")} className="rounded-lg gap-2 bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4" />
               Schedule New Meeting
@@ -565,27 +586,69 @@ export default function CenterLiveClassesPage() {
           ))}
         </div>
 
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1.5 ${
+              activeTab === "active"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            Active & Scheduled ({activeClasses.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("completed")}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1.5 ${
+              activeTab === "completed"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Completed History ({completedClasses.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1.5 ${
+              activeTab === "all"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            All Meetings ({classes.length})
+          </button>
+        </div>
+
         {/* Classes List */}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : classes.length === 0 ? (
+        ) : displayClasses.length === 0 ? (
           <Card className="rounded-xl border-border">
             <CardContent className="py-14 text-center text-muted-foreground">
               <Video className="w-12 h-12 mx-auto mb-4 opacity-40" />
-              <p className="font-semibold text-lg">No live classes or meetings scheduled.</p>
+              <p className="font-semibold text-lg">
+                {activeTab === "completed"
+                  ? "No completed meetings found in history."
+                  : "No active or scheduled live meetings."}
+              </p>
               <p className="text-sm mt-1">Use the quick action buttons above to launch instant meetings or schedule future sessions.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-3">
-            {classes.map((cls) => {
+            {displayClasses.map((cls) => {
               const platform = PLATFORM_LABELS[cls.platform] || PLATFORM_LABELS.other;
               const statusCfg = STATUS_CONFIG[cls.status] || STATUS_CONFIG.upcoming;
               const meetingCfg = MEETING_TYPES[cls.meeting_type || "academic_class"] || MEETING_TYPES.academic_class;
               const MeetingIcon = meetingCfg.icon;
               const isOngoing = cls.status === "ongoing";
+              const isCompleted = cls.status === "completed";
               const isCancelled = cls.status === "cancelled";
               const courseName = courses.find((c) => c.id === cls.course_id)?.course_name;
               const audienceLabel = AUDIENCE_OPTIONS[cls.target_audience || "course_students"] || "Target Audience";
@@ -635,7 +698,13 @@ export default function CenterLiveClassesPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {!isCancelled && cls.status !== "completed" && (
+                        {isCompleted && (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs py-1.5 px-3 rounded-lg font-bold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Meeting Completed
+                          </Badge>
+                        )}
+                        {!isCancelled && !isCompleted && (
                           <Button
                             size="sm"
                             variant={isOngoing ? "default" : "outline"}
@@ -646,7 +715,7 @@ export default function CenterLiveClassesPage() {
                             {isOngoing ? "Enter Live Studio (Host)" : "Launch Studio"}
                           </Button>
                         )}
-                        {!isCancelled && cls.status !== "completed" && (
+                        {!isCancelled && !isCompleted && (
                           <Button
                             size="sm"
                             variant="destructive"
@@ -657,7 +726,7 @@ export default function CenterLiveClassesPage() {
                             Stop / End Meeting
                           </Button>
                         )}
-                        {!isCancelled && cls.status !== "completed" && (
+                        {!isCancelled && !isCompleted && (
                           <>
                             <Button
                               size="sm"
@@ -785,6 +854,28 @@ export default function CenterLiveClassesPage() {
                 </Select>
               </div>
             </div>
+
+            {form.target_audience === "course_students" && (
+              <div className="space-y-1.5">
+                <Label>Target Course *</Label>
+                <Select
+                  value={form.course_id}
+                  onValueChange={(v) => setForm({ ...form, course_id: v })}
+                >
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue placeholder="Select Course for Live Session" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses / Public</SelectItem>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.course_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {form.platform !== "jitsi" && (
               <div className="space-y-1.5">

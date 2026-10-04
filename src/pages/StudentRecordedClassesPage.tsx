@@ -41,6 +41,7 @@ import {
   ChevronRight,
   ListVideo,
   Award,
+  Folder,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";

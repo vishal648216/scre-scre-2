@@ -9,21 +9,25 @@ import i18n from "@/i18n";
 import { syncServerTime } from "@/lib/time";
 import LanguageSync from "@/components/LanguageSync";
 import { PortalErrorBoundary } from "@/components/PortalErrorBoundary";
-import { initGoogleTranslateScript, enableDOMAutoTranslationObserver, triggerGoogleTranslateSync } from "@/lib/translator";
+import { initGoogleTranslateScript, enableDOMAutoTranslationObserver, triggerGoogleTranslateSync, setLanguage } from "@/lib/translator";
 
 const RouteTranslationSync = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const lang = localStorage.getItem("lang") || "en";
-    if (lang !== "en") {
-      setTimeout(() => {
-        triggerGoogleTranslateSync(lang);
-      }, 150);
-      setTimeout(() => {
-        triggerGoogleTranslateSync(lang);
-      }, 600);
+    const lang = (localStorage.getItem("lang") || "en").trim().toLowerCase();
+    const currentI18nLang = (i18n.language || "en").split("-")[0].toLowerCase();
+    
+    if (currentI18nLang !== lang.split("-")[0]) {
+      i18n.changeLanguage(lang.split("-")[0]);
     }
+
+    setTimeout(() => {
+      triggerGoogleTranslateSync(lang);
+    }, 150);
+    setTimeout(() => {
+      triggerGoogleTranslateSync(lang);
+    }, 600);
   }, [location.pathname]);
 
   return null;
@@ -878,7 +882,7 @@ const LanguageRouteRedirect = ({ lang }: { lang: string }) => {
   const location = useLocation();
 
   useEffect(() => {
-    i18n.changeLanguage(lang);
+    setLanguage(lang);
   }, [lang]);
 
   const targetPath = location.pathname.replace(/^\/(en|hi)/, "") || "/";

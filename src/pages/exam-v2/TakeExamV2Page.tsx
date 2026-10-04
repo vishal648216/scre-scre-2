@@ -26,6 +26,8 @@ import {
 } from "@/lib/examV2Api";
 import { ExamV2Palette, paletteStatus } from "@/components/exam-v2/ExamV2Palette";
 import { useExamV2Security } from "@/hooks/useExamV2Security";
+import { useExamProctoring } from "@/hooks/useExamProctoring";
+import { LiveProctorWidget } from "@/components/exam/LiveProctorWidget";
 
 interface Q {
   _id: string;
@@ -225,13 +227,28 @@ const TakeExamV2Page = () => {
     return () => clearInterval(t);
   }, [id, inProgress, runAutosave]);
 
+  const proctoring = useExamProctoring({
+    active: inProgress,
+    onInstantTerminate: (reason) => {
+      toast.error(`Exam Terminated: ${reason}`);
+      void doSubmit();
+    },
+  });
+
   const handleStart = async () => {
     if (!id) return;
+    if (!proctoring.hasHardwarePermission) {
+      toast.error("Camera and Microphone access is mandatory before starting the exam!");
+      return;
+    }
     setStarting(true);
     try {
       const res = await postV2Start(id);
       if (res.ok) {
         toast.success("Exam started — timer is live");
+        try {
+          if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+        } catch {}
         await load();
         await pollState();
       } else {
@@ -553,6 +570,7 @@ const TakeExamV2Page = () => {
           <Link to="/dashboard/student/exams">Back to exams</Link>
         </Button>
       </div>
+      <LiveProctorWidget {...proctoring} />
     </div>
   );
 };

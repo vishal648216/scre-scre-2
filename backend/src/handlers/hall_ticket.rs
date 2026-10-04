@@ -167,7 +167,7 @@ pub async fn generate_hall_ticket(
         }
     };
 
-    // Fetch Allotted Exams first
+    // Fetch Allotted Exams first (V1 student_papers)
     let paper_coll = db.collection::<StudentPaper>("student_papers");
     let mut cursor = paper_coll
         .find(doc! { "student_id": s_oid }, None)
@@ -180,8 +180,19 @@ pub async fn generate_hall_ticket(
         }
     }
 
-    // Check if hall ticket is issued (has allotted papers)
+    // Also check V2 exam papers if V1 is empty
+    let mut v2_papers = Vec::new();
     if papers.is_empty() {
+        let v2_paper_coll = db.collection::<mongodb::bson::Document>("exam_v2_papers");
+        if let Ok(mut v2_cursor) = v2_paper_coll.find(doc! { "student_id": s_oid }, None).await {
+            while let Some(Ok(doc)) = v2_cursor.next().await {
+                v2_papers.push(doc);
+            }
+        }
+    }
+
+    // Check if hall ticket is issued (has allotted papers in either V1 or V2)
+    if papers.is_empty() && v2_papers.is_empty() {
         return (
             StatusCode::BAD_REQUEST,
             Json(HallTicketResponse {
@@ -194,7 +205,7 @@ pub async fn generate_hall_ticket(
 
     // 2. Access control
     if claims.role == UserRole::Center {
-        // student.parent_id is the user_id of the center user!
+        // student.parent_id is the user_id or _id of the center!
         let center_user_id = match ObjectId::parse_str(&claims.sub) {
             Ok(oid) => oid,
             Err(_) => {
@@ -211,7 +222,8 @@ pub async fn generate_hall_ticket(
 
         // Check if student's parent_id is center user id OR any of the student's papers have center_id == center_user_id
         let parent_id_match = student.parent_id == Some(center_user_id);
-        let paper_center_match = papers.iter().any(|p| p.center_id == center_user_id);
+        let paper_center_match = papers.iter().any(|p| p.center_id == center_user_id)
+            || v2_papers.iter().any(|p| p.get_object_id("center_id").ok() == Some(center_user_id));
 
         if !parent_id_match && !paper_center_match {
             return (
@@ -240,11 +252,13 @@ pub async fn generate_hall_ticket(
     // 3. Fetch Center Data
     let center_coll = db.collection::<Center>("centers");
     let center = if let Some(parent_id) = student.parent_id {
-        center_coll
-            .find_one(doc! { "user_id": parent_id }, None)
-            .await
-            .ok()
-            .flatten()
+        if let Ok(Some(c)) = center_coll.find_one(doc! { "user_id": parent_id }, None).await {
+            Some(c)
+        } else if let Ok(Some(c)) = center_coll.find_one(doc! { "_id": parent_id }, None).await {
+            Some(c)
+        } else {
+            None
+        }
     } else {
         None
     };
@@ -252,54 +266,101 @@ pub async fn generate_hall_ticket(
     // 4. Fetch Blueprints and Subjects for details
     let blueprint_coll = db.collection::<ExamBlueprint>("exam_blueprints");
     let subject_coll = db.collection::<Subject>("subjects");
+    let v2_exam_coll = db.collection::<mongodb::bson::Document>("exam_v2_exams");
+    let v2_tpl_coll = db.collection::<mongodb::bson::Document>("exam_v2_paper_templates");
 
     let mut exam_rows = Vec::new();
-    for paper in &papers {
-        let sub = if let Some(sid) = paper.subject_id {
-            subject_coll
-                .find_one(doc! { "_id": sid }, None)
-                .await
-                .ok()
-                .flatten()
-        } else {
-            None
-        };
+    if !papers.is_empty() {
+        for paper in &papers {
+            let sub = if let Some(sid) = paper.subject_id {
+                subject_coll
+                    .find_one(doc! { "_id": sid }, None)
+                    .await
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
 
-        let start = paper
-            .start_window
-            .map(|d| d.to_chrono())
-            .unwrap_or(Utc::now());
-        let end = paper
-            .end_window
-            .map(|d| d.to_chrono())
-            .unwrap_or(Utc::now());
+            let start = paper
+                .start_window
+                .map(|d| d.to_chrono())
+                .unwrap_or(Utc::now());
+            let end = paper
+                .end_window
+                .map(|d| d.to_chrono())
+                .unwrap_or(Utc::now());
 
-        // Convert to IST for display
-        let ist_start = start.with_timezone(&chrono_tz::Asia::Kolkata);
-        let ist_end = end.with_timezone(&chrono_tz::Asia::Kolkata);
+            // Convert to IST for display
+            let ist_start = start.with_timezone(&chrono_tz::Asia::Kolkata);
+            let ist_end = end.with_timezone(&chrono_tz::Asia::Kolkata);
 
-        let session = if ist_start.hour() < 12 {
-            "Morning Slot"
-        } else {
-            "Evening Slot"
-        };
+            let session = if ist_start.hour() < 12 {
+                "Morning Slot"
+            } else {
+                "Evening Slot"
+            };
 
-        exam_rows.push(format!(
-            r#"<tr>
-                    <td>{}</td>
-                    <td>{}</td>
-                    <td>{}</td>
-                    <td>THEORY</td>
-                    <td>{} - {}</td>
-                </tr>"#,
-            ist_start.format("%d-%m-%Y"),
-            session,
-            sub.as_ref()
-                .map(|s| s.subject_name.clone())
-                .unwrap_or("EXAM".to_string()),
-            ist_start.format("%I:%M %p"),
-            ist_end.format("%I:%M %p")
-        ));
+            exam_rows.push(format!(
+                r#"<tr>
+                        <td>{}</td>
+                        <td>{}</td>
+                        <td>{}</td>
+                        <td>THEORY</td>
+                        <td>{} - {}</td>
+                    </tr>"#,
+                ist_start.format("%d-%m-%Y"),
+                session,
+                sub.as_ref()
+                    .map(|s| s.subject_name.clone())
+                    .unwrap_or("EXAM".to_string()),
+                ist_start.format("%I:%M %p"),
+                ist_end.format("%I:%M %p")
+            ));
+        }
+    } else {
+        for v2p in &v2_papers {
+            let exam_doc = if let Ok(eid) = v2p.get_object_id("exam_id") {
+                v2_exam_coll.find_one(doc! { "_id": eid }, None).await.ok().flatten()
+            } else {
+                None
+            };
+            let tpl_doc = if let Ok(tpid) = v2p.get_object_id("paper_template_id") {
+                v2_tpl_coll.find_one(doc! { "_id": tpid }, None).await.ok().flatten()
+            } else {
+                None
+            };
+
+            let name = exam_doc.as_ref().and_then(|d| d.get_str("name").ok())
+                .or_else(|| tpl_doc.as_ref().and_then(|d| d.get_str("name").ok()))
+                .unwrap_or("COURSE EXAMINATION");
+
+            let start_dt = exam_doc.as_ref().and_then(|d| d.get_datetime("start_at").ok())
+                .map(|d| d.to_chrono())
+                .unwrap_or_else(Utc::now);
+            let end_dt = exam_doc.as_ref().and_then(|d| d.get_datetime("end_at").ok())
+                .map(|d| d.to_chrono())
+                .unwrap_or_else(Utc::now);
+
+            let ist_start = start_dt.with_timezone(&chrono_tz::Asia::Kolkata);
+            let ist_end = end_dt.with_timezone(&chrono_tz::Asia::Kolkata);
+            let session = if ist_start.hour() < 12 { "Morning Slot" } else { "Evening Slot" };
+
+            exam_rows.push(format!(
+                r#"<tr>
+                        <td>{}</td>
+                        <td>{}</td>
+                        <td>{}</td>
+                        <td>THEORY</td>
+                        <td>{} - {}</td>
+                    </tr>"#,
+                ist_start.format("%d-%m-%Y"),
+                session,
+                name,
+                ist_start.format("%I:%M %p"),
+                ist_end.format("%I:%M %p")
+            ));
+        }
     }
 
     // 5. Prepare template variables

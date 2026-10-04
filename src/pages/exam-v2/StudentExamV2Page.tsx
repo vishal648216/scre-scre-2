@@ -281,7 +281,7 @@ const StudentExamV2Page = () => {
       const storedUser = sessionStorage.getItem("user");
       if (!storedUser) return;
       const parsed = JSON.parse(storedUser);
-      const studentId = parsed._id || parsed.id || parsed.$oid;
+      const studentId = parsed.user_id || parsed._id || parsed.id || (typeof parsed.$oid === 'string' ? parsed.$oid : parsed.$oid?.$oid);
 
       if (!studentId) {
         toast.error("Could not identify student ID");

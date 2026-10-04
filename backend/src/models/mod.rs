@@ -62,3 +62,4 @@ pub mod notification_gateway;
 pub mod resume;
 pub mod transport;
 pub mod intern_draft;
+pub mod practical;

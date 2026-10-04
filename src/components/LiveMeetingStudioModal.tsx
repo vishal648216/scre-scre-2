@@ -184,10 +184,7 @@ export default function LiveMeetingStudioModal({
               <Button
                 size="sm"
                 onClick={() => {
-                  if (confirm("Are you sure you want to end this live meeting for all participants?")) {
-                    onEndMeeting();
-                    onClose();
-                  }
+                  onEndMeeting();
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-lg px-3 py-1.5 text-xs gap-1.5 shadow-lg shadow-red-600/30 animate-pulse"
                 title="End & Close Live Broadcast for all participants"

@@ -44,7 +44,7 @@ export const i18nInitPromise = i18n
       escapeValue: false,
     },
     detection: {
-      order: ["localStorage", "cookie", "navigator"],
+      order: ["localStorage", "cookie"],
       caches: ["localStorage", "cookie"],
       lookupLocalStorage: "lang",
       lookupCookie: "lang",
@@ -100,9 +100,14 @@ i18n.on("languageChanged", (lng) => {
 });
 
 if (typeof window !== "undefined") {
-  const bootLang = (localStorage.getItem("lang") || i18n.language || "en").split("-")[0].toLowerCase();
-  loadLanguageBundle(bootLang);
-  applyDocumentLanguage(bootLang);
+  let bootLang = localStorage.getItem("lang");
+  if (!bootLang) {
+    bootLang = "en";
+    localStorage.setItem("lang", "en");
+  }
+  const normalized = bootLang.split("-")[0].toLowerCase();
+  loadLanguageBundle(normalized);
+  applyDocumentLanguage(normalized);
 }
 
 export default i18n;
