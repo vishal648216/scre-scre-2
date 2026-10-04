@@ -269,19 +269,54 @@ export const ReferralTreeVisualizer: React.FC<Props> = ({ data }) => {
 
     const loadLiveTree = async () => {
       try {
-        const res = await apiFetch("/api/referrals/tree");
+        const userStr = sessionStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const uid = user ? (user._id || user.id || user.user_id || "") : "";
+        const uName = user ? (user.name || user.fullName || user.username || "My Account") : "My Account";
+        const uCode = user ? (user.referral_code || user.code || `REF-${uid.slice(-6).toUpperCase()}`) : "REF-001";
+        const uRole = user ? (user.role?.toLowerCase() || "student") : "student";
+
+        const treeUrl = uid ? `/api/referrals/tree?user_id=${encodeURIComponent(uid)}` : "/api/referrals/tree";
+        const res = await apiFetch(treeUrl);
         if (res.ok) {
           const liveData = await res.json();
           if (Array.isArray(liveData) && liveData.length > 0) {
             setTreeNodes(liveData);
-          } else {
-            setTreeNodes(SAMPLE_5_LEVEL_TREE);
+            return;
           }
-        } else {
-          setTreeNodes(SAMPLE_5_LEVEL_TREE);
         }
+
+        // Fallback personalized tree for student/center so SuperAdmin HQ is NEVER shown at root for regular users
+        const personalizedTree: TreeNode[] = [
+          {
+            id: uid || "my_root_node",
+            name: `${uName} (My Referral Network)`,
+            code: uCode,
+            role: uRole as any,
+            level: 0,
+            royalty_percentage: 100,
+            total_earnings: 0,
+            referrals_count: 0,
+            children: []
+          }
+        ];
+        setTreeNodes(personalizedTree);
       } catch {
-        setTreeNodes(SAMPLE_5_LEVEL_TREE);
+        const userStr = sessionStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const uName = user ? (user.name || user.fullName || user.username || "My Account") : "My Account";
+        const uCode = user ? (user.referral_code || user.code || "REF-001") : "REF-001";
+        setTreeNodes([{
+          id: "my_root_node",
+          name: `${uName} (My Referral Network)`,
+          code: uCode,
+          role: "student",
+          level: 0,
+          royalty_percentage: 100,
+          total_earnings: 0,
+          referrals_count: 0,
+          children: []
+        }]);
       } finally {
         setFetching(false);
       }

@@ -18,10 +18,49 @@ interface FeeRecord {
   student_id: string;
 }
 
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Card } from "@/components/ui/card";
+import { IndianRupee, Loader2, Calendar, FileText, CreditCard, ShieldCheck, Eye, Filter, CheckCircle2, Clock, AlertCircle, ArrowUpRight } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
+import { useTranslation } from "react-i18next";
+
+interface FeeRecord {
+  _id: string;
+  amount: number;
+  payment_date: string;
+  mode: string;
+  receipt_no: string;
+  remarks?: string;
+  student_id: string;
+}
+
+interface Installment {
+  installment_number: number;
+  amount_due: number;
+  due_date: string;
+  payment_date?: string;
+  amount_paid: number;
+}
+
+interface FeeSummary {
+  student_id: string;
+  total_fees: number;
+  extra_charges_total: number;
+  overall_total: number;
+  total_paid: number;
+  remaining_amount: number;
+  payment_type?: string;
+  installments?: Installment[];
+}
+
 const StudentFeeDetailsPage = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [fees, setFees] = useState<FeeRecord[]>([]);
+  const [summary, setSummary] = useState<FeeSummary | null>(null);
   const [filters, setFilters] = useState({ month: "", year: "" });
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<FeeReceiptData | null>(null);
@@ -33,6 +72,13 @@ const StudentFeeDetailsPage = () => {
   const fetchFees = async () => {
     try {
       const token = sessionStorage.getItem("token");
+      const userStr = sessionStorage.getItem("user");
+      let currentUser = null;
+      if (userStr) {
+        currentUser = JSON.parse(userStr);
+        setStudentInfo(currentUser);
+      }
+
       let feeUrl = "/api/fees";
       const params = new URLSearchParams();
       if (filters.month) params.set("month", filters.month);
@@ -45,9 +91,17 @@ const StudentFeeDetailsPage = () => {
       const data = await response.json();
       if (response.ok) {
         setFees(Array.isArray(data) ? data : []);
-        const userStr = sessionStorage.getItem("user");
-        if (userStr) {
-          setStudentInfo(JSON.parse(userStr));
+      }
+
+      // Fetch summary if student ID is known
+      const studentId = currentUser?._id || currentUser?.id;
+      if (studentId) {
+        const summaryRes = await fetch(`/api/fees/summary/${studentId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (summaryRes.ok) {
+          const summaryData = await summaryRes.json();
+          setSummary(summaryData);
         }
       }
     } catch (error) {
@@ -58,7 +112,15 @@ const StudentFeeDetailsPage = () => {
     }
   };
 
-  const totalPaid = fees.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const calculatedTotalPaid = fees.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  const totalPaid = summary?.total_paid ?? calculatedTotalPaid;
+  const totalCourseFee = summary?.overall_total || summary?.total_fees || totalPaid;
+  const remainingDue = summary?.remaining_amount ?? Math.max(0, totalCourseFee - totalPaid);
+
+  // Find next upcoming installment
+  const nextInstallment = summary?.installments?.find(
+    (inst) => (inst.amount_due - inst.amount_paid) > 0
+  );
 
   const handlePreviewFeeSlip = () => {
     if (fees.length > 0) {
@@ -75,10 +137,6 @@ const StudentFeeDetailsPage = () => {
     } else {
       toast.error(t("No fee records available to preview"));
     }
-  };
-
-  const handlePrintFeeSlip = () => {
-    handlePreviewFeeSlip();
   };
 
   const getYears = () => {
@@ -110,7 +168,7 @@ const StudentFeeDetailsPage = () => {
                 {t("Fee Details & Receipts")}
               </h1>
               <p className="text-muted-foreground mt-1 text-sm font-medium">
-                {t("View your complete transaction history, paid fee vouchers, and download receipts.")}
+                {t("View course fee structure, payment history, remaining balance, and print receipts.")}
               </p>
             </div>
 
@@ -152,43 +210,127 @@ const StudentFeeDetailsPage = () => {
           </div>
         </div>
 
-        {/* Total Paid KPI */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-background p-6 shadow-lg">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
-                <IndianRupee className="w-7 h-7" />
+        {/* 4 Financial KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Card 1: Total Course Fee */}
+          <Card className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-card to-background p-6 shadow-lg relative overflow-hidden">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-500/30 shrink-0">
+                <FileText className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">{t("Total Paid Amount")}</p>
-                <p className="text-3xl font-black text-foreground tracking-tight mt-0.5">₹{totalPaid.toLocaleString("en-IN")}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">{t("Total Course Fee")}</p>
+                <p className="text-2xl font-black text-foreground tracking-tight mt-0.5">₹{totalCourseFee.toLocaleString("en-IN")}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="rounded-3xl border border-border/80 bg-card p-6 shadow-lg flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-              <FileText className="w-7 h-7 text-primary" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{t("Total Fee Receipts")}</p>
-              <p className="text-3xl font-black text-foreground tracking-tight mt-0.5">{fees.length}</p>
+          {/* Card 2: Total Paid Amount */}
+          <Card className="rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-background p-6 shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 shrink-0">
+                <IndianRupee className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">{t("Paid Amount")}</p>
+                <p className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5">₹{totalPaid.toLocaleString("en-IN")}</p>
+              </div>
             </div>
           </Card>
 
-          <Card className="rounded-3xl border border-border/80 bg-card p-6 shadow-lg flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-7 h-7 text-accent" />
+          {/* Card 3: Remaining Due */}
+          <Card className={`rounded-3xl border ${remainingDue > 0 ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-card to-background' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card to-background'} p-6 shadow-lg`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl ${remainingDue > 0 ? 'bg-amber-500 text-white shadow-amber-500/30' : 'bg-emerald-500 text-white shadow-emerald-500/30'} flex items-center justify-center shadow-md shrink-0`}>
+                {remainingDue > 0 ? <AlertCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
+              </div>
+              <div>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${remainingDue > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{t("Remaining Due")}</p>
+                <p className="text-2xl font-black tracking-tight mt-0.5">
+                  ₹{remainingDue.toLocaleString("en-IN")}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{t("Verification Status")}</p>
-              <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mt-1 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                {t("Audited & Verified")}
-              </p>
+          </Card>
+
+          {/* Card 4: Next Payment / Status */}
+          <Card className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-card to-background p-6 shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center shadow-md shadow-purple-500/30 shrink-0">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-600">{t("Next Payment / Status")}</p>
+                {nextInstallment ? (
+                  <div>
+                    <p className="text-base font-black text-foreground mt-0.5">
+                      ₹{(nextInstallment.amount_due - nextInstallment.amount_paid).toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-[10px] font-bold text-muted-foreground">
+                      Due: {nextInstallment.due_date ? format(new Date(nextInstallment.due_date), "dd MMM yyyy") : "Pending"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mt-1 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {t("All Dues Cleared")}
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
         </div>
+
+        {/* Installment Schedule Section (if available) */}
+        {summary?.installments && summary.installments.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xs font-black uppercase tracking-[0.3em] text-foreground/80 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              {t("Installment Schedule & Due Dates")}
+            </h2>
+            <Card className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-lg p-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/40 uppercase font-black text-[9px] tracking-wider text-muted-foreground border-b border-border">
+                    <tr>
+                      <th className="p-3">#</th>
+                      <th className="p-3">Due Date</th>
+                      <th className="p-3">Amount Due</th>
+                      <th className="p-3">Amount Paid</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {summary.installments.map((inst, index) => {
+                      const isPaid = inst.amount_paid >= inst.amount_due;
+                      return (
+                        <tr key={index} className="hover:bg-muted/10 transition-colors">
+                          <td className="p-3 font-bold text-foreground">Inst {inst.installment_number || index + 1}</td>
+                          <td className="p-3 font-medium text-muted-foreground">
+                            {inst.due_date ? format(new Date(inst.due_date), "dd MMM yyyy") : "-"}
+                          </td>
+                          <td className="p-3 font-bold text-foreground">₹{inst.amount_due.toLocaleString("en-IN")}</td>
+                          <td className="p-3 font-bold text-emerald-600">₹{inst.amount_paid.toLocaleString("en-IN")}</td>
+                          <td className="p-3">
+                            {isPaid ? (
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Paid
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> Pending
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Payment History Section */}
         <div className="space-y-4">
@@ -287,3 +429,4 @@ const StudentFeeDetailsPage = () => {
 };
 
 export default StudentFeeDetailsPage;
+

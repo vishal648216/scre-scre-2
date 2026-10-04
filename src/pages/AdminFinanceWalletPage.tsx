@@ -96,19 +96,6 @@ const AdminFinanceWalletPage = () => {
     loadAdjustments();
   }, []);
 
-  const loadAdjustments = () => {
-    const saved = localStorage.getItem("scre_wallet_adjustments");
-    if (saved) {
-      try {
-        setAdjustments(JSON.parse(saved));
-      } catch {
-        // fallback
-      }
-    }
-  };
-
-  const totalCollected = fees.reduce((s, f) => s + (f.amount || 0), 0);
-
   const toId = (v: unknown): string => {
     if (!v) return "";
     if (typeof v === "string") return v;
