@@ -1,31 +1,12 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { IndianRupee, Loader2, Calendar, FileText, CreditCard, ShieldCheck, Eye, Printer, Filter, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
-import { useTranslation } from "react-i18next";
-
-interface FeeRecord {
-  _id: string;
-  amount: number;
-  payment_date: string;
-  mode: string;
-  receipt_no: string;
-  remarks?: string;
-  student_id: string;
-}
-
-import { useState, useEffect } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { Card } from "@/components/ui/card";
-import { IndianRupee, Loader2, Calendar, FileText, CreditCard, ShieldCheck, Eye, Filter, CheckCircle2, Clock, AlertCircle, ArrowUpRight } from "lucide-react";
+import { IndianRupee, Loader2, Calendar, FileText, CreditCard, ShieldCheck, Eye, Filter, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { FeeReceiptModal, FeeReceiptData } from "@/components/FeeReceiptModal";
 import { useTranslation } from "react-i18next";
+
 
 interface FeeRecord {
   _id: string;
